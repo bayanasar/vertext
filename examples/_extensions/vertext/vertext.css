@@ -1,0 +1,50 @@
+.vertext {
+  display: flex;
+  flex-direction: row-reverse;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: .55rem;
+  overflow-x: auto;
+  min-block-size: 20rem;
+  padding: 1rem;
+  border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+}
+.vertext-page {
+  inline-size: 100%;
+  min-block-size: calc(100vh - 4rem);
+}
+.vertext-column {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: center;
+  inline-size: max-content;
+  min-inline-size: 1.5em;
+  gap: .22rem;
+}
+.vertext-upright, .vertext-neutral { inline-size: 1em; text-align: center; }
+.vertext-space { display: block; min-block-size: 1em; }
+.vertext-paired {
+  display: inline-block;
+  inline-size: 1em;
+  text-align: center;
+  transform: rotate(90deg);
+}
+.vertext-latin {
+  display: block;
+  inline-size: max-content;
+  max-inline-size: 12ch;
+  text-align: center;
+  white-space: nowrap;
+}
+.vertext-code .vertext-latin { max-inline-size: 24ch; }
+.vertext-mongolian {
+  writing-mode: vertical-lr;
+  font-feature-settings: "vert" 1, "vrt2" 1;
+  font-family: "Noto Sans Mongolian", "Mongolian Baiti", serif;
+}
+.vertext-code {
+  background: #161b22;
+  color: #e6edf3;
+  font-family: ui-monospace, "Cascadia Code", "Fira Code", monospace;
+}

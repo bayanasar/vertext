@@ -1,0 +1,9 @@
+[package]
+name = "vertext-core"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+description = "Unicode-aware layout planning for top-to-bottom, right-to-left text"
+
+[lib]
+path = "src/lib.rs"

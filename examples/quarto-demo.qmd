@@ -1,0 +1,74 @@
+---
+title: "Vertext demo"
+filters:
+  - vertext
+format:
+  vertext-html: default
+---
+
+::: {.vertext .vertext-page}
+## Chinese
+
+山川异域，风月同天。
+
+海内存知己，天涯若比邻。
+
+明月松间照，清泉石上流。
+
+## Japanese
+
+春はあけぼの。やうやう白くなりゆく山ぎは。
+
+夏は夜。月のころはさらなり。
+
+秋は夕暮れ。冬はつとめて。
+
+## Korean
+
+봄은 새벽이다. 하늘이 조금씩 밝아진다.
+
+여름은 밤이다. 달빛이 조용히 비친다.
+
+가을은 저녁이다. 겨울은 이른 아침이다.
+
+## Traditional Mongolian
+
+ᠮᠣᠩᠭᠤᠯ ᠤᠯᠤᠰ ᠮᠠᠨᠳᠤᠨ᠎ᠠ
+
+ᠴᠢᠨᠠᠷ ᠨᠢ ᠥᠪᠡᠷᠮᠢᠴᠡ ᠦᠰᠦᠭᠲᠡᠢ
+
+ᠪᠢᠴᠢᠭ ᠨᠢ ᠳᠡᠭᠡᠳᠦ ᠡᠴᠡ ᠳᠣᠣᠷ᠎ᠠ
+
+## Rust
+
+```rust
+#[derive(Debug, Clone)]
+struct LayoutConfig {
+    max_word_width: 24,
+    column_advance_left: true,
+}
+
+fn split_identifier(hi_nancy: &str, max_width: usize) -> Vec<String> {
+    hi_nancy
+        .chars()
+        .collect::<Vec<_>>()
+        .chunks(max_width)
+        .map(|part| part.iter().collect())
+        .collect()
+}
+
+fn main() {
+    let config = LayoutConfig {
+        max_word_width: 24,
+        column_advance_left: true,
+    };
+    let greeting = "vertical code";
+    let marker: &'static str = "hi_nancy";
+    let parts = split_identifier("hi_nancy", config.max_word_width);
+
+    for part in parts {
+        println!("{greeting} {marker}: {part}");
+    }
+}
+```
+:::

@@ -1,0 +1,3 @@
+[workspace]
+members = ["crates/vertext-core", "crates/vertext-cli"]
+resolver = "2"
