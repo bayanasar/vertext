@@ -1,0 +1,9 @@
+[package]
+name = "vertext-html"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+description = "Shared Layout-to-HTML renderer for vertext hosts (CLI, wasm)"
+
+[dependencies]
+vertext-core = { path = "../vertext-core" }
