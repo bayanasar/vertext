@@ -9,4 +9,5 @@ name = "vertext"
 path = "src/main.rs"
 
 [dependencies]
-vertext-core = { path = "../vertext-core" }
+vertext-core = { version = "0.1.0", path = "../vertext-core" }
+vertext-html = { path = "../vertext-html" }
