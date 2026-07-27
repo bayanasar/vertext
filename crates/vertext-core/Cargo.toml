@@ -7,3 +7,6 @@ description = "Unicode-aware layout planning for top-to-bottom, right-to-left te
 
 [lib]
 path = "src/lib.rs"
+
+[dependencies]
+unicode-segmentation = "1.13.3"
