@@ -426,6 +426,47 @@ mod tests {
     /// Semicolons keep company with commas and stops; arrows turn because a
     /// horizontal arrow must keep pointing "onward" when onward is downward;
     /// a vertical arrow already does and is left alone.
+    /// The punctuation contract, pinned character by character.
+    ///
+    /// This table is the agreement, not a sample of it. Every mark below was
+    /// decided deliberately and this classification has already churned more
+    /// than once — so it is written out in full and any change to it fails
+    /// here, loudly, instead of quietly altering how someone's document is
+    /// set. If a mark genuinely needs to move, move it *here first*.
+    #[test]
+    fn the_punctuation_contract() {
+        // Turns a quarter-circle. Brackets, quotes, colons, dashes, ellipses,
+        // and the ASCII operators that stand between clauses.
+        for mark in ['(', ')', '[', ']', '{', '}', '<', '>', ':', '"', '\'',
+                     '=', '|',
+                     '（', '）', '［', '］', '｛', '｝', '〈', '〉', '《', '》',
+                     '「', '」', '『', '』', '【', '】', '〔', '〕',
+                     '“', '”', '‘', '’', '：',
+                     '—', '―', '－', '…', '‥', '〜', '～', '｜', '‖',
+                     '→', '←', '↔', '⇒', '⇐', '⇔', '⟶', '⟵'] {
+            let layout = layout_text(&format!("好{mark}好"), &LayoutConfig::default());
+            assert_eq!(layout.columns[0].slots[1],
+                Slot::VerticalPunctuation(mark.to_string()),
+                "{mark:?} must turn");
+        }
+        // Sits in the corner of its em square. Clause separators travel as a
+        // family; splitting one off makes a sentence look mis-set.
+        for mark in ['，', '、', '。', '．', '｡', '､', '；', ';'] {
+            let layout = layout_text(&format!("好{mark}好"), &LayoutConfig::default());
+            assert_eq!(layout.columns[0].slots[1],
+                Slot::CornerPunctuation(mark.to_string()),
+                "{mark:?} must go to the corner");
+        }
+        // Stays upright. A turned slash reads as a backslash; `↑`/`↓` already
+        // point along the flow; `！`/`？` are upright by convention.
+        for mark in ['/', '\\', '↑', '↓', '↕', '！', '？', '!', '?', '+', '*', '%'] {
+            let layout = layout_text(&format!("好{mark}好"), &LayoutConfig::default());
+            assert_eq!(layout.columns[0].slots[1],
+                Slot::Neutral(mark.to_string()),
+                "{mark:?} must stay upright");
+        }
+    }
+
     #[test]
     fn separators_and_arrows_are_classified_by_behaviour() {
         let layout = layout_text("好；天→月↓日/水", &LayoutConfig::default());
