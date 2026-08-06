@@ -1,5 +1,6 @@
 ---
 title: "Vertext demo"
+vertext-page: true
 filters:
   - vertext
 format:
@@ -7,7 +8,7 @@ format:
 ---
 
 ::: {.vertext .vertext-page}
-## Chinese
+## 中文
 
 山川异域，风月同天。
 
@@ -15,7 +16,7 @@ format:
 
 明月松间照，清泉石上流。
 
-## Japanese
+## 日本語
 
 春はあけぼの。やうやう白くなりゆく山ぎは。
 
@@ -23,7 +24,7 @@ format:
 
 秋は夕暮れ。冬はつとめて。
 
-## Korean
+## 한국어
 
 봄은 새벽이다. 하늘이 조금씩 밝아진다.
 
@@ -31,13 +32,32 @@ format:
 
 가을은 저녁이다. 겨울은 이른 아침이다.
 
-## Traditional Mongolian
+## ᠮᠣᠩᠭᠤᠯ ᠪᠢᠴᠢᠭ
 
 ᠮᠣᠩᠭᠤᠯ ᠤᠯᠤᠰ ᠮᠠᠨᠳᠤᠨ᠎ᠠ
 
 ᠴᠢᠨᠠᠷ ᠨᠢ ᠥᠪᠡᠷᠮᠢᠴᠡ ᠦᠰᠦᠭᠲᠡᠢ
 
 ᠪᠢᠴᠢᠭ ᠨᠢ ᠳᠡᠭᠡᠳᠦ ᠡᠴᠡ ᠳᠣᠣᠷ᠎ᠠ
+
+## 混合表格
+
+A table is the one construct vertical text renders better than horizontal:
+each row becomes a column, so an entry reads top to bottom.
+
+| 蒙古文 | 转写 | 音标 | English |
+|---|---|---|---|
+| ᠰᠠᠶᠢᠨ | sayin | sain | good |
+| ᠪᠢ | bi | bi | I |
+| ᠨᠡᠷ᠎ᠡ | ner_e | ner | name |
+| ᠪᠠᠶᠠᠷᠯᠠᠯ᠎ᠠ | bayarlal_a | bayarlalaa | thank you |
+| 山 | aGula | uul | mountain |
+
+## English
+
+It is a truth universally acknowledged, that a single man in possession of a good fortune, must be in want of a wife.
+
+However little known the feelings or views of such a man may be on his first entering a neighbourhood, this truth is so well fixed in the minds of the surrounding families, that he is considered the rightful property of some one or other of their daughters.
 
 ## Rust
 

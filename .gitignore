@@ -1,1 +1,13 @@
 /target/
+
+# The demo consumes the extension through a render-time copy of
+# extensions/vertext (Quarto's extension discovery does not follow symlinks),
+# so the repository keeps exactly one copy of the filter and stylesheet.
+# Run examples/render.sh to produce this directory.
+/examples/_extensions/
+
+# Soulstem session config — persona stays out of the repository.
+/.claude/
+
+# Quarto copies the extension's stylesheet here at render time.
+/examples/quarto-demo_files/libs/quarto-contrib/
