@@ -129,6 +129,28 @@ check        "the declaring document is vertical" 'class="vertext'          "$wo
 check_absent "state does not leak to the next document" 'class="vertext'    "$work/proj/b-plain.html"
 check        "the untouched document keeps its text" 'never asked'          "$work/proj/b-plain.html"
 
+# Without the binary the document must stay an ordinary horizontal page.
+# Injecting the page stylesheet anyway turns the content region vertical while
+# the text is still horizontal markdown, which lays every Latin word on its
+# side and leaves CJK upright -- worse than doing nothing, and exactly what
+# reached production. The degraded path had never been rendered in a test.
+printf '%s\n' '---' 'title: "Degraded"' 'vertext: true' 'filters: [vertext]' \
+  'format: {vertext-html: default}' '---' '' '山川异域 and some English.' > "$work/nobin.qmd"
+# quarto is invoked by absolute path so the binary can be taken off PATH
+# without taking quarto with it.
+quarto_bin=$(command -v quarto)
+( PATH="/usr/bin:/bin"; export PATH; "$quarto_bin" render "$work/nobin.qmd" --quiet ) >/dev/null 2>&1 || true
+nb="$work/nobin.html"
+if [ -f "$nb" ]; then
+  check_absent "no page style without the binary"  'vertext-document-mode'  "$nb"
+  check_absent "no page style without the binary (page)" 'vertext-page-mode' "$nb"
+  check_absent "no strip markup without the binary" 'class="vertext"'       "$nb"
+  check        "the text still renders"             'English'               "$nb"
+else
+  printf 'FAIL degraded-path render produced no output\n'
+  failures=$((failures + 1))
+fi
+
 printf '\n'
 if [ "$failures" -eq 0 ]; then
   printf 'all extension checks passed\n'

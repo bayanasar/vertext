@@ -41,6 +41,9 @@ local page_mode = false
 local document_mode = false
 -- 'rl' = CJK (vertical-rl), 'lr' = traditional Mongolian (vertical-lr).
 local progression = 'rl'
+-- Set when an explicit `.vertext-page` div rendered, so its page style can be
+-- injected from the Pandoc pass rather than up front.
+local page_div_rendered = false
 
 -- The stylesheet must travel with the filter, not with the format.
 --
@@ -390,6 +393,7 @@ end
 function Meta(meta)
   page_mode = false
   document_mode = false
+  page_div_rendered = false
   progression = 'rl'
   stylesheet_added = false
   -- Progression is read whether or not the document is in page mode, because
@@ -412,20 +416,14 @@ function Meta(meta)
   if meta['vertext-page'] == true or meta['vertext-page'] == 'true' then
     document_mode = true
     page_mode = true
-    local includes = meta['header-includes'] or pandoc.MetaList({})
-    if includes.t ~= 'MetaList' then
-      includes = pandoc.MetaList({ includes })
-    end
-    includes[#includes + 1] = pandoc.MetaBlocks({ pandoc.RawBlock('html', page_style(progression) .. SCROLL_SCRIPT) })
-    meta['header-includes'] = includes
-  elseif document_mode then
-    local includes = meta['header-includes'] or pandoc.MetaList({})
-    if includes.t ~= 'MetaList' then
-      includes = pandoc.MetaList({ includes })
-    end
-    includes[#includes + 1] = pandoc.MetaBlocks({ pandoc.RawBlock('html', document_style() .. SCROLL_SCRIPT) })
-    meta['header-includes'] = includes
   end
+  -- The page styles are NOT injected here. They turn the content region into a
+  -- vertical surface, which is only correct if the layout actually ran: without
+  -- the binary the text stays ordinary horizontal markdown, and a horizontal
+  -- paragraph inside `writing-mode: vertical-rl` lays every Latin word on its
+  -- side while CJK stands upright. That is worse than doing nothing, and it is
+  -- what a missing binary shipped to production. Injection now happens in the
+  -- Pandoc pass, only once a strip has genuinely been rendered.
   return meta
 end
 
@@ -504,6 +502,12 @@ function Div(el)
   -- No binary: hand the original content back untouched rather than emitting
   -- a broken block.
   if not html then return nil end
+  -- A `.vertext-page` div asks for the whole page to go vertical, and it never
+  -- reaches the Pandoc pass, so it registers its own page style here — again
+  -- only after a successful render.
+  if el.classes:includes("vertext-page") then
+    page_div_rendered = true
+  end
   return pandoc.RawBlock("html", html)
 end
 
@@ -520,8 +524,22 @@ end
 -- still work and are passed through untouched: `Div` has already replaced them
 -- with RawBlocks by the time this runs.
 function Pandoc(doc)
-  if not document_mode then return nil end
   if not quarto.doc.is_format("html") then return nil end
+  -- A document that only carries an explicit `.vertext-page` div still needs
+  -- its page style attached; it just has no body to lay out.
+  if not document_mode then
+    if page_div_rendered and stylesheet_added then
+      local includes = doc.meta['header-includes'] or pandoc.MetaList({})
+      if includes.t ~= 'MetaList' then
+        includes = pandoc.MetaList({ includes })
+      end
+      includes[#includes + 1] = pandoc.MetaBlocks({
+        pandoc.RawBlock('html', page_style(progression) .. SCROLL_SCRIPT) })
+      doc.meta['header-includes'] = includes
+      return doc
+    end
+    return nil
+  end
 
   local strip_args = page_mode and { "--page" } or {}
   local rendered = {}
@@ -582,6 +600,20 @@ function Pandoc(doc)
     end
   end
   flush()
+
+  -- Only now, with a strip actually rendered, is it safe to make the page
+  -- vertical. If the binary was missing every block passed through untouched,
+  -- and the document must stay the plain horizontal page it already is.
+  if stylesheet_added then
+    local includes = doc.meta['header-includes'] or pandoc.MetaList({})
+    if includes.t ~= 'MetaList' then
+      includes = pandoc.MetaList({ includes })
+    end
+    local style = (page_mode or page_div_rendered)
+      and page_style(progression) or document_style()
+    includes[#includes + 1] = pandoc.MetaBlocks({ pandoc.RawBlock('html', style .. SCROLL_SCRIPT) })
+    doc.meta['header-includes'] = includes
+  end
 
   doc.blocks = rendered
   return doc
