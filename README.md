@@ -148,14 +148,27 @@ Products in `apps/` are adapters over the same core:
 
 | Product | Status |
 |---|---|
-| Quarto / Markdown extension (`extensions/vertext`) | Working end to end |
+| Markdown / Quarto extension (`extensions/vertext`) | **Done** — shipping in production |
+| [VertexT Quarto theme](apps/quarto-theme/README.md) | Planned next — Asian-native page chrome; unblocked |
+| [chaji 侘寂 (Flutter)](apps/chaji/README.md) | Planned — layout theme over `vertext-core`, sibling to the wabisabi widget kit |
+| [Browser extension](apps/browser-extension/README.md) | Planned — blocked on `vertext-wasm` |
+| [Notes](apps/notes/README.md) | Planned — blocked on `vertext-wasm` and slot geometry |
 | [Neovim plugin](apps/nvim/README.md) | Planned — an honest lossy projection onto the terminal grid |
 | [Web IDE](apps/web-ide/README.md) | Planned |
-| [Browser extension](apps/browser-extension/README.md) | Planned — blocked on `vertext-wasm` |
 | [Browser](apps/browser/README.md) | Planned, last in the queue |
 
-`vertext-wasm` is the next crate: it will wrap `vertext-core` and
-`vertext-html` so the browser targets render byte-identically to the CLI.
+The markdown path is complete: the filter renders real documents end to end
+and is in production. It is a Pandoc filter with four Quarto-specific calls,
+so other Pandoc-based generators are a small port; non-Pandoc generators
+(Hugo's goldmark, remark, python-markdown) each need their own adapter over
+the same wire protocol.
+
+Two crates are still ahead. `vertext-wasm` wraps `vertext-core` and
+`vertext-html` so the browser targets render byte-identically to the CLI, and
+unblocks three products. **Slot geometry** — retaining slot positions and the
+map back to a source offset — is the other, and every product that lets a
+reader place a caret is blocked on it: Notes, the Web IDE, the Neovim cursor
+mapping, and editable text in chaji.
 
 ## Tests
 
