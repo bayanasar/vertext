@@ -214,6 +214,17 @@ pub fn layout_text(input: &str, config: &LayoutConfig) -> Layout {
     // leading mark waits to see whether letters follow; if they do it joins
     // them, and if they do not it becomes punctuation after all.
     let mut pending_connectors = String::new();
+    // Whether those buffered connectors may still join a word that follows.
+    //
+    // A connector joins letters only when letters hold it on BOTH sides. At the
+    // start of a line, or after a space, `-n_a` is still one word — nothing has
+    // claimed the mark, so a following word may. But after an ideograph the
+    // mark has already been decided: `词尾(n)` is a Chinese sentence with a
+    // bracketed gloss, and the bracket must turn like every other bracket in
+    // that sentence. Without this the same paren lies flat next to Han and
+    // turns next to a space, which is what left a line of prose with some
+    // brackets rotated and some not.
+    let mut connectors_may_join = true;
 
     let flush_latin = |columns: &mut Vec<Column>, word: &mut String| {
         if word.is_empty() { return; }
@@ -240,6 +251,7 @@ pub fn layout_text(input: &str, config: &LayoutConfig) -> Layout {
             flush_latin(&mut columns, &mut latin_word);
             flush_mongolian(&mut columns, &mut mongolian_run);
             flush_pending(&mut columns, &mut pending_connectors);
+            connectors_may_join = true;
             columns.push(Column { slots: Vec::new() });
         } else if base.is_whitespace() {
             flush_latin(&mut columns, &mut latin_word);
@@ -251,6 +263,8 @@ pub fn layout_text(input: &str, config: &LayoutConfig) -> Layout {
             // quote. `preserve_spaces` now decides only whether the space is
             // made *visible* (code indentation), never whether it survives.
             columns.last_mut().unwrap().slots.push(Slot::Space(cluster.to_owned()));
+            // A space frees the next mark to join whatever follows it.
+            connectors_may_join = true;
         } else if is_mongolian(base) {
             flush_latin(&mut columns, &mut latin_word);
             // A connector still waiting for a word has just learned that no
@@ -259,19 +273,35 @@ pub fn layout_text(input: &str, config: &LayoutConfig) -> Layout {
             // run flushes, and `= ᠬ` would come back as `ᠬ=`. Reordering
             // the author's characters is as wrong as replacing them.
             flush_pending(&mut columns, &mut pending_connectors);
+            // Bichig is not Latin: `ᠱ(S)` is a script paired with its
+            // transliteration, so the bracket belongs to the sentence.
+            connectors_may_join = false;
             mongolian_run.push_str(cluster);
         } else if is_word_char(base) {
             flush_mongolian(&mut columns, &mut mongolian_run);
             latin_word.push_str(&std::mem::take(&mut pending_connectors));
             latin_word.push_str(cluster);
-        } else if is_word_connector(base) {
+            connectors_may_join = true;
+        } else if is_word_connector(base) && (connectors_may_join || !latin_word.is_empty()) {
             // Inside a word this mark is a letter: `min-U`, `kedU(n)`, and
             // `-n_a` are one word each. Held on either side by letters it
             // joins them; held by neither it is punctuation.
-            if latin_word.is_empty() {
-                pending_connectors.push_str(cluster);
-            } else {
+            //
+            // A mark at the tail of an open word is buffered rather than
+            // appended, because whether it belongs to that word is not yet
+            // known: the letters in `kedU(n)` claim it, but the ideograph in
+            // `(n)形式` does not, and only the next character tells them apart.
+            // Buffering defers the choice to the branch that sees it.
+            //
+            // Unless it closes a bracket the word already opened. `kedU(n)` is
+            // one citation form and its `)` has letters on the left and its own
+            // `(` inside the word -- the pair is balanced, so the mark is the
+            // word's own and needs no lookahead. Deferring it would strand the
+            // closing bracket outside the word at end of input.
+            if closes_open_bracket(base, &latin_word) {
                 latin_word.push_str(cluster);
+            } else {
+                pending_connectors.push_str(cluster);
             }
         } else {
             flush_latin(&mut columns, &mut latin_word);
@@ -286,6 +316,11 @@ pub fn layout_text(input: &str, config: &LayoutConfig) -> Layout {
             } else {
                 Slot::Neutral(cluster.to_owned())
             };
+            // An ideograph (or any other non-word character) on the left ends a
+            // word. A connector that follows it opens an aside in a sentence
+            // rather than continuing a citation form, so it must not be held
+            // back waiting for letters to join.
+            connectors_may_join = false;
             columns.last_mut().unwrap().slots.push(slot);
         }
     }
@@ -293,6 +328,26 @@ pub fn layout_text(input: &str, config: &LayoutConfig) -> Layout {
     flush_mongolian(&mut columns, &mut mongolian_run);
     flush_pending(&mut columns, &mut pending_connectors);
     Layout { columns, progression: config.progression }
+}
+
+/// Whether a closing mark completes a bracket the word already holds open.
+///
+/// `kedU(n)` is one word: its `)` matches a `(` that letters already claimed,
+/// so it joins them with no lookahead. `词尾(n)形式` never gets here for its
+/// `)` — that `(` went out as punctuation, so the word holds nothing open and
+/// the closing mark is punctuation too. Balance is what separates a citation
+/// form from an aside in a sentence.
+fn closes_open_bracket(ch: char, word: &str) -> bool {
+    let opener = match ch {
+        ')' => '(',
+        ']' => '[',
+        '}' => '{',
+        '>' => '<',
+        _ => return false,
+    };
+    let opens = word.chars().filter(|&c| c == opener).count();
+    let closes = word.chars().filter(|&c| c == ch).count();
+    opens > closes
 }
 
 /// Emits buffered connectors that never found a word to join.
@@ -426,6 +481,47 @@ mod tests {
     /// Semicolons keep company with commas and stops; arrows turn because a
     /// horizontal arrow must keep pointing "onward" when onward is downward;
     /// a vertical arrow already does and is left alone.
+    /// The punctuation contract, pinned character by character.
+    ///
+    /// This table is the agreement, not a sample of it. Every mark below was
+    /// decided deliberately and this classification has already churned more
+    /// than once — so it is written out in full and any change to it fails
+    /// here, loudly, instead of quietly altering how someone's document is
+    /// set. If a mark genuinely needs to move, move it *here first*.
+    #[test]
+    fn the_punctuation_contract() {
+        // Turns a quarter-circle. Brackets, quotes, colons, dashes, ellipses,
+        // and the ASCII operators that stand between clauses.
+        for mark in ['(', ')', '[', ']', '{', '}', '<', '>', ':', '"', '\'',
+                     '=', '|',
+                     '（', '）', '［', '］', '｛', '｝', '〈', '〉', '《', '》',
+                     '「', '」', '『', '』', '【', '】', '〔', '〕',
+                     '“', '”', '‘', '’', '：',
+                     '—', '―', '－', '…', '‥', '〜', '～', '｜', '‖',
+                     '→', '←', '↔', '⇒', '⇐', '⇔', '⟶', '⟵'] {
+            let layout = layout_text(&format!("好{mark}好"), &LayoutConfig::default());
+            assert_eq!(layout.columns[0].slots[1],
+                Slot::VerticalPunctuation(mark.to_string()),
+                "{mark:?} must turn");
+        }
+        // Sits in the corner of its em square. Clause separators travel as a
+        // family; splitting one off makes a sentence look mis-set.
+        for mark in ['，', '、', '。', '．', '｡', '､', '；', ';'] {
+            let layout = layout_text(&format!("好{mark}好"), &LayoutConfig::default());
+            assert_eq!(layout.columns[0].slots[1],
+                Slot::CornerPunctuation(mark.to_string()),
+                "{mark:?} must go to the corner");
+        }
+        // Stays upright. A turned slash reads as a backslash; `↑`/`↓` already
+        // point along the flow; `！`/`？` are upright by convention.
+        for mark in ['/', '\\', '↑', '↓', '↕', '！', '？', '!', '?', '+', '*', '%'] {
+            let layout = layout_text(&format!("好{mark}好"), &LayoutConfig::default());
+            assert_eq!(layout.columns[0].slots[1],
+                Slot::Neutral(mark.to_string()),
+                "{mark:?} must stay upright");
+        }
+    }
+
     #[test]
     fn separators_and_arrows_are_classified_by_behaviour() {
         let layout = layout_text("好；天→月↓日/水", &LayoutConfig::default());
@@ -563,6 +659,46 @@ mod tests {
             &Slot::LatinWord("gerel.net".into()),
             &Slot::LatinWord("a=b:c".into()),
         ]);
+    }
+    /// The other half of the contract above, and the boundary between them.
+    ///
+    /// A connector joins letters only when letters hold it on BOTH sides.
+    /// Pressed against an ideograph it is an ordinary bracket in a Chinese
+    /// sentence and takes its vertical form, exactly as `is_word_connector`
+    /// has always said it should ("with a space or an ideograph on the left
+    /// ... ordinary punctuation").
+    ///
+    /// This is the case a Chinese document teaching Mongolian is made of:
+    /// `不稳定词尾(n)` is a gloss inside prose, while `kedU(n)` in the glossary
+    /// beside it is one citation form. Same characters, different job, and the
+    /// character on the left is what tells them apart. Getting this wrong
+    /// leaves a sentence where some brackets turn and some lie flat.
+    #[test]
+    fn a_mark_against_an_ideograph_is_punctuation() {
+        let layout = layout_text("词尾(n)形式", &LayoutConfig::default());
+        assert_eq!(layout.columns[0].slots, vec![
+            Slot::Upright("词".into()),
+            Slot::Upright("尾".into()),
+            Slot::VerticalPunctuation("(".into()),
+            Slot::LatinWord("n".into()),
+            Slot::VerticalPunctuation(")".into()),
+            Slot::Upright("形".into()),
+            Slot::Upright("式".into()),
+        ]);
+        // A closing bracket followed by an ideograph closes the aside; it must
+        // not swallow the ideograph's side of the boundary either.
+        let mongolian = layout_text("ᠱ(S) 不", &LayoutConfig::default());
+        assert_eq!(mongolian.columns[0].slots, vec![
+            Slot::MongolianRun("ᠱ".into()),
+            Slot::VerticalPunctuation("(".into()),
+            Slot::LatinWord("S".into()),
+            Slot::VerticalPunctuation(")".into()),
+            Slot::Space(" ".into()),
+            Slot::Upright("不".into()),
+        ]);
+        // And the citation form is untouched: letters on both sides still join.
+        let citation = layout_text("kedU(n)", &LayoutConfig::default());
+        assert_eq!(citation.columns[0].slots, vec![Slot::LatinWord("kedU(n)".into())]);
     }
     /// A mark with letters on the right joins them too: `-n_a` is one word.
     /// The invariant that matters most: layout never edits the text. Every

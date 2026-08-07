@@ -129,6 +129,30 @@ check        "the declaring document is vertical" 'class="vertext'          "$wo
 check_absent "state does not leak to the next document" 'class="vertext'    "$work/proj/b-plain.html"
 check        "the untouched document keeps its text" 'never asked'          "$work/proj/b-plain.html"
 
+# A Div wrapping a code block must keep its code.
+#
+# `pandoc.utils.stringify` walks INLINES, and a CodeBlock's text is not
+# inlines -- so a Div holding code stringifies to the empty string, and the
+# encoder's catch-all branch dropped the entire block instead of flattening
+# it. Quarto wraps every executed result in `::: {.cell-output}`, so this
+# silently deleted every printed output in the book while leaving the prose
+# around it intact: the text read as if the programs had produced nothing.
+#
+# The fixture is written as the AST Quarto produces (a `.cell` Div holding
+# source and output) rather than as an executable cell, so the test needs no
+# Jupyter kernel to run.
+printf '%s\n' '---' 'title: "输出"' 'vertext: true' 'filters: [vertext]' \
+  'format: {vertext-html: default}' '---' '' \
+  '::: {.cell}' '``` {.python .cell-code}' 'total = sum(range(1, 6))' '```' '' \
+  '::: {.cell-output .cell-output-stdout}' '```' 'Sum: 15' '```' ':::' ':::' \
+  > "$work/cell.qmd"
+quarto render "$work/cell.qmd" --quiet
+cellout="$work/cell.html"
+check "executed output survives the layout"     'Sum: 15'         "$cellout"
+check "the cell source survives the layout"     'sum(range(1, 6))' "$cellout"
+# Both belong in the horizontal code column, not poured into vertical prose.
+check "wrapped code is laid out as code"        'vertext-horizontal-code' "$cellout"
+
 # Without the binary the document must stay an ordinary horizontal page.
 # Injecting the page stylesheet anyway turns the content region vertical while
 # the text is still horizontal markdown, which lays every Latin word on its
@@ -148,6 +172,66 @@ if [ -f "$nb" ]; then
   check        "the text still renders"             'English'               "$nb"
 else
   printf 'FAIL degraded-path render produced no output\n'
+  failures=$((failures + 1))
+fi
+
+# ── The VertexT theme ────────────────────────────────────────────────────
+# The theme rotates the page chrome; the filter lays out the text. The whole
+# requirement is that an existing document renders under it with NO edits, so
+# the fixture below is written for the plain filter and never mentions the
+# theme -- the theme is selected in _quarto.yml alone.
+#
+# The theme embeds its own copy of the content extension, because Quarto
+# requires an extension that uses another to embed it. That copy is generated,
+# so it can drift from the original -- and a drifted filter is a filter whose
+# PUA markers no longer match the binary's. Catch it here.
+if diff -r -q extensions/vertext extensions/vertext-theme/_extensions/vertext >/dev/null 2>&1; then
+  printf 'ok   the embedded filter matches its source\n'
+else
+  printf 'FAIL the embedded filter has drifted from extensions/vertext\n'
+  printf '     refresh it: cp -R extensions/vertext extensions/vertext-theme/_extensions/\n'
+  failures=$((failures + 1))
+fi
+
+theme=$work/theme
+mkdir -p "$theme/_extensions"
+cp -R extensions/vertext-theme "$theme/_extensions/vertext-theme"
+printf '%s\n' 'project:' '  type: website' 'website:' '  title: "教程"' \
+  '  navbar:' '    left:' '      - href: index.qmd' '        text: 首页' \
+  '  page-footer: "footer text"' 'format: vertext-theme-html' > "$theme/_quarto.yml"
+printf '%s\n' '---' 'title: "首页"' '---' '' '山川异域，风月同天。' > "$theme/index.qmd"
+printf '%s\n' '---' 'title: "ᠮᠣᠩᠭᠤᠯ"' 'vertext-progression: lr' '---' '' \
+  'ᠮᠣᠩᠭᠤᠯ ᠤᠯᠤᠰ ᠮᠠᠨᠳᠤᠨ᠎ᠠ' > "$theme/mn.qmd"
+quarto render "$theme" --quiet
+th="$theme/_site/index.html"
+check        "theme renders an unedited document"  'class="vertext'          "$th"
+check        "theme stamps the progression"        'data-vertext-progression' "$th"
+check        "the navbar survives the rotation"    'quarto-header'            "$th"
+check        "the footer survives the rotation"    'nav-footer'               "$th"
+# The chrome placement must reach the compiled bundle, not just the source.
+if grep -rq 'data-vertext-progression' "$theme/_site/site_libs/"*/*.css 2>/dev/null; then
+  printf 'ok   chrome rules reach the compiled stylesheet\n'
+else
+  printf 'FAIL chrome rules reach the compiled stylesheet\n'
+  failures=$((failures + 1))
+fi
+# The attribute is set from a script, so the rendered form is a setAttribute
+# call rather than a literal `attr="lr"` -- match what is actually emitted.
+check        "Mongolian declares the opposite edge" 'data-vertext-progression","lr"' "$theme/_site/mn.html"
+check_absent "CJK progression does not leak in"     'data-vertext-progression","rl"' "$theme/_site/mn.html"
+check        "a CJK page in the same project stays rl" 'data-vertext-progression","rl"' "$theme/_site/index.html"
+
+# The theme must hold the same line the filter does: rotating the chrome around
+# text that is still horizontal markdown is the live-site failure wearing a
+# different hat. No binary, no rotation.
+rm -rf "$theme/_site"
+( PATH="/usr/bin:/bin"; export PATH; "$quarto_bin" render "$theme" --quiet ) >/dev/null 2>&1 || true
+if [ -f "$th" ]; then
+  check_absent "theme does not rotate without the binary" 'data-vertext-progression' "$th"
+  check_absent "no strip markup without the binary (theme)" 'class="vertext"'        "$th"
+  check        "the themed text still renders"             '山川异域'                "$th"
+else
+  printf 'FAIL themed degraded-path render produced no output\n'
   failures=$((failures + 1))
 fi
 
