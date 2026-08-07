@@ -433,7 +433,11 @@ end
 -- that opts in with `vertext-page: true` gets exactly the same treatment as
 -- one that wraps its content by hand — an author writing a vertical document
 -- should not have to fence the entire thing.
-local function encode_blocks(blocks)
+--
+-- Declared before the definition because a Div recurses back into it.
+local encode_blocks
+
+function encode_blocks(blocks)
   local parts = {}
   for _, block in ipairs(blocks) do
     if block.t == "CodeBlock" then
@@ -468,6 +472,21 @@ local function encode_blocks(blocks)
       -- `Chinese`, indistinguishable from prose.
       table.insert(parts,
         heading_marker(block.level) .. content_of(block) .. MODE_PROSE)
+    elseif block.t == "Div" then
+      -- Recurse rather than stringify. A Div is a wrapper, and the blocks
+      -- inside it deserve exactly the treatment they would get at top level:
+      -- a CodeBlock in here is still code and must reach the branch above.
+      --
+      -- Stringifying instead is not merely lossy, it is silently *empty*:
+      -- `pandoc.utils.stringify` walks inlines, and a CodeBlock's text is not
+      -- inlines, so a Div wrapping code stringifies to "" and the whole block
+      -- disappears from the document. That is how Quarto's executed output
+      -- vanished -- `.cell-output` is a Div around a CodeBlock, so every
+      -- `Sum: 15` a notebook printed was dropped while the prose around it
+      -- survived, making it look like an output-specific bug. It is not
+      -- specific to `.cell-output`; any Div holding code was erased.
+      local inner = encode_blocks(block.content)
+      if inner ~= "" then table.insert(parts, inner) end
     else
       -- Everything else is still flattened to its characters: inline emphasis,
       -- links, and list structure do not survive. Documented in the README

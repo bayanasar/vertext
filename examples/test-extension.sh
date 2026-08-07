@@ -129,6 +129,30 @@ check        "the declaring document is vertical" 'class="vertext'          "$wo
 check_absent "state does not leak to the next document" 'class="vertext'    "$work/proj/b-plain.html"
 check        "the untouched document keeps its text" 'never asked'          "$work/proj/b-plain.html"
 
+# A Div wrapping a code block must keep its code.
+#
+# `pandoc.utils.stringify` walks INLINES, and a CodeBlock's text is not
+# inlines -- so a Div holding code stringifies to the empty string, and the
+# encoder's catch-all branch dropped the entire block instead of flattening
+# it. Quarto wraps every executed result in `::: {.cell-output}`, so this
+# silently deleted every printed output in the book while leaving the prose
+# around it intact: the text read as if the programs had produced nothing.
+#
+# The fixture is written as the AST Quarto produces (a `.cell` Div holding
+# source and output) rather than as an executable cell, so the test needs no
+# Jupyter kernel to run.
+printf '%s\n' '---' 'title: "输出"' 'vertext: true' 'filters: [vertext]' \
+  'format: {vertext-html: default}' '---' '' \
+  '::: {.cell}' '``` {.python .cell-code}' 'total = sum(range(1, 6))' '```' '' \
+  '::: {.cell-output .cell-output-stdout}' '```' 'Sum: 15' '```' ':::' ':::' \
+  > "$work/cell.qmd"
+quarto render "$work/cell.qmd" --quiet
+cellout="$work/cell.html"
+check "executed output survives the layout"     'Sum: 15'         "$cellout"
+check "the cell source survives the layout"     'sum(range(1, 6))' "$cellout"
+# Both belong in the horizontal code column, not poured into vertical prose.
+check "wrapped code is laid out as code"        'vertext-horizontal-code' "$cellout"
+
 # Without the binary the document must stay an ordinary horizontal page.
 # Injecting the page stylesheet anyway turns the content region vertical while
 # the text is still horizontal markdown, which lays every Latin word on its
