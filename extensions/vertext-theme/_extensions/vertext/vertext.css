@@ -1,0 +1,340 @@
+/* Strip-level styles. Page-level vertical flow is injected by vertext.lua
+   only when the document asks for it with `vertext-page: true`.
+
+   The Latin slot caps are NOT written here. The renderer publishes them as
+   `--vertext-latin-cap-prose` / `--vertext-latin-cap-code` custom properties
+   on the strip root, from the same constants that drive the hyphenation in
+   vertext-core. A cap declared in two places is a cap that will drift, and a
+   drifted cap truncates silently instead of wrapping visibly. */
+
+.vertext {
+  display: flex;
+  flex-direction: row-reverse;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: .55rem;
+  overflow-x: auto;
+  min-block-size: 20rem;
+  padding: 1rem;
+  border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+  font-size: 18px;
+}
+/* Progression is data: the renderer stamps it on the root and the stylesheet
+   follows. `left` means columns advance leftward (vertical-rl, CJK); `right`
+   means they advance rightward (vertical-lr, traditional Mongolian). */
+.vertext[data-column-advance="left"] { flex-direction: row-reverse; }
+.vertext[data-column-advance="right"] { flex-direction: row; }
+
+.vertext-page {
+  inline-size: 100%;
+  min-block-size: calc(100vh - 4rem);
+}
+/* A column is the browser's own vertical writing mode, not a stack of boxes.
+   That distinction is not cosmetic: a flex column blockifies every slot, and
+   browsers put a line break between block boxes when serialising a selection.
+   Copying a paragraph then yields
+       蒙\n古\n语\n教\n程
+   one character per line — text that looks right on screen and is useless the
+   moment anyone quotes it. Inline spans inside a real writing mode copy as
+   continuous text, wrap into new columns natively, and select the way a
+   reader expects. The slot spans still decide per-glyph orientation; the
+   browser decides flow, because flow is what it is good at.
+   Axis note: under `vertical-rl` the inline axis is vertical, so `height` is
+   the line length — that is what makes a column wrap into the next one. */
+.vertext-column {
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  flex: 0 0 auto;
+  block-size: auto;
+  height: var(--vertext-column-height, 34em);
+  line-height: 1.05;
+}
+.vertext[data-column-advance="right"] .vertext-column { writing-mode: vertical-lr; }
+/* A cell holds one short run and must never wrap. Under `vertical-rl` the
+   height IS the line length, so `auto` lets the table's row height clamp it
+   and a three-character heading breaks into three one-character columns —
+   which then advance right-to-left and read 文古蒙. `max-content` gives the
+   line all the room it needs. */
+.vertext-column-cell { height: max-content; max-height: none; }
+/* Upright glyphs need no box at all: the column's `text-orientation: upright`
+   already stands them up, and leaving them as bare inline text is what keeps
+   a selection continuous. */
+.vertext-upright, .vertext-neutral { font-size: 18px; }
+
+/* Centre every slot across the width of its column.
+   In a vertical writing mode the block axis is horizontal, so what centres a
+   glyph side-to-side is `vertical-align`, not `text-align` — `text-align`
+   works along the inline axis, which here runs down the page. A column is
+   only as wide as its widest slot, so one long Latin word widens the whole
+   column and everything narrower then hangs off one edge unless it is
+   explicitly centred. */
+.vertext-upright,
+.vertext-neutral,
+.vertext-latin,
+.vertext-mongolian,
+.vertext-vform,
+.vertext-corner,
+.vertext-space { vertical-align: middle; }
+
+/* Headings. The level sets one scale factor and every glyph class multiplies
+   the base size by it, so adding a level means adding one line here and the
+   upright/Latin/neutral sizes stay in step by construction. */
+.vertext-column-heading { --vertext-heading-scale: 1; font-weight: 600; }
+.vertext-column-h1 { --vertext-heading-scale: 1.75; }
+.vertext-column-h2 { --vertext-heading-scale: 1.4; }
+.vertext-column-h3 { --vertext-heading-scale: 1.2; }
+.vertext-column-h4 { --vertext-heading-scale: 1.1; }
+.vertext-column-h5, .vertext-column-h6 { --vertext-heading-scale: 1; }
+.vertext-column-heading .vertext-upright,
+.vertext-column-heading .vertext-neutral,
+.vertext-column-heading .vertext-vform,
+.vertext-column-heading .vertext-corner {
+  font-size: calc(18px * var(--vertext-heading-scale));
+}
+.vertext-column-heading .vertext-latin,
+.vertext-column-heading .vertext-mongolian {
+  font-size: calc(14px * var(--vertext-heading-scale));
+}
+/* A heading opens a section, so it takes air on the side the columns advance
+   from and a rule marking the section's start. */
+.vertext-column-heading {
+  padding-inline-start: .5rem;
+  border-inline-start: 2px solid color-mix(in srgb, currentColor 35%, transparent);
+}
+.vertext[data-column-advance="left"] .vertext-column-heading {
+  margin-inline-start: .5rem;
+}
+/* A space is a real space character, never a stand-in glyph. Code
+   indentation is made visible with a faint rule instead of by substituting a
+   middle dot, so what a reader copies is what the writer wrote. */
+.vertext-space {
+  /* `pre` so the browser keeps the literal space: HTML collapses a lone
+     space between inline elements, which would silently drop it from both
+     the rendering and the clipboard. Using `&nbsp;` instead would "fix" the
+     display by writing U+00A0 into the document — a different character than
+     the author typed, which is the substitution trap again.
+     The advance is set explicitly rather than left to the font: a space
+     inherits the full em of an 18px column, which opens a gap wider than the
+     characters around it, and the gap then varies with whatever font each
+     run happens to use. Half an em is the usual measure for an inter-word
+     space, and fixing it here keeps every space in the document identical. */
+  white-space: pre;
+  display: inline-block;
+  /* Physical, deliberately: `writing-mode` inherits into this span, so the
+     logical properties would set the horizontal extent instead of the gap. */
+  height: .5em;
+  width: 1em;
+  font-size: 18px;
+  overflow: hidden;
+}
+.vertext-column-code .vertext-space,
+.vertext-code .vertext-space {
+  background: color-mix(in srgb, currentColor 12%, transparent);
+  border-radius: 1px;
+}
+/* Punctuation in a vertical column.
+   These rules change only how a mark LOOKS. The character in the markup is
+   always the one the author typed — never a U+FE10–FE4F presentation form.
+   Substituting the codepoint would render correctly and quietly ruin the
+   document: copy-paste, find-in-page, and screen readers would all hand back
+   text nobody wrote. Appearance is ours to decide; content is not.
+
+   `transform` is the right tool precisely because it is view-only — it moves
+   pixels and leaves the DOM, the selection, and the accessibility tree alone.
+   Rotating one bracket is not the same sin as rotating a run of text: for a
+   bracket, the quarter-turn IS its vertical form. */
+.vertext-vform {
+  display: inline-block;
+  font-size: 18px;
+  transform: rotate(90deg);
+}
+/* Stops and commas do not turn — they sit in the upper-right corner of their
+   em square. The box keeps its size so the column rhythm is unchanged; only
+   the glyph moves. */
+.vertext-corner {
+  display: inline-block;
+  font-size: 18px;
+  transform: translate(.32em, -.34em);
+}
+/* A Latin word reads horizontally inside the vertical flow. `inline-block`
+   rather than `block`: an inline-level box keeps the selection continuous. */
+.vertext-latin {
+  display: inline-block;
+  writing-mode: horizontal-tb;
+  vertical-align: middle;
+  inline-size: max-content;
+  max-inline-size: var(--vertext-latin-cap-prose, 12ch);
+  text-align: center;
+  white-space: nowrap;
+  font-size: 14px;
+  line-height: 1;
+}
+.vertext-code .vertext-latin,
+.vertext-column-code .vertext-latin {
+  max-inline-size: var(--vertext-latin-cap-code, 24ch);
+}
+/* A Mongolian run is one joined word and must be handed to the font whole.
+   Two things break it inside a CJK column:
+   `text-orientation: upright` is inherited from the column and stands every
+   letter up on its own, destroying the joining that is the entire script;
+   and an inline-block in an orthogonal flow has no definite line length, so
+   the run wraps after each letter and the word collapses into a smudge.
+   `mixed` restores the joining, and `height: max-content` gives the line the
+   room the word needs — under `vertical-lr` the height IS the line length. */
+.vertext-mongolian {
+  display: inline-block;
+  writing-mode: vertical-lr;
+  text-orientation: mixed;
+  height: max-content;
+  max-height: none;
+  font-feature-settings: "vert" 1, "vrt2" 1;
+  font-family: "Noto Sans Mongolian", "Mongolian Baiti", serif;
+  font-size: 15px;
+  line-height: 1;
+}
+/* ── Horizontal blocks ───────────────────────────────────────────────────
+   Latin-majority prose and program source are set horizontally: an
+   orthogonal island in the vertical flow. `horizontal-tb` inside the strip's
+   flex row makes the block size to its own measure, and the surrounding
+   columns continue past it in the document's progression.
+
+   The measure comes from `--vertext-wrap`, published by the renderer from
+   `HorizontalKind::default_wrap` — 66ch for prose (the long-settled optimum
+   of 45–75) and 80ch for code (the narrower of Google's and Mozilla's C++
+   limits). Never write the number here. */
+/* Consecutive horizontal blocks share one slot and stack downward: a heading
+   sits on top and its paragraph runs beneath it, the way the two relate on a
+   page. Each block still shrink-wraps, so the stack is as wide as its widest
+   member and no wider. */
+.vertext-hstack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  flex: 0 0 auto;
+  align-self: flex-start;
+  writing-mode: horizontal-tb;
+  gap: .25rem;
+  margin-inline: .75rem;
+}
+.vertext-hstack > .vertext-horizontal { margin-inline: 0; }
+.vertext-hstack > .vertext-table { margin-inline: 0; margin-block: .35rem; }
+/* Only the first block in a stack takes the leading indent; the ones beneath
+   follow it directly. */
+.vertext-hstack > .vertext-horizontal ~ .vertext-horizontal { padding-block-start: 0; }
+
+.vertext-horizontal {
+  writing-mode: horizontal-tb;
+  flex: 0 0 auto;
+  /* The measure is a ceiling, not a width. A one-word heading must shrink to
+     its word; only a paragraph long enough to need wrapping reaches the full
+     measure. Setting `inline-size` to the measure instead would give every
+     heading a 66-character-wide empty box. */
+  inline-size: max-content;
+  max-inline-size: var(--vertext-wrap, 66ch);
+  align-self: flex-start;
+  /* The indent at the block's start, matching a markdown line indent. */
+  padding-block-start: 1.5em;
+  /* Horizontal blocks sit beside vertical columns whose gap is set on the
+     strip; without their own breathing room a heading and the block after it
+     read as one word. */
+  margin-inline: .75rem;
+  font-size: 15px;
+  line-height: 1.5;
+}
+.vertext-horizontal-prose { text-align: start; hyphens: auto; }
+.vertext-horizontal-code { max-inline-size: var(--vertext-wrap, 80ch); }
+.vertext-horizontal-code pre {
+  margin: 0;
+  padding: .75em 1em;
+  overflow-x: auto;
+  background: #161b22;
+  color: #e6edf3;
+  border-radius: 4px;
+  font-family: ui-monospace, "Cascadia Code", "Fira Code", monospace;
+  font-size: 13px;
+  line-height: 1.45;
+  tab-size: 4;
+}
+.vertext-horizontal-heading { font-weight: 600; padding-block-start: .5em; }
+.vertext-horizontal-h1 { font-size: 1.75em; line-height: 1.15; }
+.vertext-horizontal-h2 { font-size: 1.4em; line-height: 1.2; }
+.vertext-horizontal-h3 { font-size: 1.2em; }
+.vertext-horizontal-h4, .vertext-horizontal-h5, .vertext-horizontal-h6 { font-size: 1.05em; }
+
+/* ── Tables ──────────────────────────────────────────────────────────────
+   `writing-mode: vertical-rl` on the table transposes it natively: each
+   `<tr>` becomes a visual column, its cells stacking top-to-bottom, and rows
+   advance right-to-left with the surrounding text. The markup stays a real
+   table — the transposition is presentational, so screen readers and any
+   non-CSS fallback still get rows and cells in document order. */
+.vertext-table {
+  writing-mode: vertical-rl;
+  border-collapse: collapse;
+  flex: 0 0 auto;
+  align-self: flex-start;
+  block-size: auto;
+  margin-inline: .5rem;
+  font-size: 16px;
+}
+.vertext[data-column-advance="right"] .vertext-table { writing-mode: vertical-lr; }
+/* The table's `vertical-rl` does the row-to-column transposition, but flex
+   directions are writing-mode relative — `flex-direction: column` inside it
+   would run horizontally and lay 蒙古文 out as 文古蒙. The cell resets to
+   horizontal-tb so the slot columns inside behave exactly as they do in the
+   main strip; per-glyph orientation is the slot classes' job, not the
+   container's. */
+.vertext-cell {
+  writing-mode: horizontal-tb;
+  border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+  padding: .4em .5em;
+  vertical-align: top;
+  text-align: start;
+  min-inline-size: 2.5em;
+}
+.vertext-row-header .vertext-cell {
+  font-weight: 600;
+  background: color-mix(in srgb, currentColor 8%, transparent);
+}
+/* A cell holds an ordinary slot column and inherits its writing mode; it must
+   NOT be turned back into a flex column. Flex would blockify every slot,
+   which both reverses their order inside the cell's vertical flow and puts a
+   newline between every character on copy — the two bugs this file already
+   fixed once. */
+.vertext-column-cell { text-align: start; }
+/* Cells never hyphenate, so the Latin cap must not clamp them either. */
+.vertext-cell .vertext-latin { max-inline-size: none; }
+
+.vertext-column:empty {
+  min-block-size: .55em;
+  inline-size: 0;
+  flex: 0 0 .55em;
+}
+.vertext-code {
+  background: #161b22;
+  color: #e6edf3;
+  font-family: ui-monospace, "Cascadia Code", "Fira Code", monospace;
+}
+
+/* A list item is indented from the head of its column, the way a list is
+   indented from the start of a line.
+   `padding-inline-start` is the correct axis: under `vertical-rl` the inline
+   axis runs down the page, so this is the top of the column. `block-start`
+   would have padded the side and left the items flush with the text above,
+   which is what removed the indentation. */
+.vertext-column-list { padding-inline-start: 1.1em; }
+/* The bullet is drawn only for unordered items: a numbered item already
+   carries its own "1." in the text, and giving it a bullet as well leaves a
+   stray mark sitting beside every number.
+   It is pseudo-content deliberately — a marker is presentation, and browsers
+   leave list markers out of the clipboard. Putting "・" in the text would
+   both invent a character the author never typed and paste it back out. */
+.vertext-column-list-bullet::before {
+  content: "・";
+  color: color-mix(in srgb, currentColor 55%, transparent);
+  font-size: 14px;
+}
+.vertext-horizontal-list { padding-inline-start: 1.1em; text-indent: -1.1em; }
+.vertext-horizontal-list-bullet::before {
+  content: "・";
+  color: color-mix(in srgb, currentColor 55%, transparent);
+}

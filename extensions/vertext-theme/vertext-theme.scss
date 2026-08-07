@@ -1,0 +1,256 @@
+/*-- scss:defaults --*/
+
+// Edge thicknesses. Named by their ROLE, not their side, because the sides
+// swap with the progression and the role does not.
+$vertext-banner-size:  3.25rem !default;  // the start edge (right under rl)
+$vertext-toc-size:     2.75rem !default;  // the top edge
+$vertext-status-size:  1.75rem !default;  // the end edge (left under rl)
+
+/*-- scss:rules --*/
+
+/* VertexT — the page rotated a quarter-turn.
+ *
+ * AXIS WARNING, because it is the easiest thing in CSS to get backwards and it
+ * caused six separate bugs in the content stylesheet: under `vertical-rl` the
+ * BLOCK axis is horizontal (right-to-left) and the INLINE axis is vertical. So
+ * `block-size` means width and `inline-size` means height. Every rule here is
+ * written with PHYSICAL properties on purpose -- this file positions chrome
+ * against the four edges of the viewport, and physical sides are what "edge"
+ * actually means. Logical properties would silently follow the writing mode
+ * and put the banner somewhere else.
+ *
+ * Placement is by fixed positioning against the viewport, not by reparenting
+ * nodes. Quarto's navbar and sidebar carry collapse state, search, and
+ * keyboard access; moving them in the DOM breaks all of it. The theme decides
+ * where they sit and leaves what they are alone.
+ */
+
+/* The body no longer scrolls: each edge is pinned and the content region owns
+   the single scroll axis. Without this the page gets a second, vertical
+   scrollbar that does nothing -- the "trapped in a frame" feeling where the
+   wheel drives the wrong scroller. */
+body {
+  margin: 0;
+  overflow: hidden;
+}
+
+/* ── The banner: top → right ─────────────────────────────────────────────
+   Quarto ships this as `.fixed-top`, which pins it across the top with
+   `left: 0; right: 0; top: 0`. Every one of those has to be overridden, not
+   just the ones that look wrong: leaving `left: 0` in place stretches the
+   banner across the whole viewport behind everything else. */
+#quarto-header {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  left: auto;
+  width: $vertext-banner-size;
+  height: auto;
+  z-index: 1030;
+  /* The banner's own text turns with it. This is the one place a rotation of a
+     whole run is correct: the banner IS rotated, so its text is not being
+     misrepresented -- it is being read along the edge it now occupies. */
+  writing-mode: vertical-rl;
+  overflow: hidden;
+}
+/* Bootstrap's navbar is a horizontal flex row. Inside a vertical writing mode
+   its flex axis follows suit, so the items stack along the edge on their own;
+   what does NOT follow is the container width, which still tries to span the
+   old horizontal measure. */
+#quarto-header .navbar {
+  height: 100%;
+  width: 100%;
+  padding: .75rem .25rem;
+}
+#quarto-header .navbar-container,
+#quarto-header .navbar-collapse {
+  height: 100%;
+  width: 100%;
+  flex-direction: column;
+  align-items: center;
+}
+#quarto-header .navbar-nav {
+  flex-direction: column;
+  align-items: center;
+  gap: .75rem;
+}
+
+/* ── The table of contents: left → top ───────────────────────────────────
+   The TOC becomes a horizontal strip, which is a different shape from the tall
+   column it was: it must scroll along its own axis rather than wrap into
+   several rows and eat the page. `toc-depth: 2` in the extension keeps it
+   shallow for the same reason. */
+#quarto-margin-sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: $vertext-banner-size;
+  bottom: auto;
+  width: auto;
+  height: $vertext-toc-size;
+  max-height: $vertext-toc-size;
+  z-index: 1020;
+  overflow-x: auto;
+  overflow-y: hidden;
+  /* Back to horizontal: the strip runs along the top edge, so its text reads
+     left-to-right like any horizontal rule of navigation. */
+  writing-mode: horizontal-tb;
+  padding: 0 .75rem;
+  border-bottom: 1px solid rgba(128, 128, 128, .25);
+}
+#quarto-margin-sidebar nav[role="doc-toc"] > ul,
+#quarto-margin-sidebar .toc-actions,
+#quarto-margin-sidebar > nav > ul {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  list-style: none;
+  white-space: nowrap;
+}
+/* A nested TOC level cannot become a second row -- there is no vertical room.
+   Depth is flattened into the same strip and marked by weight instead. */
+#quarto-margin-sidebar ul ul {
+  display: flex;
+  flex-direction: row;
+  gap: .75rem;
+  margin: 0;
+  padding-left: .75rem;
+  list-style: none;
+  opacity: .7;
+}
+
+/* ── The status bar: bottom → left ───────────────────────────────────────
+   The end edge. Its text turns the same way the banner's does, and for the
+   same reason. */
+.footer, .nav-footer {
+  position: fixed;
+  left: 0;
+  top: $vertext-toc-size;
+  bottom: 0;
+  right: auto;
+  width: $vertext-status-size;
+  height: auto;
+  z-index: 1020;
+  writing-mode: vertical-rl;
+  /* Read bottom-to-top along the left edge, which is how a spine reads. */
+  transform: rotate(180deg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: .5rem 0;
+  margin: 0;
+  font-size: .8rem;
+  border-right: 1px solid rgba(128, 128, 128, .25);
+  overflow: hidden;
+}
+.nav-footer-left, .nav-footer-center, .nav-footer-right {
+  text-align: center;
+  padding: 0;
+}
+
+/* ── The content region: the remaining rectangle ─────────────────────────
+   Inset from all three occupied edges. The content filter has already made
+   this region a vertical surface that scrolls horizontally; the theme only
+   decides how much room it gets. */
+#quarto-content {
+  position: fixed;
+  top: $vertext-toc-size;
+  right: $vertext-banner-size;
+  left: $vertext-status-size;
+  bottom: 0;
+  width: auto;
+  height: auto;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+/* Quarto's article grid reserves margin columns for a sidebar and a TOC. In a
+   horizontally scrolling document those reservations are dead space *in the
+   scroll axis* -- every pixel is a column of text the reader must scroll past
+   instead of read. Collapsed to a single full-bleed column. */
+#quarto-content > *,
+.page-columns {
+  display: block !important;
+  grid-template-columns: none !important;
+  max-width: none;
+}
+body main.content,
+body #quarto-document-content {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: .5rem 1rem;
+  /* The content filter sets the writing mode and the scroll axis here. Height
+     is the one thing the theme owns, because only the theme knows how much of
+     the viewport the chrome has taken. */
+  height: 100%;
+  max-height: 100%;
+  box-sizing: border-box;
+}
+
+/* The floating sidebar has no place in a rotated page: it slides in from the
+   left, which is now the status edge. Navigation lives in the banner. */
+#quarto-sidebar,
+#quarto-sidebar-glass {
+  display: none;
+}
+
+/* ── Mongolian: the block axis reverses, so the two edges swap ───────────
+   Banner to the left, status bar to the right. Getting this backwards does not
+   look wrong -- it puts the start of the document at the end of the page. */
+html[data-vertext-progression="lr"] {
+  #quarto-header {
+    right: auto;
+    left: 0;
+    writing-mode: vertical-lr;
+  }
+  .footer, .nav-footer {
+    left: auto;
+    right: 0;
+    writing-mode: vertical-lr;
+    transform: none;
+    border-right: 0;
+    border-left: 1px solid rgba(128, 128, 128, .25);
+  }
+  #quarto-margin-sidebar {
+    left: $vertext-banner-size;
+    right: $vertext-status-size;
+  }
+  #quarto-content {
+    right: $vertext-status-size;
+    left: $vertext-banner-size;
+  }
+}
+
+/* ── Small viewports ─────────────────────────────────────────────────────
+   Three occupied edges leave too little for a phone. The honest answer is to
+   give the text the screen: the banner keeps its edge, the rest stand down.
+   Stated as a documented fallback rather than left to chance. */
+@media (max-width: 40rem) {
+  #quarto-margin-sidebar { display: none; }
+  .footer, .nav-footer { display: none; }
+  #quarto-content {
+    top: 0;
+    left: 0;
+    bottom: 0;
+  }
+  html[data-vertext-progression="lr"] #quarto-content {
+    right: 0;
+  }
+}
+
+/* Print: the chrome is screen furniture and does not belong on paper. */
+@media print {
+  #quarto-header, #quarto-margin-sidebar, .footer, .nav-footer { display: none; }
+  body { overflow: visible; }
+  #quarto-content {
+    position: static;
+    inset: auto;
+    overflow: visible;
+  }
+}

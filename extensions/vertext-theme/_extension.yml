@@ -1,0 +1,42 @@
+title: VertexT
+author: Vertext contributors
+version: 0.1.0
+quarto-required: ">=1.2.0"
+contributes:
+  formats:
+    html:
+      # The content filter runs first, then the theme's own.
+      #
+      # `vertext` here resolves to the EMBEDDED copy in this extension's own
+      # `_extensions/` directory. Quarto requires that: an extension that uses
+      # another extension must embed it (`quarto install --embedded`), and a
+      # relative path out of this directory fails the render outright with
+      # "Failed to resolve referenced filter".
+      #
+      # That embedded copy is GENERATED, never edited by hand. Refresh it with
+      #
+      #     cp -R extensions/vertext extensions/vertext-theme/_extensions/
+      #
+      # after any change to the filter. `test-extension.sh` diffs the two and
+      # fails if they have drifted, because a hand-maintained second copy of
+      # the Lua is a second thing to keep in step with the PUA wire protocol in
+      # `vertext-html` -- exactly the drift the protocol test exists to catch.
+      filters:
+        - vertext
+        - vertext-theme.lua
+      theme:
+        - vertext-theme.scss
+      # Choosing the theme IS the opt-in. The content filter lays out a whole
+      # document only when it sees `vertext: true`, and requiring every page to
+      # carry that in its own frontmatter would be precisely the per-document
+      # edit this theme exists to avoid. Setting it as a format default means an
+      # unmodified corpus renders vertically the moment the theme is selected.
+      #
+      # `vertext-page` is deliberately NOT set: that mode takes over the whole
+      # body and is only right for a standalone document with no chrome. This
+      # theme has chrome, and places it.
+      vertext: true
+      toc: true
+      # The TOC moves to the top edge, where it is a horizontal strip rather
+      # than a tall column, so it must stay shallow.
+      toc-depth: 2
