@@ -368,16 +368,51 @@ fn flush_pending(columns: &mut Vec<Column>, pending: &mut String) {
 
 /// Splits on grapheme-cluster boundaries so a hard hyphen can never land
 /// between a base letter and its combining mark.
+///
+/// A hyphen the author already typed is a break opportunity, and taking it
+/// costs nothing: the pieces still concatenate to the source, so a word broken
+/// there is not edited at all. Counting to the cap is the fallback for a word
+/// that offers no such break — `use-after-free` must not come back as
+/// `use-after-f‐` / `ree`, which reads as a different term.
+///
+/// Only hyphens qualify. The other word connectors in `is_word_connector`
+/// *join* — splitting `gerel.net` at the dot or `kedU(n)` at the paren cuts a
+/// citation form in half.
 fn split_latin_word(word: &str, limit: usize) -> Vec<String> {
     let limit = limit.max(2);
     let clusters: Vec<&str> = word.graphemes(true).collect();
     if clusters.len() <= limit { return vec![word.to_owned()]; }
-    let payload = limit - 1;
-    clusters.chunks(payload).enumerate().map(|(i, chunk)| {
-        let mut piece: String = chunk.concat();
-        if (i + 1) * payload < clusters.len() { piece.push('‐'); }
-        piece
-    }).collect()
+
+    // The rightmost hyphen that still fits, so the piece before it is as full
+    // as it can be. The break falls *after* the hyphen — that is where a
+    // hyphenated word is allowed to break, and it leaves the mark on the line
+    // that earned it.
+    let hyphen = clusters[..limit].iter()
+        .rposition(|cluster| matches!(*cluster, "-" | "\u{2010}"))
+        .map(|index| index + 1)
+        // A hyphen in the last position would leave an empty remainder; there
+        // is nothing after it to move to the next piece.
+        .filter(|split| *split < clusters.len());
+
+    match hyphen {
+        Some(split) => {
+            let mut pieces = vec![clusters[..split].concat()];
+            pieces.extend(split_latin_word(&clusters[split..].concat(), limit));
+            pieces
+        }
+        None => {
+            // No break of its own: count, and reserve one slot for the mark
+            // that says the break was ours.
+            let payload = limit - 1;
+            let mut pieces = vec![{
+                let mut piece: String = clusters[..payload].concat();
+                piece.push('‐');
+                piece
+            }];
+            pieces.extend(split_latin_word(&clusters[payload..].concat(), limit));
+            pieces
+        }
+    }
 }
 
 fn is_mongolian(ch: char) -> bool { matches!(ch as u32, 0x1800..=0x18AF | 0x11660..=0x1167F) }
@@ -700,6 +735,70 @@ mod tests {
         let citation = layout_text("kedU(n)", &LayoutConfig::default());
         assert_eq!(citation.columns[0].slots, vec![Slot::LatinWord("kedU(n)".into())]);
     }
+    /// A long word breaks at a hyphen it already has, rather than counting to
+    /// the cap and inserting one.
+    ///
+    /// `use-after-free` came back as `use-after-f‐` / `ree`, which reads as a
+    /// different term. A hyphen is already a sanctioned break point, so
+    /// breaking there needs no inserted mark at all — and a break that adds
+    /// nothing leaves the text identical to the source.
+    #[test]
+    fn a_long_word_breaks_at_the_hyphen_it_already_has() {
+        // 15 clusters against the default cap of 12.
+        assert_eq!(split_latin_word("use-after-free", 12),
+            vec!["use-after-".to_owned(), "free".to_owned()]);
+        // Nothing was inserted: the pieces rebuild the source exactly.
+        assert_eq!(split_latin_word("use-after-free", 12).concat(), "use-after-free");
+
+        // The rightmost hyphen that still fits wins, so each piece is as full
+        // as it can be. `-in-` would fit too, but leaves a longer remainder.
+        assert_eq!(split_latin_word("copy-on-write-semantics", 14),
+            vec!["copy-on-write-".to_owned(), "semantics".to_owned()]);
+
+        // A remainder that still overflows keeps breaking, and the tail falls
+        // back to counting when it holds no hyphen of its own.
+        assert_eq!(split_latin_word("well-known-supercalifragilistic", 12),
+            vec!["well-known-".to_owned(), "supercalifr‐".to_owned(), "agilistic".to_owned()]);
+
+        // A hyphen too far right to help is no break opportunity: the prefix
+        // before it still exceeds the cap, so counting takes over.
+        assert_eq!(split_latin_word("supercalifragilistic-x", 12),
+            vec!["supercalifr‐".to_owned(), "agilistic-x".to_owned()]);
+
+        // A trailing hyphen must not produce an empty piece.
+        assert_eq!(split_latin_word("autoconfiguration-", 12),
+            vec!["autoconfigu‐".to_owned(), "ration-".to_owned()]);
+
+        // Only hyphens are break opportunities. The other word connectors join
+        // — splitting `gerel.net` at the dot, or `kedU(n)` at the paren, breaks
+        // a citation form in half.
+        assert_eq!(split_latin_word("gerel.net.example.org", 12),
+            vec!["gerel.net.e‐".to_owned(), "xample.org".to_owned()]);
+
+        // Short enough to leave alone, hyphen or not.
+        assert_eq!(split_latin_word("use-after", 12), vec!["use-after".to_owned()]);
+    }
+
+    /// A hyphen break survives the full layout path, not just the splitter,
+    /// and leaves the source character-for-character intact.
+    #[test]
+    fn breaking_at_a_hyphen_alters_no_character() {
+        let source = "在 use-after-free 中";
+        let layout = layout_text(source, &LayoutConfig::default());
+        let mut rebuilt = String::new();
+        for column in &layout.columns {
+            for slot in &column.slots {
+                match slot {
+                    Slot::Upright(s) | Slot::LatinWord(s) | Slot::MongolianRun(s)
+                    | Slot::VerticalPunctuation(s) | Slot::CornerPunctuation(s)
+                    | Slot::Neutral(s) | Slot::Space(s) => rebuilt.push_str(s),
+                }
+            }
+        }
+        assert_eq!(rebuilt, source, "a hyphen break must insert nothing");
+        assert!(!rebuilt.contains('\u{2010}'), "no break mark was needed here");
+    }
+
     /// A mark with letters on the right joins them too: `-n_a` is one word.
     /// The invariant that matters most: layout never edits the text. Every
     /// slot concatenated back together, in order, must equal the source with
