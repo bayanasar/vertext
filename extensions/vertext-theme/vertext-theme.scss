@@ -54,26 +54,95 @@ body {
   writing-mode: vertical-rl;
   overflow: hidden;
 }
-/* Bootstrap's navbar is a horizontal flex row. Inside a vertical writing mode
-   its flex axis follows suit, so the items stack along the edge on their own;
-   what does NOT follow is the container width, which still tries to span the
-   old horizontal measure. */
-#quarto-header .navbar {
-  height: 100%;
-  width: 100%;
-  padding: .75rem .25rem;
-}
+/* Bootstrap's navbar is a horizontal flex row, and the whole banner now sits
+   in `vertical-rl`. The correction that makes the rest of this section make
+   sense, and the one that was wrong before: in a vertical writing mode the
+   flex `row` axis runs DOWN the banner and `column` runs ACROSS its narrow
+   width. So `row` — Bootstrap's own default — is already the axis that stacks
+   items along the edge, and forcing `column` piles every child into the same
+   67px band, overlapping each other, with the brand painting over the links.
+   That is what made every control in the banner unclickable while still
+   looking correct: `overflow: hidden` clipped the paint, and hit-testing goes
+   by boxes, not paint.
+
+   Sizing stays PHYSICAL, per this file's convention: `width` is across the
+   banner and `height` along it, whatever the writing mode does to the logical
+   names. Getting that pair backwards is what let a nav list 105px wide sit
+   inside a 21px parent and hang out over the text. */
+#quarto-header .navbar,
 #quarto-header .navbar-container,
 #quarto-header .navbar-collapse {
+  flex-direction: row;
   height: 100%;
   width: 100%;
-  flex-direction: column;
+  min-width: 0;
+  max-width: 100%;
+}
+#quarto-header .navbar { padding: .75rem .25rem; }
+/* The container distributes the banner's length: brand at the start, links
+   after it, tools at the far end. `space-between` is what gives each child its
+   own stretch instead of letting `flex: 1 1 auto` on the collapse swallow the
+   whole banner and stack its siblings on top of it. */
+#quarto-header .navbar-container {
+  justify-content: flex-start;
+  align-items: stretch;
+  gap: .5rem;
+}
+/* `align-items: stretch` rather than `center`: centred, the collapse shrank to
+   its own 21px content measure while the banner offered 55px, and the labels
+   then hung out of it over the text. Stretched, it takes the width it was
+   given and the labels sit inside. */
+#quarto-header .navbar-collapse {
+  flex: 1 1 auto;
+  justify-content: flex-start;
+  align-items: stretch;
+}
+/* The brand keeps its own stretch and never grows into the links' space. */
+#quarto-header .navbar-brand-container,
+#quarto-header .navbar-brand {
+  flex: 0 0 auto;
+  width: auto;
+  max-width: 100%;
+  min-width: 0;
+  display: flex;
   align-items: center;
 }
 #quarto-header .navbar-nav {
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   gap: .75rem;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+}
+/* Each link is a flex item whose automatic minimum is its own text, so a
+   constrained list still overflows unless its children may shrink. Overflow is
+   clipped rather than allowed to escape, matching the banner itself. */
+#quarto-header .navbar-nav .nav-item,
+#quarto-header .navbar-nav .nav-link,
+#quarto-header .quarto-navbar-tools {
+  flex: 0 0 auto;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+/* Bootstrap's link padding is written for a horizontal bar: its left/right
+   half lands ACROSS the rotated banner and pushed each item ~20px wider than
+   the space it had, which is the last of the overhang out over the text. The
+   padding is wanted ALONG the banner instead, which is `top`/`bottom` here. */
+#quarto-header .navbar-nav .nav-link {
+  padding-left: 0;
+  padding-right: 0;
+  padding-top: .5rem;
+  padding-bottom: .5rem;
+}
+/* The tools sit at the far end of the banner rather than wherever the flow
+   leaves them — measured at zero size and floating over the text before this. */
+#quarto-header .quarto-navbar-tools {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
 }
 
 /* ── The table of contents: left → top ───────────────────────────────────
@@ -174,7 +243,13 @@ body {
    horizontally scrolling document those reservations are dead space *in the
    scroll axis* -- every pixel is a column of text the reader must scroll past
    instead of read. Collapsed to a single full-bleed column. */
-#quarto-content > *,
+/* `:not(script):not(style):not(template)` is load-bearing, not tidiness. The
+   universal child selector with `!important` also hit `#quarto-html-after-body`
+   — a `<script>` that Quarto emits inside the content region — and overrode the
+   browser's own `script { display: none }`, dumping its JavaScript source onto
+   the page as visible text below the columns. That is the "trailing code dump"
+   the site was showing, and it is this rule, not the content filter. */
+#quarto-content > *:not(script):not(style):not(template),
 .page-columns {
   display: block !important;
   grid-template-columns: none !important;
