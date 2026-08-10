@@ -223,6 +223,110 @@ body {
   padding: 0;
 }
 
+/* ── Books: the chapter sidebar takes the banner edge ────────────────────
+   A `project: type: book` has no navbar. It carries its chapter list in
+   `#quarto-sidebar` instead, which the rules above never mention -- so a book
+   rendered under this theme got an EMPTY banner pinned to the right edge while
+   its chapter navigation stayed in the ordinary flow and was squashed to 14px
+   at the bottom of the page. Measured: `#quarto-sidebar` at y=799, h=14, while
+   `#quarto-header` held 55x813 of nothing. The book was unnavigable.
+
+   So on a book the chapter sidebar IS the banner: it takes that edge, and the
+   empty header gives it up.
+
+   Finding a scope that actually identifies a book took three tries, and the
+   two failures are worth recording because both look like the rules simply
+   not loading:
+     - `body.quarto-book` -- no such class exists. Matched nothing, silently.
+     - `body.nav-sidebar:not(.nav-fixed)` -- right for a bare book, wrong the
+       moment one is embedded in a site. A website with a docked sidebar is
+       also `nav-sidebar`, and the docs pipeline INJECTS a navbar into this
+       book before rendering it, which makes Quarto stamp `nav-fixed` on the
+       body as well. So a book published as part of the site was excluded by
+       its own scope and lost its chapter navigation again.
+   `.chapter-title` is emitted by Quarto for book chapter entries and by
+   nothing else -- measured, 7 occurrences in the book against 0 on every page
+   of the website, navbar or no navbar. */
+/* A STANDALONE book has an empty navbar shell -- nothing is declared for it,
+   so the banner would pin 55px of nothing to the right edge. It stands down
+   and gives that edge to the chapters.
+
+   A book published as part of the site is the other case, and it must not hit
+   this rule: the docs pipeline injects the 幾社 navbar into the book before
+   rendering precisely so the reader keeps the site's navigation. `:has(a)` is
+   the difference -- a real navbar has links in it, an empty shell has none. */
+body:has(.chapter-title) #quarto-header:not(:has(.navbar-nav a)) {
+  display: none;
+}
+/* With a real navbar the banner keeps its edge and the chapters take the one
+   next to it, so neither covers the other. Written on `body` rather than as a
+   sibling combinator: the sidebar is not a sibling of the header in Quarto's
+   markup, and a descendant selector off `body` is the only form that holds for
+   both layouts. */
+body:has(.chapter-title):has(#quarto-header .navbar-nav a) #quarto-sidebar {
+  right: $vertext-banner-size;
+  /* With a navbar present Quarto also makes this sidebar a Bootstrap
+     collapse (`collapse collapse-horizontal`), for the secondary-nav toggle it
+     shows under a navbar. Those classes compute `max-height` to ~0 and
+     `display` off, which flattened the placed sidebar to 26px at the bottom of
+     the window -- placement was correct and the box was collapsed. Undone
+     here rather than by removing the classes: Quarto's own script toggles
+     them, and stripping them in the DOM would break that. */
+  display: block !important;
+  max-height: 100vh !important;
+  height: auto !important;
+  visibility: visible !important;
+  /* `top` also has to be forced, and for a different reason than the rest:
+     Quarto's `updateDocumentOffset` in quarto-nav.js writes it as an INLINE
+     style (measured: `top: 813px; max-height: calc(-813px + 100vh)`), pushing
+     the sidebar the height of a horizontal navbar down the page -- which in
+     this layout is the whole viewport, so it landed just off the bottom edge.
+     An inline style outranks every stylesheet rule that is not `!important`.
+     The navbar is on the RIGHT here, not the top, so that offset is zero. */
+  top: 0 !important;
+  bottom: 0 !important;
+}
+body:has(.chapter-title):has(#quarto-header .navbar-nav a) #quarto-content {
+  right: $vertext-banner-size * 3 + $vertext-banner-size;
+}
+body:has(.chapter-title) #quarto-sidebar {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  left: auto;
+  width: $vertext-banner-size * 3;
+  height: auto;
+  max-height: 100vh;
+  z-index: 1030;
+  /* The chapter list reads horizontally: these are titles to scan, not a
+     rotated spine, and a book's list is far too long to read edgewise. */
+  writing-mode: horizontal-tb;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: .75rem .5rem;
+  border-left: 1px solid rgba(128, 128, 128, .25);
+}
+body:has(.chapter-title) #quarto-sidebar .sidebar-menu-container,
+body:has(.chapter-title) #quarto-sidebar .sidebar-item-container {
+  writing-mode: horizontal-tb;
+  width: 100%;
+}
+/* The content region gives up the banner edge to the wider sidebar instead. */
+body:has(.chapter-title) #quarto-content {
+  right: $vertext-banner-size * 3;
+}
+/* A book has no navbar to hold the light/dark and other tools, and its footer
+   is page-navigation rather than a status line, so the end edge stands down
+   and the text gets it. */
+body:has(.chapter-title) #quarto-content {
+  left: 0;
+}
+body:has(.chapter-title) .nav-footer,
+body:has(.chapter-title) .footer {
+  display: none;
+}
+
 /* ── The content region: the remaining rectangle ─────────────────────────
    Inset from all three occupied edges. The content filter has already made
    this region a vertical surface that scrolls horizontally; the theme only

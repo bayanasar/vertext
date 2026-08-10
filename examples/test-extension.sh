@@ -249,6 +249,42 @@ else
   printf 'FAIL a light/dark theme map fails to render\n'
   failures=$((failures + 1))
 fi
+
+# A BOOK project. Different chrome from a website: no navbar, and the chapter
+# list lives in `#quarto-sidebar`, which the theme has to place or the book is
+# unnavigable -- measured before it did, the sidebar was 14px at the bottom of
+# the page while an empty banner held 55x813 of nothing.
+#
+# The rules are scoped on `.chapter-title`, which Quarto emits for book chapter
+# entries and nowhere else. Two earlier scopes failed silently and are the
+# reason this check exists: `body.quarto-book` (no such class) and
+# `body.nav-sidebar:not(.nav-fixed)` (right for a bare book, wrong for one
+# embedded in a site, because injecting a navbar adds `nav-fixed`).
+book=$work/book
+mkdir -p "$book/_extensions"
+cp -R extensions/vertext-theme "$book/_extensions/vertext-theme"
+cp extensions/vertext-theme/vertext-theme.scss "$book/vertext-theme.scss"
+printf '%s\n' 'project:' '  type: book' 'book:' '  title: "測試書"' \
+  '  chapters:' '    - index.qmd' '    - ch1.qmd' \
+  'format:' '  vertext-theme-html:' '    theme: [cosmo, vertext-theme.scss]' \
+  > "$book/_quarto.yml"
+printf '%s\n' '---' 'title: "序"' '---' '' '山川异域，风月同天。' > "$book/index.qmd"
+printf '%s\n' '---' 'title: "第一章"' '---' '' '寄諸佛子，共結來緣。' > "$book/ch1.qmd"
+if quarto render "$book" --quiet >/dev/null 2>&1 && [ -f "$book/_book/index.html" ]; then
+  printf 'ok   a book project renders under the theme\n'
+  check "the book lays its text out vertically" 'vertext-column' "$book/_book/index.html"
+  check "the book keeps its chapter sidebar"    'quarto-sidebar'  "$book/_book/index.html"
+  # The placement rules must reach the compiled bundle, not merely the source.
+  if grep -rq 'chapter-title' "$book/_book/site_libs/bootstrap/"*.css 2>/dev/null; then
+    printf 'ok   the book chrome rules reach the compiled stylesheet\n'
+  else
+    printf 'FAIL the book chrome rules never reached the stylesheet\n'
+    failures=$((failures + 1))
+  fi
+else
+  printf 'FAIL a book project fails to render under the theme\n'
+  failures=$((failures + 1))
+fi
 # The attribute is set from a script, so the rendered form is a setAttribute
 # call rather than a literal `attr="lr"` -- match what is actually emitted.
 check        "Mongolian declares the opposite edge" 'data-vertext-progression","lr"' "$theme/_site/mn.html"
