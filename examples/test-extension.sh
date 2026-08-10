@@ -196,9 +196,16 @@ fi
 theme=$work/theme
 mkdir -p "$theme/_extensions"
 cp -R extensions/vertext-theme "$theme/_extensions/vertext-theme"
+# The theme deliberately declares no `theme:` of its own -- a flat list there
+# and a site's light/dark MAP merge into a shape Quarto cannot resolve, and it
+# dies inside layerTheme naming neither the file nor the theme. So the scss
+# ships as an asset the site copies in and names, which is what a real site has
+# to do; the fixture does it the same way or it is not testing the real path.
+cp extensions/vertext-theme/vertext-theme.scss "$theme/vertext-theme.scss"
 printf '%s\n' 'project:' '  type: website' 'website:' '  title: "教程"' \
   '  navbar:' '    left:' '      - href: index.qmd' '        text: 首页' \
-  '  page-footer: "footer text"' 'format: vertext-theme-html' > "$theme/_quarto.yml"
+  '  page-footer: "footer text"' 'format:' '  vertext-theme-html:' \
+  '    theme: [cosmo, vertext-theme.scss]' > "$theme/_quarto.yml"
 printf '%s\n' '---' 'title: "首页"' '---' '' '山川异域，风月同天。' > "$theme/index.qmd"
 printf '%s\n' '---' 'title: "ᠮᠣᠩᠭᠤᠯ"' 'vertext-progression: lr' '---' '' \
   'ᠮᠣᠩᠭᠤᠯ ᠤᠯᠤᠰ ᠮᠠᠨᠳᠤᠨ᠎ᠠ' > "$theme/mn.qmd"
@@ -213,6 +220,33 @@ if grep -rq 'data-vertext-progression' "$theme/_site/site_libs/"*/*.css 2>/dev/n
   printf 'ok   chrome rules reach the compiled stylesheet\n'
 else
   printf 'FAIL chrome rules reach the compiled stylesheet\n'
+  failures=$((failures + 1))
+fi
+
+# A site with a light/dark theme MAP, which is the shape that broke. While the
+# theme declared its own flat `theme:`, this render died with a bare
+# `TypeError: Path must be a string, received "{"light":[...]}"` -- no mention
+# of the theme, on a real site, from a config that looks perfectly ordinary.
+# Both arms must compile, so a dark bundle has to appear alongside the light.
+map=$work/thememap
+mkdir -p "$map/_extensions"
+cp -R extensions/vertext-theme "$map/_extensions/vertext-theme"
+cp extensions/vertext-theme/vertext-theme.scss "$map/vertext-theme.scss"
+printf '%s\n' 'project:' '  type: website' 'website:' '  title: "教程"' \
+  'format:' '  vertext-theme-html:' '    theme:' \
+  '      light: [cosmo, vertext-theme.scss]' \
+  '      dark: [darkly, vertext-theme.scss]' > "$map/_quarto.yml"
+printf '%s\n' '---' 'title: "首页"' '---' '' '山川异域，风月同天。' > "$map/index.qmd"
+if quarto render "$map" --quiet >/dev/null 2>&1 && [ -f "$map/_site/index.html" ]; then
+  printf 'ok   a light/dark theme map renders\n'
+  if ls "$map/_site/site_libs/bootstrap/"*dark*.css >/dev/null 2>&1; then
+    printf 'ok   both arms of the theme map compile\n'
+  else
+    printf 'FAIL the dark arm of the theme map did not compile\n'
+    failures=$((failures + 1))
+  fi
+else
+  printf 'FAIL a light/dark theme map fails to render\n'
   failures=$((failures + 1))
 fi
 # The attribute is set from a script, so the rendered form is a setAttribute

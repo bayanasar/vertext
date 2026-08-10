@@ -6,6 +6,7 @@ $vertext-banner-size:  3.25rem !default;  // the start edge (right under rl)
 $vertext-toc-size:     2.75rem !default;  // the top edge
 $vertext-status-size:  1.75rem !default;  // the end edge (left under rl)
 
+
 /*-- scss:rules --*/
 
 /* VertexT — the page rotated a quarter-turn.
@@ -316,6 +317,83 @@ html[data-vertext-progression="lr"] {
   }
   html[data-vertext-progression="lr"] #quarto-content {
     right: 0;
+  }
+
+  /* The hamburger menu, and the reason it needed one of these at all.
+     Below this width Bootstrap collapses the links behind `.navbar-toggler`
+     and expands them into `.navbar-collapse` on click. That collapse inherits
+     the desktop rule above, whose `width: 100%` means 100% OF THE BANNER --
+     21px. So the menu did open, to full height and a 21px sliver, showing the
+     brand and nothing else. It reads exactly like a menu that opened and
+     snapped shut, which is how it was reported; measured, `.show` was still
+     applied four seconds later at 21x748. A screenshot of the closed state
+     tells you nothing about this -- it has to be clicked and then sampled.
+
+     So the banner stops being a fixed-width edge while the menu is open and
+     takes the width it needs, and the links lay out ACROSS it rather than
+     stacking along the edge they no longer occupy. */
+  #quarto-header:has(.navbar-collapse.show),
+  #quarto-header:has(.navbar-collapse.collapsing) {
+    width: min(16rem, 70vw);
+    overflow-y: auto;
+    /* The WHOLE open banner leaves vertical mode, not just the panel inside it.
+       Turning only the collapse horizontal is not enough and looks like a
+       second bug: its parent `.navbar-container` stays `vertical-rl` with
+       `flex-direction: row`, which stacks children along the VERTICAL axis, so
+       the 238px panel was laid out backwards from the container's start edge
+       and landed at x=188 while its own parent began at x=232 -- 44px outside
+       itself, on top of the page text. An open menu is an ordinary menu. */
+    writing-mode: horizontal-tb;
+  }
+  #quarto-header:has(.navbar-collapse.show) .navbar-container,
+  #quarto-header:has(.navbar-collapse.collapsing) .navbar-container {
+    writing-mode: horizontal-tb;
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    height: auto;
+  }
+  #quarto-header .navbar-collapse.show,
+  #quarto-header .navbar-collapse.collapsing {
+    width: 100%;
+    /* Horizontal text: this panel is a menu now, not a rotated banner, and
+       its labels are read the ordinary way. */
+    writing-mode: horizontal-tb;
+  }
+  /* The panel needs an opaque backdrop: the banner was a narrow strip that
+     never overlapped anything, so it never needed one, and without it the page
+     text behind shows straight through the links.
+
+     It is taken from `.navbar`, by stretching that element behind the open
+     panel rather than by naming a colour. Three sources were tried and
+     measured first, and all three were wrong:
+       - `background: inherit` inherits the SPECIFIED value, and the ancestors
+         in between are transparent, so it resolved to rgba(0,0,0,0);
+       - there is no `--bs-navbar-bg` custom property to read at runtime --
+         Quarto resolves the navbar colour at SCSS compile time;
+       - declaring `$navbar-bg` here to read it back is WORSE THAN THE BUG:
+         this file layers before Bootstrap, so a `!default` here WINS, and it
+         repainted the navbar on every page of the site -- it turned the host
+         site's own blue into this file's fallback. Never declare a Bootstrap
+         variable from here to read it; only ever consume one.
+     `.navbar` is the element that actually paints, so widening it paints the
+     panel in whatever colour the host theme gave it, light or dark, with no
+     variable to keep in step. */
+  #quarto-header:has(.navbar-collapse.show) .navbar,
+  #quarto-header:has(.navbar-collapse.collapsing) .navbar {
+    width: 100%;
+  }
+  #quarto-header .navbar-collapse.show .navbar-nav,
+  #quarto-header .navbar-collapse.collapsing .navbar-nav {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    writing-mode: horizontal-tb;
+  }
+  #quarto-header .navbar-collapse.show .nav-link,
+  #quarto-header .navbar-collapse.collapsing .nav-link {
+    padding: .5rem .75rem;
+    overflow: visible;
   }
 }
 
