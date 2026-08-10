@@ -206,7 +206,10 @@ printf '%s\n' 'project:' '  type: website' 'website:' '  title: "教程"' \
   '  navbar:' '    left:' '      - href: index.qmd' '        text: 首页' \
   '  page-footer: "footer text"' 'format:' '  vertext-theme-html:' \
   '    theme: [cosmo, vertext-theme.scss]' > "$theme/_quarto.yml"
-printf '%s\n' '---' 'title: "首页"' '---' '' '山川异域，风月同天。' > "$theme/index.qmd"
+# Two headings, because the TOC checks below need something to list -- a page
+# with only a title has no entries and would fail for the wrong reason.
+printf '%s\n' '---' 'title: "首页"' '---' '' '## 第一節' '' '山川异域，风月同天。' \
+  '' '## 第二節' '' '寄諸佛子，共結來緣。' > "$theme/index.qmd"
 printf '%s\n' '---' 'title: "ᠮᠣᠩᠭᠤᠯ"' 'vertext-progression: lr' '---' '' \
   'ᠮᠣᠩᠭᠤᠯ ᠤᠯᠤᠰ ᠮᠠᠨᠳᠤᠨ᠎ᠠ' > "$theme/mn.qmd"
 quarto render "$theme" --quiet
@@ -215,6 +218,15 @@ check        "theme renders an unedited document"  'class="vertext'          "$t
 check        "theme stamps the progression"        'data-vertext-progression' "$th"
 check        "the navbar survives the rotation"    'quarto-header'            "$th"
 check        "the footer survives the rotation"    'nav-footer'               "$th"
+# The table of contents. Pandoc fills `$toc$` by walking `Header` blocks, and
+# the filter encodes every heading into the strip -- so for a long time a
+# vertext page simply had no TOC, on every document there had ever been, and
+# Quarto parked the empty sidebar off-screen where it read like a placement
+# bug in the theme. The Pandoc pass now keeps the real `Header` nodes beside
+# the strip. Filter ORDERING cannot substitute for this: `$toc$` is computed by
+# the writer, after every filter has run.
+check        "a vertical page still builds a TOC" 'doc-toc'                   "$th"
+check        "the TOC anchors survive"            'vertext-toc-anchor'        "$th"
 # The chrome placement must reach the compiled bundle, not just the source.
 if grep -rq 'data-vertext-progression' "$theme/_site/site_libs/"*/*.css 2>/dev/null; then
   printf 'ok   chrome rules reach the compiled stylesheet\n'

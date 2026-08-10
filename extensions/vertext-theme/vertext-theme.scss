@@ -151,15 +151,39 @@ body {
    column it was: it must scroll along its own axis rather than wrap into
    several rows and eat the page. `toc-depth: 2` in the extension keeps it
    shallow for the same reason. */
-#quarto-margin-sidebar {
+/* `body` is in this selector to WIN A FIGHT, not for style. The content filter
+   ships its own stylesheet carrying
+
+       body #quarto-margin-sidebar, body .toc-active #TOC { display: none; }
+
+   which is right on its own terms -- with only the filter there is no edge to
+   hang a TOC on, so it hides it. The theme makes that false by giving it the
+   top edge. But the filter's selector is (0,1,0,1) and a bare id is (0,1,0,0),
+   so the placement lost silently: the strip sat off-screen at y=813, 1px tall,
+   which reads like a placement bug rather than a `display: none` two files
+   away. Matching the specificity and restoring `display` is what puts it on
+   screen. */
+body #quarto-margin-sidebar,
+body .toc-active #TOC {
+  display: block;
+}
+body #quarto-margin-sidebar {
   position: fixed;
-  top: 0;
+  /* `top` and `max-height` are forced because Quarto's `updateDocumentOffset`
+     in quarto-nav.js writes them as INLINE styles -- measured here as
+     `top: 813px; max-height: calc(-813px + 100vh)`. It is offsetting the
+     sidebar by the height of a horizontal navbar, which in this layout is the
+     whole viewport, so the strip landed one pixel tall just past the bottom
+     edge. An inline style outranks every rule that is not `!important`. The
+     banner is on the RIGHT here, so the offset it is compensating for is
+     zero. */
+  top: 0 !important;
+  max-height: $vertext-toc-size !important;
   left: 0;
   right: $vertext-banner-size;
   bottom: auto;
   width: auto;
   height: $vertext-toc-size;
-  max-height: $vertext-toc-size;
   z-index: 1020;
   overflow-x: auto;
   overflow-y: hidden;
@@ -168,6 +192,30 @@ body {
   writing-mode: horizontal-tb;
   padding: 0 .75rem;
   border-bottom: 1px solid rgba(128, 128, 128, .25);
+}
+/* The whole strip is ONE row: title, then entries, laid along the top edge.
+   Without this the nav stacks them -- `#toc-title` ("On this page") took the
+   first 18px and pushed the `<ul>` down to y=26..51 inside a 47px strip that
+   clips. The entries were then painted where they overflowed and CLIPPED OUT
+   OF HIT-TESTING: every link measured at the right place and every one was
+   dead to a real click, which is the same failure the banner had. */
+#quarto-margin-sidebar > nav {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: .75rem;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+/* The title is a label on a strip now, not a heading above a column. */
+#quarto-margin-sidebar #toc-title {
+  flex: 0 0 auto;
+  margin: 0;
+  font-size: .8rem;
+  font-weight: 600;
+  opacity: .7;
+  white-space: nowrap;
 }
 #quarto-margin-sidebar nav[role="doc-toc"] > ul,
 #quarto-margin-sidebar .toc-actions,
@@ -412,7 +460,10 @@ html[data-vertext-progression="lr"] {
    give the text the screen: the banner keeps its edge, the rest stand down.
    Stated as a documented fallback rather than left to chance. */
 @media (max-width: 40rem) {
-  #quarto-margin-sidebar { display: none; }
+  /* `body` for the same specificity reason as the placement rule above: that
+     rule is (0,1,0,1) to beat the content filter, so a bare id no longer
+     outranks it and the strip would survive onto phones. */
+  body #quarto-margin-sidebar { display: none; }
   .footer, .nav-footer { display: none; }
   #quarto-content {
     top: 0;
@@ -503,7 +554,7 @@ html[data-vertext-progression="lr"] {
 
 /* Print: the chrome is screen furniture and does not belong on paper. */
 @media print {
-  #quarto-header, #quarto-margin-sidebar, .footer, .nav-footer { display: none; }
+  #quarto-header, body #quarto-margin-sidebar, .footer, .nav-footer { display: none; }
   body { overflow: visible; }
   #quarto-content {
     position: static;

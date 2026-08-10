@@ -163,8 +163,44 @@ local function document_style()
      it from metadata at template time, after this filter has run. */
   body #title-block-header { display: none; }
   /* The table of contents assumes a vertically scrolling article and has
-     nothing to anchor to here. */
+     nothing to anchor to here. The filter alone offers no edge to put one on;
+     the THEME does, and overrides this at matching specificity. */
   body #quarto-margin-sidebar, body .toc-active #TOC { display: none; }
+  /* The real `Header` nodes kept beside the strip so Quarto can build a TOC
+     at all (see the Pandoc pass). The strip already draws these headings in
+     columns, so these copies must not be seen -- but NOT via `display: none`
+     or `visibility: hidden`, which drop them from the accessibility tree and
+     would hand a screen reader a document with no headings while sighted
+     readers get a full outline. This is the standard visually-hidden clip:
+     out of the layout, still in the tree, still a valid anchor target. */
+     Deliberately NOT `position: absolute`, which is what the usual
+     visually-hidden recipe uses: taking the anchor out of flow puts it
+     wherever the containing block starts, measured at x=-1950 in a document
+     that scrolls right-to-left -- outside the scrollable range entirely, so
+     following a TOC link updated the hash and scrolled nowhere. In flow and
+     zero-width, the anchor sits exactly beside the text it names, which is
+     the whole point of it being an anchor. */
+  body .vertext-toc-anchor {
+    display: inline-block;
+    width: 0;
+    height: 0;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    border: 0;
+    vertical-align: top;
+  }
+  /* The heading inside keeps its text for a screen reader while contributing
+     no box of its own. */
+  body .vertext-toc-anchor > * {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
   /* Give the document the full width of the window.
      Quarto's article grid reserves margin columns for a sidebar and a table
      of contents; in a horizontally scrolling document those reservations are
@@ -608,6 +644,36 @@ function Pandoc(doc)
     return false
   end
 
+  -- Headings are carried across in BOTH forms, and the reason is Quarto's
+  -- table of contents.
+  --
+  -- Pandoc fills `$toc$` by walking `Header` blocks, and by the time it looks
+  -- there are none left: every heading has been encoded into the strip and
+  -- comes back as a `vertext-column-heading` div inside one RawBlock. Nothing
+  -- errors -- the page just renders with no TOC, on every vertext document
+  -- there has ever been, and Quarto then stamps `.zindex-bottom` on the empty
+  -- sidebar and parks it off-screen, which reads like a placement bug in the
+  -- theme rather than a missing heading two files away.
+  --
+  -- Filter ORDERING cannot fix it (both `pre-quarto` and `post-quarto` were
+  -- tried): `$toc$` is computed by the WRITER, after every filter has run. The
+  -- headings have to be real `Header` nodes sitting in the AST this pass
+  -- returns. So each one is emitted next to the strip that draws it, keeping
+  -- document order so the TOC reads in the right sequence. The stylesheet
+  -- takes them out of the visual flow -- they are already drawn, in columns,
+  -- inside the strip.
+  local function emit_toc_headings(blocks)
+    for _, block in ipairs(blocks) do
+      if block.t == "Header" then
+        table.insert(rendered,
+          pandoc.Div({ pandoc.Header(block.level, block.content, block.attr) },
+                     pandoc.Attr("", { "vertext-toc-anchor" }, {})))
+      elseif block.t == "Div" and block.content then
+        emit_toc_headings(block.content)
+      end
+    end
+  end
+
   for _, block in ipairs(doc.blocks) do
     -- A RawBlock at this point is a strip `Div` already rendered; emitting it
     -- as-is keeps an author's explicit fences intact.
@@ -615,6 +681,12 @@ function Pandoc(doc)
       flush()
       table.insert(rendered, block)
     else
+      if block.t == "Header" or block.t == "Div" then
+        -- Flush first so the anchor lands AFTER the strip carrying the text
+        -- before it, keeping the reading order Pandoc will walk.
+        flush()
+        emit_toc_headings({ block })
+      end
       table.insert(pending, block)
     end
   end
