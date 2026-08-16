@@ -485,7 +485,18 @@ fn has_vertical_form(ch: char) -> bool {
         // handled by `is_corner_punctuation`; `！` and `？` stay upright.
         '：' |
         // Dashes, ellipses, and connectors that run along the column.
-        '—' | '―' | '－' | '…' | '‥' | '〜' | '～' | '｜' | '‖')
+        // The whole dash family, not just the em dash: a range written `᠑–᠕`
+        // reached here on an en dash, missed this list, and fell through to
+        // `Neutral`, where nothing turns it — so it lay flat across the column
+        // while the em dashes on the same page stood correctly. Every mark
+        // Unicode calls a dash belongs to one class; picking three of them out
+        // by hand is what let the other five drift.
+        //
+        // ASCII `-` is deliberately NOT here. `is_word_connector` claims it
+        // first so that a word breaks at the hyphen it already has, and it only
+        // reaches this function when no word holds it.
+        '—' | '―' | '－' | '–' | '‐' | '‑' | '‒' | '−' | '⸺' | '⸻' |
+        '…' | '‥' | '〜' | '～' | '｜' | '‖')
 }
 
 #[cfg(test)]
@@ -533,6 +544,11 @@ mod tests {
                      '「', '」', '『', '』', '【', '】', '〔', '〕',
                      '“', '”', '‘', '’', '：',
                      '—', '―', '－', '…', '‥', '〜', '～', '｜', '‖',
+                     // The rest of the dash family. The em dash was here from
+                     // the start and its siblings were not, so `᠑–᠕` came out
+                     // with the dash lying flat across the column while an em
+                     // dash two lines above it turned correctly.
+                     '–', '‐', '‑', '‒', '−', '⸺', '⸻',
                      '→', '←', '↔', '⇒', '⇐', '⇔', '⟶', '⟵'] {
             let layout = layout_text(&format!("好{mark}好"), &LayoutConfig::default());
             assert_eq!(layout.columns[0].slots[1],
