@@ -55,7 +55,18 @@
    and a three-character heading breaks into three one-character columns —
    which then advance right-to-left and read 文古蒙. `max-content` gives the
    line all the room it needs. */
-.vertext-column-cell { height: max-content; max-height: none; }
+.vertext-column-cell {
+  height: max-content;
+  /* ...but never longer than the column budget. `max-content` alone let a cell
+     run as far as its text wanted: measured 405px of cell inside a 347px
+     region, so the bottom of the table disappeared under the page TOC while
+     every prose column beside it sat correctly inside. Capping with
+     `max-height` keeps the reason `max-content` is here -- a short cell still
+     gets its natural single line and does not break "蒙古文" into three
+     one-character columns reading backwards -- and only bites on the long
+     cell, which then wraps inside its own cell instead of leaving the page. */
+  max-height: var(--vertext-cell-cap, var(--vertext-column-height, 34em));
+}
 /* Upright glyphs need no box at all: the column's `text-orientation: upright`
    already stands them up, and leaving them as bare inline text is what keeps
    a selection continuous. */
@@ -139,14 +150,49 @@
    document: copy-paste, find-in-page, and screen readers would all hand back
    text nobody wrote. Appearance is ours to decide; content is not.
 
-   `transform` is the right tool precisely because it is view-only — it moves
-   pixels and leaves the DOM, the selection, and the accessibility tree alone.
-   Rotating one bracket is not the same sin as rotating a run of text: for a
-   bracket, the quarter-turn IS its vertical form. */
+   The quarter-turn used to be written here as `transform: rotate(90deg)`, and
+   it was a SECOND turn. In a vertical writing mode the browser has already
+   given every one of these marks its vertical form before we touch it: the
+   font's `vert`/`vrt2` feature substitutes the proper glyph for the fullwidth
+   brackets and quotes, and the Unicode vertical-orientation rules turn the
+   ASCII ones and the arrows. Measured at 64px, bare text renders `（` as ︵ and
+   `<` as ∧, correctly; adding our rotate brought them back round to standing
+   upright, which is what a bracket in this layout has looked like for as long
+   as there has been one. An arrow fared worse -- the browser had already
+   pointed `→` down the column and we turned it to point backwards.
+
+   So the rotation is not specified here at all. That is not a retreat from
+   rotating to substituting -- the character in the markup is still the one the
+   author typed, never a U+FE10–FE4F presentation form, and `vert` is a glyph
+   substitution inside the font, invisible to copy-paste, find-in-page and the
+   accessibility tree. It is the same view-only contract, kept by the layer
+   that knows the glyph's own metrics. Which is what the classifier in
+   vertext-core already says it is doing: "the font decides".
+
+   `inline-block` is not what was breaking it -- bare text and inline-block
+   render identically here -- so it stays, for the size and alignment below.
+
+   CORRECTION, and the measurement above is where it went wrong: "the browser
+   has already turned them" was read off BARE TEXT in a vertical writing mode,
+   where `text-orientation` is `mixed`. The shipped column sets `upright`,
+   which stands every character up and suppresses the Unicode
+   vertical-orientation rules entirely. So the finding transferred for exactly
+   half the marks. The fullwidth brackets and quotes really are handled by the
+   font -- `vert`/`vrt2` still substitutes under `upright`, and `（` renders
+   `︵` with no help from us. But the ASCII marks, the arrows and every dash
+   have no vertical glyph in the font; they were relying on the rotation that
+   `upright` had already ruled out, so dropping the `transform` left them lying
+   flat. An em dash across a column reads as a stray rule.
+
+   `mixed` on the slot restores the per-character rule and is the honest
+   spelling of "the font decides": vo=Tu marks (the fullwidth set) take the
+   font's vertical glyph, vo=R marks (ASCII, arrows, dashes) rotate. One
+   declaration covers both classes, which is why this is not a return to the
+   blanket `transform` -- that turned the fullwidth marks a second time. */
 .vertext-vform {
   display: inline-block;
   font-size: 18px;
-  transform: rotate(90deg);
+  text-orientation: mixed;
 }
 /* Stops and commas do not turn — they sit in the upper-right corner of their
    em square. The box keeps its size so the column rhythm is unchanged; only
@@ -216,6 +262,57 @@
   gap: .25rem;
   margin-inline: .75rem;
 }
+/* Nothing in the strip may be taller than the region holding it.
+   A column of vertical text never had this problem: when it runs out of room
+   the browser wraps it into the next column, which is the whole reason the
+   layout uses a real writing mode instead of stacked boxes. A stack is one
+   flex item and has no such escape -- it simply grows downward, and
+   `main.content` is `overflow-y: hidden` (deliberately: the y axis is where a
+   column wraps, and letting it scroll would hand the wheel the wrong
+   scroller). So a stack taller than the region is CUT, with no scrollbar and
+   nothing on screen to say text is missing. Measured on the live site: a code
+   block 188px past the region on the zircon page, a table 139px past on the
+   Mongolian lessons -- the truncation reported over and over, and the reason
+   the earlier "the document scrolls to its last column" checks kept coming
+   back clean. They were asking about the columns, and it was never the
+   columns.
+
+   The cap is the same budget the columns get, so a stack ends where a column
+   beside it ends. `overflow-y: auto` is what makes this a fix rather than a
+   tidier clip: the overflow stays reachable, and a stack that fits -- almost
+   all of them -- shows no scrollbar at all.
+
+   `max-height` is physical on purpose. A stack is `horizontal-tb` and a table
+   inside it is `vertical-rl`, so `max-block-size` would mean the height in one
+   and the WIDTH in the other; that axis flip is exactly what made the cell cap
+   silently do nothing before. */
+.vertext-hstack,
+.vertext > .vertext-horizontal,
+.vertext > .vertext-table {
+  max-height: var(--vertext-column-height, 34em);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  /* Reachable is not the same as knowing it is reachable. Chrome's overlay
+     scrollbar is invisible until something scrolls, so a capped table ends at
+     the region edge looking exactly like the truncation this rule just fixed
+     -- and a reader who cannot tell the difference will report it as one,
+     rightly. Naming `::-webkit-scrollbar` opts out of overlay scrollbars, so
+     the bar is present whenever the stack actually overflows and absent when
+     it does not. */
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, currentColor 40%, transparent) transparent;
+}
+.vertext-hstack::-webkit-scrollbar,
+.vertext > .vertext-horizontal::-webkit-scrollbar,
+.vertext > .vertext-table::-webkit-scrollbar {
+  width: 8px;
+}
+.vertext-hstack::-webkit-scrollbar-thumb,
+.vertext > .vertext-horizontal::-webkit-scrollbar-thumb,
+.vertext > .vertext-table::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, currentColor 40%, transparent);
+  border-radius: 4px;
+}
 .vertext-hstack > .vertext-horizontal { margin-inline: 0; }
 .vertext-hstack > .vertext-table { margin-inline: 0; margin-block: .35rem; }
 /* Only the first block in a stack takes the leading indent; the ones beneath
@@ -240,6 +337,31 @@
   margin-inline: .75rem;
   font-size: 15px;
   line-height: 1.5;
+}
+/* Already-rendered HTML that the encoder cannot touch: a cell magic's
+   syntax-highlighted source, a plot, a rendered table. It is emitted beside the
+   strips rather than inside one, which puts it directly in the region's
+   `vertical-rl` flow -- so without this it inherits the vertical writing mode
+   and a Rust listing runs DOWN the page one character per line, losing both the
+   highlighting's shape and the rule that code is set horizontally.
+   Same treatment a code block gets from the encoder: horizontal, wrapped at the
+   code measure, and capped to the column budget so it cannot be cut. */
+.vertext-raw {
+  writing-mode: horizontal-tb;
+  display: inline-block;
+  vertical-align: top;
+  inline-size: max-content;
+  max-inline-size: var(--vertext-wrap, 80ch);
+  max-height: var(--vertext-column-height, 34em);
+  overflow: auto;
+  overscroll-behavior: contain;
+  margin-inline: .75rem;
+  scrollbar-width: thin;
+}
+.vertext-raw pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: 0;
 }
 .vertext-horizontal-prose { text-align: start; hyphens: auto; }
 .vertext-horizontal-code { max-inline-size: var(--vertext-wrap, 80ch); }

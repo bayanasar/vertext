@@ -3,8 +3,41 @@
 // Edge thicknesses. Named by their ROLE, not their side, because the sides
 // swap with the progression and the role does not.
 $vertext-banner-size:  3.25rem !default;  // the start edge (right under rl)
-$vertext-toc-size:     2.75rem !default;  // the top edge
+// The TOP edge: WHERE YOU ARE IN THE WORK -- a book's chapters, a section's
+// pages. The wider of the two horizontal strips, because this list is the
+// longer one and the one a reader steers by.
+// Deep enough to hold a VERTICAL label: these strips turn with the page, so an
+// entry's length runs across the edge rather than along it, and 2.75rem (right
+// for horizontal text) clipped every entry to a few glyphs.
+// 8.5rem, not 7: measured on the real lists, a two-level entry starts below
+// the strip's top (the parent level takes the first band) and a long CJK page
+// title then needs ~93px of the 112px a 7rem strip offers, so the last glyph
+// of names like 「第二節有很長的名字」 was clipped by the `overflow: hidden`
+// that keeps an entry from pushing its neighbours out of the line.
+$vertext-nav-size:     11rem !default;    // the top edge
+// The BOTTOM edge: WHERE YOU ARE IN THIS PAGE -- the headings of the document
+// being read. Shallower: a page TOC is a short list, and the depth it takes is
+// taken from the text.
+$vertext-toc-size:     8rem !default;     // the bottom edge
+// A BOOK's top edge. This was 5rem for a while, because the chapter list was
+// set HORIZONTALLY and horizontal entries run along the edge needing only a
+// line's depth. That asymmetry was the wrong call: it left the one book on the
+// site reading left-to-right across the top while every other page had turned,
+// and the reason given for it -- that chapter titles are long -- turns out not
+// to distinguish the two. Measured: the longest label is 29 characters on the
+// book and 30 on a dive page, both Chinese. What actually differed was the
+// depth each strip was given, which is this variable, so the argument was
+// circular. Rotated like everything else, it needs the same depth as the
+// site's nav strip.
+$vertext-book-nav-size: $vertext-nav-size !default;
 $vertext-status-size:  1.75rem !default;  // the end edge (left under rl)
+// Clearance between the end of a text column and the strip below it. The
+// columns used to wrap at the WINDOW's bottom rather than the region's, so the
+// last ~120px of every column ran under the bottom strip and the text was cut
+// mid-glyph -- measured 466px columns in a 347px region. Wrapping exactly at
+// the region's edge would fix the cut and still read as if the text ran into
+// the list; this holds the two apart.
+$vertext-column-gap:   2rem !default;
 
 
 /*-- scss:rules --*/
@@ -146,11 +179,18 @@ body {
   align-items: center;
 }
 
-/* ── The table of contents: left → top ───────────────────────────────────
+/* ── The table of contents: left → BOTTOM ────────────────────────────────
    The TOC becomes a horizontal strip, which is a different shape from the tall
    column it was: it must scroll along its own axis rather than wrap into
    several rows and eat the page. `toc-depth: 2` in the extension keeps it
-   shallow for the same reason. */
+   shallow for the same reason.
+
+   BOTTOM, not top, and the pairing is the point: the top edge carries WHERE
+   YOU ARE IN THE WORK (a book's chapters, a section's pages) and the bottom
+   carries WHERE YOU ARE IN THIS PAGE. Both were fighting for the top before --
+   the section sidebar was a tall panel on the left while this strip took the
+   top, so the two lists that answer different questions sat on unrelated
+   edges and the wider one was hidden down the side. */
 /* `body` is in this selector to WIN A FIGHT, not for style. The content filter
    ships its own stylesheet carrying
 
@@ -163,11 +203,22 @@ body {
    which reads like a placement bug rather than a `display: none` two files
    away. Matching the specificity and restoring `display` is what puts it on
    screen. */
-body #quarto-margin-sidebar,
-body .toc-active #TOC {
+/* `:not(:has(.chapter-title))` scopes all of this to a page that is NOT a book
+   chapter, and it is a fix for a regression these rules caused. A book already
+   carries navigation on the top-right: its chapter sidebar takes the banner
+   edge (see the book block below) at `z-index: 1030`. The strip spans
+   `left: 0` to the banner at 1020, so the two crossed in that corner and the
+   book got a per-page TOC laid over its chapter list. A book's own list is the
+   navigation that matters there; the strip stands down rather than fighting it
+   for the edge. */
+body:not(:has(.chapter-title)) #quarto-margin-sidebar,
+body:not(:has(.chapter-title)) .toc-active #TOC,
+body:has(.chapter-title) #quarto-margin-sidebar,
+body:has(.chapter-title) .toc-active #TOC {
   display: block;
 }
-body #quarto-margin-sidebar {
+body:not(:has(.chapter-title)) #quarto-margin-sidebar,
+body:has(.chapter-title) #quarto-margin-sidebar {
   position: fixed;
   /* `top` and `max-height` are forced because Quarto's `updateDocumentOffset`
      in quarto-nav.js writes them as INLINE styles -- measured here as
@@ -176,39 +227,73 @@ body #quarto-margin-sidebar {
      whole viewport, so the strip landed one pixel tall just past the bottom
      edge. An inline style outranks every rule that is not `!important`. The
      banner is on the RIGHT here, so the offset it is compensating for is
-     zero. */
-  top: 0 !important;
+     zero.
+
+     Now that this strip sits at the BOTTOM, `top` is released to `auto` and
+     `bottom` does the pinning -- but it still has to be `!important`, because
+     the inline `top: 813px` would otherwise re-pin the strip by its top edge
+     and the `bottom` here would only stretch it. */
+  top: auto !important;
+  bottom: 0;
   max-height: $vertext-toc-size !important;
-  left: 0;
+  /* Clears the status spine, which runs the left edge between the two strips.
+     At `left: 0` the strip and the spine overlapped in the corner and the
+     spine (z-index 1020, opaque) painted over the strip's first entry -- the
+     same collision that hid the first glyphs of the section list before. */
+  left: $vertext-status-size;
   right: $vertext-banner-size;
-  bottom: auto;
   width: auto;
   height: $vertext-toc-size;
   z-index: 1020;
-  overflow-x: auto;
-  overflow-y: hidden;
-  /* Back to horizontal: the strip runs along the top edge, so its text reads
-     left-to-right like any horizontal rule of navigation. */
-  writing-mode: horizontal-tb;
-  padding: 0 .75rem;
-  border-bottom: 1px solid rgba(128, 128, 128, .25);
+  /* The strip scrolls along its own axis, and that axis rotated with it:
+     under `vertical-rl` the strip's length runs DOWN the page in layout terms,
+     so the scrollable overflow is the Y axis, not X. Left as `overflow-x`, a
+     TOC longer than the edge simply could not be reached. */
+  overflow-x: hidden;
+  overflow-y: auto;
+  /* The strip is rotated with the page, not against it: entries advance along
+     the top edge, and each entry's TEXT is set vertically, the same way the
+     banner's is. Laid out horizontally instead, the TOC was the one piece of
+     chrome still reading left-to-right on a page where everything else had
+     turned -- and CJK titles then need far more width per entry than the edge
+     can give. The strip is deeper for the same reason: a vertical label needs
+     length, not width. */
+  writing-mode: vertical-rl;
+  padding: .75rem 0;
+  /* The rule goes on the side facing the TEXT, which is now above. */
+  border-top: 1px solid rgba(128, 128, 128, .25);
 }
-/* The whole strip is ONE row: title, then entries, laid along the top edge.
-   Without this the nav stacks them -- `#toc-title` ("On this page") took the
-   first 18px and pushed the `<ul>` down to y=26..51 inside a 47px strip that
-   clips. The entries were then painted where they overflowed and CLIPPED OUT
-   OF HIT-TESTING: every link measured at the right place and every one was
-   dead to a real click, which is the same failure the banner had. */
+/* The strip is ONE line of entries running ALONG the top edge. Under
+   `vertical-rl` the flex `row` axis is the one that advances along it -- the
+   same axis correction the banner needed, and the same trap: `column` would
+   pile every entry into the strip's narrow depth.
+
+   `#toc-title` must be in that line too, not above it. Left alone the nav
+   stacked the title over the list, which pushed the entries outside a strip
+   that clips, and every entry then measured in the right place while being
+   DEAD to a real click -- paint is clipped, hit-testing goes by boxes. */
 #quarto-margin-sidebar > nav {
   display: flex;
-  flex-direction: row;
-  align-items: center;
+  /* `column`, and getting this backwards cost two rounds. This strip is in
+     `vertical-rl`, and under a vertical writing mode the flex ROW axis is the
+     block axis -- which here runs down the page, not along the edge. `row`
+     therefore stacked the entries DOWNWARD (measured at y=957, 910, 850 in an
+     813px window: off-screen and unclickable while the markup looked right),
+     and `row-reverse` only stacked them upward instead. `column` is the axis
+     that advances ALONG the top edge. Same correction the banner needed, in
+     the opposite direction, because the banner's edge is the vertical one. */
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
   gap: .75rem;
+  writing-mode: vertical-rl;
   height: 100%;
+  width: 100%;
   margin: 0;
   padding: 0;
 }
-/* The title is a label on a strip now, not a heading above a column. */
+/* The title is a label at the start of the strip, reading with everything
+   else rather than across it. */
 #quarto-margin-sidebar #toc-title {
   flex: 0 0 auto;
   margin: 0;
@@ -216,18 +301,52 @@ body #quarto-margin-sidebar {
   font-weight: 600;
   opacity: .7;
   white-space: nowrap;
+  writing-mode: vertical-rl;
 }
 #quarto-margin-sidebar nav[role="doc-toc"] > ul,
 #quarto-margin-sidebar .toc-actions,
 #quarto-margin-sidebar > nav > ul {
   display: flex;
-  flex-direction: row;
-  align-items: center;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
   gap: 1rem;
   margin: 0;
   padding: 0;
+  /* `width`, not `height`: this list is the thing that runs ALONG the strip,
+     and along is the physical X axis however the writing mode names it. Sized
+     by `height: 100%` instead it took the strip's depth as its length, so the
+     entries stacked past the bottom of the window -- measured at y=957 in an
+     813px viewport, off-screen and unclickable while looking fine in markup. */
+  width: 100%;
   height: 100%;
+  flex: 1 1 auto;
   list-style: none;
+  white-space: nowrap;
+  writing-mode: vertical-rl;
+}
+/* Each entry is one vertical label. `max-height` keeps a long CJK title from
+   running the depth of the strip; it clips rather than pushing its
+   neighbours out of the line. */
+#quarto-margin-sidebar li {
+  flex: 0 0 auto;
+  /* `height`, not just `max-height`: the entry was being sized by the flex
+     line to 84px inside a 111px strip -- the strip's padding and the
+     `#toc-title` label took the rest -- so a heading clipped long before it
+     had used the depth the edge actually offers. */
+  height: 100%;
+  max-height: 100%;
+  overflow: hidden;
+}
+#quarto-margin-sidebar li > a {
+  writing-mode: vertical-rl;
+  display: block;
+  padding: 0;
+  /* Same shrink-rather-than-clip rule as the nav strip above, and this edge
+     needs it more: it is the shallower of the two (5.5rem against 8.5rem), so
+     a five-glyph heading already overran it and lost its last characters. */
+  font-size: clamp(.6rem, 1.3vh, .9rem);
+  line-height: 1.05;
   white-space: nowrap;
 }
 /* A nested TOC level cannot become a second row -- there is no vertical room.
@@ -248,8 +367,11 @@ body #quarto-margin-sidebar {
 .footer, .nav-footer {
   position: fixed;
   left: 0;
-  top: $vertext-toc-size;
-  bottom: 0;
+  /* Between the two strips: the nav strip owns the top edge corner-to-corner
+     and the page TOC owns the bottom one, so the status spine runs the length
+     that is left between them rather than under either. */
+  top: $vertext-nav-size;
+  bottom: $vertext-toc-size;
   right: auto;
   width: $vertext-status-size;
   height: auto;
@@ -313,6 +435,7 @@ body:has(.chapter-title) #quarto-header:not(:has(.navbar-nav a)) {
    both layouts. */
 body:has(.chapter-title):has(#quarto-header .navbar-nav a) #quarto-sidebar {
   right: $vertext-banner-size;
+  left: 0;
   /* With a navbar present Quarto also makes this sidebar a Bootstrap
      collapse (`collapse collapse-horizontal`), for the secondary-nav toggle it
      shows under a navbar. Those classes compute `max-height` to ~0 and
@@ -321,7 +444,12 @@ body:has(.chapter-title):has(#quarto-header .navbar-nav a) #quarto-sidebar {
      here rather than by removing the classes: Quarto's own script toggles
      them, and stripping them in the DOM would break that. */
   display: block !important;
-  max-height: 100vh !important;
+  /* Undoing the collapse, not releasing the strip: the computed `max-height`
+     these classes bring is ~0, so anything well clear of zero restores the
+     list. It used to say `100vh`, which also let the strip grow the whole
+     window deep if the chapter list ever wrapped -- over the text, since the
+     region insets by a fixed amount. Capped at the strip's own depth instead. */
+  max-height: $vertext-book-nav-size !important;
   height: auto !important;
   visibility: visible !important;
   /* `top` also has to be forced, and for a different reason than the rest:
@@ -332,43 +460,100 @@ body:has(.chapter-title):has(#quarto-header .navbar-nav a) #quarto-sidebar {
      An inline style outranks every stylesheet rule that is not `!important`.
      The navbar is on the RIGHT here, not the top, so that offset is zero. */
   top: 0 !important;
-  bottom: 0 !important;
+  bottom: auto !important;
 }
-body:has(.chapter-title):has(#quarto-header .navbar-nav a) #quarto-content {
-  right: $vertext-banner-size * 3 + $vertext-banner-size;
-}
+/* The chapter list takes the TOP edge, like a website section's list, because
+   it answers the same question -- where am I in this work. It used to be a
+   tall panel on the right, which put it opposite the page's own headings and
+   made the two read as unrelated furniture.
+
+   Its text stays HORIZONTAL inside the strip, and that is a deliberate
+   departure from the bottom strip rather than an oversight. Measured on the
+   real book, chapter titles run to 26 characters ("1.2 記憶體安全模型——借用檢查器
+   vs 程式設計師自律"); a rotated label in a 7rem strip fits seven or eight CJK
+   glyphs before it clips, so turning these would cost the reader the end of
+   every title. The page TOC can turn because `toc-depth: 2` keeps its entries
+   short; a book's chapter list has no such bound. */
 body:has(.chapter-title) #quarto-sidebar {
   position: fixed;
   top: 0;
-  bottom: 0;
-  right: 0;
-  left: auto;
-  width: $vertext-banner-size * 3;
-  height: auto;
-  max-height: 100vh;
+  bottom: auto;
+  left: $vertext-status-size;
+  right: $vertext-banner-size;
+  width: auto;
+  height: $vertext-book-nav-size;
+  max-height: $vertext-book-nav-size;
   z-index: 1030;
-  /* The chapter list reads horizontally: these are titles to scan, not a
-     rotated spine, and a book's list is far too long to read edgewise. */
-  writing-mode: horizontal-tb;
-  overflow-y: auto;
+  /* Rotated with the page, exactly like the site's nav strip. Under
+     `vertical-rl` the strip's length runs DOWN in layout terms, so its
+     scrollable overflow is the Y axis -- left on X, a chapter list longer than
+     the edge could not be reached at all. */
+  writing-mode: vertical-rl;
   overflow-x: hidden;
-  padding: .75rem .5rem;
-  border-left: 1px solid rgba(128, 128, 128, .25);
+  overflow-y: auto;
+  padding: .75rem 0;
+  border-bottom: 1px solid rgba(128, 128, 128, .25);
 }
+/* Entries along the edge. `column` is the one that runs ALONG the top edge
+   inside a `vertical-rl` strip -- `row` there is the BLOCK axis and stacks the
+   entries down the page, off-screen. That inversion has bitten this file
+   before; it is the same rule the site's nav strip follows. */
 body:has(.chapter-title) #quarto-sidebar .sidebar-menu-container,
-body:has(.chapter-title) #quarto-sidebar .sidebar-item-container {
-  writing-mode: horizontal-tb;
-  width: 100%;
+body:has(.chapter-title) #quarto-sidebar ul {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 1rem;
+  writing-mode: vertical-rl;
+  width: auto;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
-/* The content region gives up the banner edge to the wider sidebar instead. */
-body:has(.chapter-title) #quarto-content {
-  right: $vertext-banner-size * 3;
+body:has(.chapter-title) #quarto-sidebar .sidebar-item,
+body:has(.chapter-title) #quarto-sidebar .sidebar-item-container {
+  flex: 0 0 auto;
+  display: block;
+  max-height: 100%;
+  max-width: none;
+  min-width: 0;
+  width: auto;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+body:has(.chapter-title) #quarto-sidebar a,
+body:has(.chapter-title) #quarto-sidebar .sidebar-item-text {
+  writing-mode: vertical-rl;
+  /* `nowrap`: a wrapped entry becomes a second column of glyphs beside itself
+     and stops being one line. */
+  white-space: nowrap;
+  overflow-wrap: normal;
+  display: block;
+}
+/* Nested levels flatten into the same row rather than wrapping to a second
+   one -- there is no depth for a second row. */
+body:has(.chapter-title) #quarto-sidebar ul ul {
+  gap: 1rem;
+  /* Logical: under `vertical-rl` the indent belongs on the axis the list runs
+     along, and `padding-left` would push the nested level across the strip's
+     depth instead. */
+  padding-block-start: 1rem;
+  opacity: .75;
 }
 /* A book has no navbar to hold the light/dark and other tools, and its footer
-   is page-navigation rather than a status line, so the end edge stands down
-   and the text gets it. */
+   is page-navigation rather than a status line, so the END edge stands down and
+   the text gets it. Only the end edge: the bottom now carries the book's own
+   page TOC, the same as every other page. It used to be hidden on the argument
+   that the chapter list was the navigation that mattered -- but the two strips
+   were only in conflict while the chapter list was horizontal and pinned at a
+   different depth. Rotated and at the standard depth, they sit on opposite
+   edges like they do everywhere else, and a chapter loses nothing by telling
+   the reader where they are inside it. */
 body:has(.chapter-title) #quarto-content {
   left: 0;
+  right: $vertext-banner-size;
 }
 body:has(.chapter-title) .nav-footer,
 body:has(.chapter-title) .footer {
@@ -376,20 +561,64 @@ body:has(.chapter-title) .footer {
 }
 
 /* ── The content region: the remaining rectangle ─────────────────────────
-   Inset from all three occupied edges. The content filter has already made
-   this region a vertical surface that scrolls horizontally; the theme only
-   decides how much room it gets. */
+   Inset from every occupied edge. The content filter has already made this
+   region a vertical surface that scrolls horizontally; the theme only decides
+   how much room it gets.
+
+   `top` is the nav strip's depth and `bottom` the page TOC's -- the text sits
+   between the two lists rather than beside either. Only the pages that
+   actually HAVE a nav strip pay for the top; the rule below hands the depth
+   back otherwise. */
 #quarto-content {
   position: fixed;
-  top: $vertext-toc-size;
+  top: $vertext-nav-size;
   right: $vertext-banner-size;
   left: $vertext-status-size;
-  bottom: 0;
+  bottom: $vertext-toc-size;
   width: auto;
-  height: auto;
+  /* `height: auto` here is not the same as "let the insets decide". Quarto
+     puts `min-height: calc(100vh - 132px)` on `.quarto-container` (this same
+     element) and `main` below is `height: 100% !important` -- a percentage
+     against an auto-height parent resolves against CONTENT, so the two sized
+     each other in a circle and the region measured 717px tall inside a 598px
+     gap, hanging its last rows off the bottom of the window. Stating the
+     height as the distance between the two insets breaks the circle: it is
+     what `top`/`bottom` already mean, said in a form `min-height` cannot
+     outrank. */
+  /* `!important` because `main` below carries `height: 100% !important` (it
+     has to: the content filter hardcodes a chrome guess there). Without it the
+     child's forced height won, the auto-height parent grew to the child, and
+     the region measured 717px inside a 605px gap -- the last rows hanging off
+     the bottom of the window while every inset read correctly. */
+  height: calc(100vh - #{$vertext-nav-size} - #{$vertext-toc-size}) !important;
+  min-height: 0 !important;
   max-width: none;
   margin: 0;
   padding: 0;
+  /* `visible`, and this is a fix, not a relaxation. This region used to be
+     `overflow: hidden`, which clipped the chrome pinned inside it.
+
+     Quarto puts FOUR children here, not one: `#quarto-sidebar`,
+     `#quarto-sidebar-glass`, `#quarto-margin-sidebar` and `main`. The theme
+     pins the first three to viewport edges with `position: fixed` -- but this
+     region is itself `position: fixed`, which makes it the containing block
+     for fixed descendants, so `overflow: hidden` DID clip them. That is why
+     the section sidebar rendered at x=0 and had the first characters cut off
+     every entry while the DOM insisted its text began at x=13: the box was
+     placed correctly and the paint was clipped by an ancestor. Swapping the
+     region's `left` inset for `padding-left` did not help either -- padding
+     moves the text, not the clip.
+
+     Only `main` ever needed clipping, because only `main` is the scrolling
+     text surface; it takes the `overflow` below instead. The TOC strip had the
+     same latent bug and got away with it only because it is pinned to `top: 0`
+     where this region's inset happens to be zero. */
+  overflow: visible;
+}
+/* The clip the region gave up. This is the element it was always for: the
+   horizontally scrolling column surface, whose overflow must not spill across
+   the chrome. */
+#quarto-content > main {
   overflow: hidden;
 }
 /* Quarto's article grid reserves margin columns for a sidebar and a TOC. In a
@@ -402,7 +631,27 @@ body:has(.chapter-title) .footer {
    browser's own `script { display: none }`, dumping its JavaScript source onto
    the page as visible text below the columns. That is the "trailing code dump"
    the site was showing, and it is this rule, not the content filter. */
-#quarto-content > *:not(script):not(style):not(template),
+/* The `#quarto-sidebar`/`#quarto-margin-sidebar`/glass exclusions are
+   load-bearing for the same reason, found the same way. This rule is about
+   Quarto's article GRID, and those three children are not grid items -- they
+   are the chrome the theme pins to viewport edges. Matching them here meant
+   `display: block !important` overrode every attempt to hide one, which is
+   why the TOC strip stayed painted across a book's chapter sidebar even with
+   an explicit `body:has(.chapter-title) … { display: none }` written for it:
+   the strip was not winning a specificity fight, it was being forced back on
+   by this rule two blocks away. Anything that needs to hide a piece of chrome
+   has to be able to.
+
+   `.modal` is the same bug with teeth, and it was found by clicking a live
+   page rather than by looking at one. `code-tools: true` puts Bootstrap's
+   `#quarto-embedded-source-code-modal` inside this region, and Bootstrap keeps
+   a closed modal at `display: none`. Forced to `block` it becomes an
+   INVISIBLE, FULL-VIEWPORT click target: `opacity: 0`, `pointer-events: auto`,
+   `z-index: 1055`, measured at 1280x717 over everything. Every control on the
+   book's chapter sidebar was dead -- and looked perfect, because the thing
+   covering them paints nothing. Hit-testing goes by boxes, not paint; a
+   screenshot cannot show this and neither can any check that does not click. */
+#quarto-content > *:not(script):not(style):not(template):not(#quarto-sidebar):not(#quarto-margin-sidebar):not(#quarto-sidebar-glass):not(.modal),
 .page-columns {
   display: block !important;
   grid-template-columns: none !important;
@@ -415,15 +664,256 @@ body #quarto-document-content {
   padding: .5rem 1rem;
   /* The content filter sets the writing mode and the scroll axis here. Height
      is the one thing the theme owns, because only the theme knows how much of
-     the viewport the chrome has taken. */
-  height: 100%;
-  max-height: 100%;
+     the viewport the chrome has taken.
+
+     `!important` is what makes that true, and without it the sentence above
+     was just an intention. The filter ships `height: calc(100vh - 9rem)` -- a
+     fixed GUESS at the chrome, correct for the filter standing alone -- at
+     `body #quarto-document-content`, which is (0,1,0,1), exactly this rule's
+     specificity. Its stylesheet loads later, so it won, and the text column
+     measured 564px inside a region 598px tall on a site and 717px on a book:
+     a band of dead space at the end of every page that tracked nothing about
+     the actual chrome. The theme places that chrome and is the only thing
+     that knows what is left over. */
+  height: 100% !important;
+  max-height: 100% !important;
   box-sizing: border-box;
 }
 
-/* The floating sidebar has no place in a rotated page: it slides in from the
-   left, which is now the status edge. Navigation lives in the banner. */
-#quarto-sidebar,
+/* A website's section sidebar (`sidebar: docked` in the project config, e.g.
+   a docs tree with sections). It is NOT the book case above -- no
+   `.chapter-title` -- and it used to be hidden here on the reasoning that
+   navigation lives in the banner.
+
+   `display: none` at (0,1,0,0) never won. Quarto's own sidebar rules are more
+   specific, so the element stayed in the ordinary flow and came to rest at the
+   BOTTOM LEFT of the page, under the text, as a stack of section links with
+   chevrons -- looking like a stray fragment of some other layout rather than
+   navigation. Hiding it properly would also throw away the only way to reach
+   the other pages of a section.
+
+   So it is placed instead -- on the TOP edge, as a strip, not as a panel down
+   the side. It answers "where am I in this work", which is the question the
+   top edge carries; the page's own headings answer "where am I in this page"
+   and take the bottom. Side by side on unrelated edges the two lists read as
+   unrelated furniture; stacked on opposite edges of the text they read as a
+   pair.
+
+   The geometry is deliberately the SAME as the bottom strip's, because the two
+   are the same shape of thing and every trap below was already paid for once
+   there: the `!important` on `top` (`updateDocumentOffset` in quarto-nav.js
+   writes `top` inline), the rotated writing mode, and the flex axis. */
+body:not(:has(.chapter-title)) #quarto-sidebar {
+  display: block !important;
+  position: fixed !important;
+  top: 0 !important;
+  bottom: auto !important;
+  left: $vertext-status-size;
+  right: $vertext-banner-size;
+  width: auto;
+  max-width: none;
+  height: $vertext-nav-size;
+  max-height: $vertext-nav-size !important;
+  z-index: 1020;
+  /* Rotated with the page, like the banner and the bottom strip. Horizontal
+     text here would be the one piece of chrome still reading left-to-right on
+     a page where everything else has turned, and a CJK page title needs far
+     more width per entry than the edge can give. */
+  writing-mode: vertical-rl;
+  /* The strip's length runs DOWN the page in layout terms under `vertical-rl`,
+     so its scrollable overflow is the Y axis. Left as `overflow-x`, a list
+     longer than the edge could not be reached at all -- the same correction
+     the bottom strip needed. */
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: .75rem 0;
+  /* The rule faces the text, which is below. */
+  border-bottom: 1px solid rgba(128, 128, 128, .25);
+}
+/* ONE line of entries running ALONG the top edge. `column` is the axis that
+   advances along it under `vertical-rl` -- `row` is the BLOCK axis and would
+   stack every entry down the page, off-screen and unclickable while measuring
+   perfectly. That cost two rounds on the bottom strip; it is not re-learned
+   here. */
+body:not(:has(.chapter-title)) #quarto-sidebar .sidebar-menu-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 1rem;
+  writing-mode: vertical-rl;
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+body:not(:has(.chapter-title)) #quarto-sidebar ul {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 1rem;
+  writing-mode: vertical-rl;
+  height: 100%;
+  width: auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+/* Each entry is one vertical label, sized to its own text rather than
+   stretched by the flex line. `max-height` keeps a long CJK title from running
+   the depth of the strip. */
+body:not(:has(.chapter-title)) #quarto-sidebar .sidebar-item,
+body:not(:has(.chapter-title)) #quarto-sidebar .sidebar-item-container {
+  flex: 0 0 auto;
+  display: block;
+  max-height: 100%;
+  max-width: none;
+  min-width: 0;
+  width: auto;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+body:not(:has(.chapter-title)) #quarto-sidebar .sidebar-item-text,
+body:not(:has(.chapter-title)) #quarto-sidebar a {
+  writing-mode: vertical-rl;
+  /* `nowrap`: wrapping is what a tall panel wanted. In a strip a wrapped entry
+     becomes a second column of glyphs beside itself and the line stops being
+     one line. */
+  white-space: nowrap;
+  overflow-wrap: normal;
+  display: block;
+  padding: 0;
+  /* A long title SHRINKS rather than clipping. Measured: a nine-glyph CJK page
+     name 「第二節有很長的名字」 needs 189px of vertical run and a 7rem strip
+     offered 118, so `overflow: hidden` on the entry took the last glyphs off
+     -- and the title of a page is exactly the part a reader cannot guess.
+     Deepening the strip to fit the worst case is the other option and it is
+     worse: every page pays that depth out of its text forever, for one long
+     name. `clamp` keeps ordinary entries at full size and only steps the long
+     ones down. */
+  font-size: clamp(.6rem, 1.5vh, .95rem);
+  line-height: 1.05;
+  /* Past the clamp's floor a label still cannot fit -- real section names run
+     to "Component Framework — 學習索引", which needs 203px in a 176px strip.
+     It ends in an ellipsis instead of a hard cut, so the entry reads as
+     truncated rather than as a name that happens to end mid-word. */
+  text-overflow: ellipsis;
+}
+/* 縦中横: a short number stands upright and occupies ONE slot, the way an
+   ideograph does. Without it a strip entry for "01 — 對象模型" laid the 01 on
+   its side while the same 01 stood upright in the heading it names, two
+   inches away -- the chrome disagreeing with the text about whether a numeral
+   is a word.
+
+   The `.vertext-tcu` spans are added by the theme's filter script, because the
+   `digits` keyword that would do this without markup is unsupported in Chrome
+   (see vertext-theme.lua). Scoped to the ROTATED strips only: inside the
+   book's horizontal chapter strip the spans are still emitted and must stay
+   inert, since horizontal text has nothing to turn. */
+body:not(:has(.chapter-title)) #quarto-sidebar .vertext-tcu,
+#quarto-margin-sidebar .vertext-tcu {
+  text-combine-upright: all;
+}
+/* A nested level cannot become a second row -- there is no depth for one. It
+   is flattened into the same line and marked by weight, as the bottom strip
+   does with its sub-headings. */
+body:not(:has(.chapter-title)) #quarto-sidebar ul ul {
+  flex-direction: column;
+  gap: .75rem;
+  padding-top: .75rem;
+  opacity: .75;
+}
+/* An edge is only paid for when something is actually standing on it. The
+   region insets from both strips by default (see above), so these two rules
+   hand the depth BACK where the strip does not exist -- otherwise a page with
+   no docked sidebar carries 7rem of blank across its top, and a page with no
+   headings carries 5.5rem across its bottom, charged for chrome that is not
+   there. That exact bug was already shipped once on books, which reserved the
+   old top strip's depth after the strip was hidden.
+
+   `:has()` on the CONTENT, not on the element: `#quarto-sidebar` exists in the
+   markup on pages that have no sidebar contents, so testing for the node finds
+   one everywhere. `.sidebar-item` is what only a populated list has. */
+body:not(:has(#quarto-sidebar .sidebar-item)) #quarto-content {
+  top: 0;
+  height: calc(100vh - #{$vertext-toc-size}) !important;
+}
+body:not(:has(#quarto-margin-sidebar a)) #quarto-content {
+  bottom: 0;
+  height: calc(100vh - #{$vertext-nav-size}) !important;
+}
+/* Neither strip: the text gets the whole height. Written out because the two
+   rules above each state only their own edge, and a page with no sidebar AND
+   no headings needs both released at once. */
+body:not(:has(#quarto-sidebar .sidebar-item)):not(:has(#quarto-margin-sidebar a)) #quarto-content {
+  height: 100vh !important;
+}
+
+/* A book's region starts under its own, shallower strip.
+   Written twice, and the duplication is load-bearing rather than sloppy: the
+   release rule above is `body:not(:has(#quarto-margin-sidebar a))
+   #quarto-content`, and an `#id` inside `:has()` lends the whole compound its
+   specificity, so that selector scores (2,0,1) and out-ranks a plain
+   `body:has(.chapter-title) #quarto-content` at (1,1,1). A book has no page
+   TOC (it is hidden above), so it MATCHES that release rule and was silently
+   handed the 11rem inset back. Naming both branches of the `:has()` explicitly
+   puts this at (2,1,1), which wins either way round. */
+body:has(.chapter-title):has(#quarto-margin-sidebar a) #quarto-content {
+  top: $vertext-book-nav-size;
+  bottom: $vertext-toc-size;
+  height: calc(100vh - #{$vertext-book-nav-size} - #{$vertext-toc-size}) !important;
+}
+/* A chapter with no headings of its own has no page TOC to reserve for. */
+body:has(.chapter-title):not(:has(#quarto-margin-sidebar a)) #quarto-content {
+  top: $vertext-book-nav-size;
+  bottom: 0;
+  height: calc(100vh - #{$vertext-book-nav-size}) !important;
+}
+
+/* ── How far a column runs before it wraps ───────────────────────────────
+   The content filter sizes its columns from `--vertext-column-height`, whose
+   own default is `calc(100vh - 12rem)` -- a guess about how much chrome a page
+   carries, made before this theme put a strip on two edges. It was wrong by
+   the depth of the bottom strip, which is exactly what it looked like: columns
+   measured 466px inside a 347px region, so every column's last ~120px ran
+   UNDER the page TOC and the text was cut mid-glyph. The region was never the
+   problem -- its insets were right all along; the text inside it was being
+   told to be taller than it was.
+
+   The filter reads this variable and falls back to its own guess when no theme
+   sets it. It has to be routed that way round: the filter writes its style into
+   the BODY, after this sheet in the head, so a plain override here loses the
+   tie and the guess survives.
+
+   ONE rule, and `100%` rather than viewport arithmetic, because the filter's
+   own `.vertext` wrapper is already exactly the right box: the theme gives the
+   region a definite height in every branch above, the wrapper inherits it, and
+   the wrapper's 17px padding is outside its content box. So `100%` is the
+   usable run in every layout -- book, section page, page with no strip at all
+   -- without this rule having to know which one it is. The first version DID
+   restate all five cases here, and it was wrong in a way worth recording: it
+   subtracted the chrome but not the wrapper's padding or the line-height
+   overshoot, so the clearance came out at 8px instead of 2rem and the text
+   still looked cut off against the bottom edge. Measuring the container
+   removes that whole class of arithmetic error. */
+body {
+  --vertext-column-theme-height: calc(100% - #{$vertext-column-gap});
+  /* A table cell cannot use the percentage form above. Its containing block is
+     the table, whose own height is content-derived, so a percentage `max-height`
+     has nothing definite to resolve against and is simply dropped -- measured,
+     the cap did not bite at all and cells still ran 277px past the region.
+     So cells get an ABSOLUTE cap, and deliberately only one: the tightest
+     layout (both strips present). A page with fewer strips is then capped a
+     little sooner than it strictly needs, which costs a long cell an earlier
+     wrap and nothing else -- much better than five branches that can drift
+     apart, which is how the region insets went wrong in the first place. */
+  --vertext-cell-cap:
+    calc(100vh - #{$vertext-nav-size} - #{$vertext-toc-size} - #{$vertext-column-gap});
+}
+/* The glass overlay belongs to the slide-in behaviour, which no longer
+   happens: the sidebar is pinned. Left visible it covers the page. */
 #quarto-sidebar-glass {
   display: none;
 }
@@ -445,7 +935,11 @@ html[data-vertext-progression="lr"] {
     border-right: 0;
     border-left: 1px solid rgba(128, 128, 128, .25);
   }
-  #quarto-margin-sidebar {
+  /* Both horizontal strips span between the two vertical edges, so both swap
+     with them. Missing the nav strip here would leave it running under the
+     banner at one end and short of the status bar at the other. */
+  #quarto-margin-sidebar,
+  body:not(:has(.chapter-title)) #quarto-sidebar {
     left: $vertext-banner-size;
     right: $vertext-status-size;
   }
@@ -460,10 +954,13 @@ html[data-vertext-progression="lr"] {
    give the text the screen: the banner keeps its edge, the rest stand down.
    Stated as a documented fallback rather than left to chance. */
 @media (max-width: 40rem) {
-  /* `body` for the same specificity reason as the placement rule above: that
-     rule is (0,1,0,1) to beat the content filter, so a bare id no longer
-     outranks it and the strip would survive onto phones. */
-  body #quarto-margin-sidebar { display: none; }
+  /* `body:not(:has(...))` for the same specificity reason as the placement
+     rule above, and the selector has to track it exactly. That rule started as
+     (0,1,0,1) to beat the content filter and became (0,1,1,1) when it was
+     scoped away from books; a bare `body #id` is (0,1,0,1) and now LOSES to it
+     on a non-book page even though it comes later, so the strip would survive
+     onto phones. Matching the placement rule's shape is what hides it. */
+  body:not(:has(.chapter-title)) #quarto-margin-sidebar { display: none; }
   .footer, .nav-footer { display: none; }
   #quarto-content {
     top: 0;
@@ -554,7 +1051,10 @@ html[data-vertext-progression="lr"] {
 
 /* Print: the chrome is screen furniture and does not belong on paper. */
 @media print {
-  #quarto-header, body #quarto-margin-sidebar, .footer, .nav-footer { display: none; }
+  /* Same specificity fight as the mobile rule: the placement rule is
+     (0,1,1,1), so a bare `body #id` here would not hide the strip on paper. */
+  #quarto-header, .footer, .nav-footer { display: none; }
+  body:not(:has(.chapter-title)) #quarto-margin-sidebar { display: none; }
   body { overflow: visible; }
   #quarto-content {
     position: static;
