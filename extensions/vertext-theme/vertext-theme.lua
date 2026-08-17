@@ -52,6 +52,45 @@ local function strip_rendered(blocks)
   return false
 end
 
+-- Numbers in the rotated strips stand UPRIGHT, because a number is text here,
+-- not a foreign word. The content filter already treats it that way -- its slot
+-- model gives an ideograph one slot and a whole Latin WORD one slot, and a
+-- numeral behaves like the ideograph -- so a heading reading "01 — 對象模型"
+-- comes out with the 01 upright in the text and, until this existed, on its
+-- side in the strip naming the very same page.
+--
+-- Why this is script and not a stylesheet rule: the CSS for it is
+-- `text-combine-upright`, and the `digits` keyword that would do the whole job
+-- selector-side is NOT supported in Chrome -- measured, `CSS.supports(
+-- 'text-combine-upright','digits 2')` is false and the computed value stays
+-- `none`. Only `all` is supported, and `all` combines an element's ENTIRE
+-- text, which would crush "01 — 對象模型" into one cluster. So the digit run
+-- needs an element of its own, and only script can add one: this chrome is
+-- built by Quarto's template, after every filter has run.
+--
+-- Runs of one or two digits only. `all` squeezes whatever it is given into a
+-- single em, which is right for 01 and wrong for 2015 -- a longer run is left
+-- to rotate as it did before rather than being made illegible.
+--
+-- This adds MARKUP, never a character: the digit text is moved into a span
+-- unchanged, so copy-paste, find-in-page and a screen reader all still see the
+-- number the author typed.
+local UPRIGHT_DIGITS = [[
+document.addEventListener("DOMContentLoaded",function(){
+var links=document.querySelectorAll("#quarto-sidebar a, #quarto-margin-sidebar a");
+for(var i=0;i<links.length;i++){
+var w=document.createTreeWalker(links[i],NodeFilter.SHOW_TEXT),t,ns=[];
+while(t=w.nextNode())ns.push(t);
+for(var j=0;j<ns.length;j++){var n=ns[j];
+if(!/\d/.test(n.nodeValue))continue;
+var parts=n.nodeValue.split(/(\d+)/),f=document.createDocumentFragment();
+for(var k=0;k<parts.length;k++){var p=parts[k];if(!p)continue;
+if(k%2&&p.length<=2){var s=document.createElement("span");
+s.className="vertext-tcu";s.textContent=p;f.appendChild(s);}
+else f.appendChild(document.createTextNode(p));}
+n.parentNode.replaceChild(f,n);}}});
+]]
+
 function Meta(meta)
   -- Reset: Quarto reuses one Lua state for every document in a project render,
   -- so state left behind here turns the chrome for a page that never asked.
@@ -107,7 +146,7 @@ function Pandoc(doc)
   -- visible flash on the wrong edges.
   table.insert(doc.blocks, 1, pandoc.RawBlock('html', string.format(
     '<script>document.documentElement.setAttribute(' ..
-    '"data-vertext-progression","%s");</script>', progression)))
+    '"data-vertext-progression","%s");%s</script>', progression, UPRIGHT_DIGITS)))
   return doc
 end
 

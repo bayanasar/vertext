@@ -1,3 +1,21 @@
 [workspace]
 members = ["crates/vertext-core", "crates/vertext-html", "crates/vertext-cli"]
 resolver = "2"
+
+# Shared metadata lives here so the three crates cannot drift apart. They are
+# published together and a mismatched version between them is exactly the
+# silent-mislayout class this publish exists to remove: the Lua filter and the
+# binary share a PUA wire protocol, so a host that resolves two different
+# vertext versions gets no error, just misplaced text.
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+repository = "https://github.com/bayanasar/vertext"
+readme = "README.md"
+keywords = ["vertical-text", "typography", "cjk", "mongolian", "unicode"]
+categories = ["text-processing", "internationalization"]
+
+[workspace.dependencies]
+vertext-core = { version = "0.1.0", path = "crates/vertext-core" }
+vertext-html = { version = "0.1.0", path = "crates/vertext-html" }

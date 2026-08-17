@@ -111,8 +111,21 @@ local function document_style()
   /* The column length budget: how far a paragraph runs before wrapping into
      the next visual column. This is the vertical analogue of a measure, and
      it is what makes a long paragraph reachable instead of running off the
-     bottom of the page into nothing. */
-  body { --vertext-column-height: calc(100vh - 12rem); }
+     bottom of the page into nothing.
+
+     The 12rem is a guess about chrome, and it is only ever right for a bare
+     document. A THEME knows the real answer -- it is the thing that decides
+     how deep the strips are -- so it gets to say, through
+     `--vertext-column-theme-height`. Routed through a variable rather than
+     left for the theme to override directly because THIS stylesheet wins a
+     specificity tie: the filter writes it into the body, after the head, so a
+     plain `body { --vertext-column-height: ... }` in a linked theme sheet
+     loses and the columns keep the guess. Measured before this existed: a
+     466px column in a 347px region, so the last ~120px of every column ran
+     under the bottom strip and the text was cut mid-glyph. */
+  body {
+    --vertext-column-height: var(--vertext-column-theme-height, calc(100vh - 12rem));
+  }
   /* The content region becomes the vertical surface.
      `writing-mode: vertical-rl` is doing real work here, not decoration: a
      `flex-direction: row-reverse` strip overflows *leftward*, into negative
@@ -163,8 +176,45 @@ local function document_style()
      it from metadata at template time, after this filter has run. */
   body #title-block-header { display: none; }
   /* The table of contents assumes a vertically scrolling article and has
-     nothing to anchor to here. */
+     nothing to anchor to here. The filter alone offers no edge to put one on;
+     the THEME does, and overrides this at matching specificity. */
   body #quarto-margin-sidebar, body .toc-active #TOC { display: none; }
+  /* The real `Header` nodes kept beside the strip so Quarto can build a TOC
+     at all (see the Pandoc pass). The strip already draws these headings in
+     columns, so these copies must not be seen -- but NOT via `display: none`
+     or `visibility: hidden`, which drop them from the accessibility tree and
+     would hand a screen reader a document with no headings while sighted
+     readers get a full outline. This is the standard visually-hidden clip:
+     out of the layout, still in the tree, still a valid anchor target.
+
+     Deliberately NOT `position: absolute`, which is what the usual
+     visually-hidden recipe uses: taking the anchor out of flow puts it
+     wherever the containing block starts, measured at x=-1950 in a document
+     that scrolls right-to-left -- outside the scrollable range entirely, so
+     following a TOC link updated the hash and scrolled nowhere. In flow and
+     zero-width, the anchor sits exactly beside the text it names, which is
+     the whole point of it being an anchor. */
+  body .vertext-toc-anchor {
+    display: inline-block;
+    width: 0;
+    height: 0;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    border: 0;
+    vertical-align: top;
+  }
+  /* The heading inside keeps its text for a screen reader while contributing
+     no box of its own. */
+  body .vertext-toc-anchor > * {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
   /* Give the document the full width of the window.
      Quarto's article grid reserves margin columns for a sidebar and a table
      of contents; in a horizontally scrolling document those reservations are
@@ -225,11 +275,32 @@ local SCROLL_SCRIPT = [[
     }
     if (!target) { return; }
     var listener = (target === document.scrollingElement) ? window : target;
+    // A block too tall for the region -- a long code listing, a big table --
+    // is capped and scrolls inside itself, because the region cannot scroll on
+    // the y axis without fighting the column wrap. That only counts as a fix
+    // if the wheel can actually reach it: this handler sits on the region and
+    // sees those events bubble, and turning them into column advance would
+    // leave the overflow unreachable by the one gesture people use. So a
+    // gesture that starts inside a y-scroller with room left in that direction
+    // belongs to the scroller, and this handler keeps its hands off.
+    function insideLiveScroller(node, delta) {
+      for (var el = node; el && el !== target; el = el.parentElement) {
+        if (el.scrollHeight <= el.clientHeight + 1) { continue; }
+        var style = getComputedStyle(el).overflowY;
+        if (style !== 'auto' && style !== 'scroll') { continue; }
+        var room = delta > 0
+          ? el.scrollHeight - el.clientHeight - el.scrollTop > 1
+          : el.scrollTop > 1;
+        if (room) { return true; }
+      }
+      return false;
+    }
     listener.addEventListener('wheel', function (event) {
       // Leave zoom and genuine horizontal gestures alone.
       if (event.ctrlKey || !event.deltaY) { return; }
       if (Math.abs(event.deltaX) > Math.abs(event.deltaY)) { return; }
       if (target.scrollWidth <= target.clientWidth + 1) { return; }
+      if (insideLiveScroller(event.target, event.deltaY)) { return; }
       var before = target.scrollLeft;
       target.scrollLeft = before + forward * event.deltaY;
       // Only claim the gesture if it actually moved; at either end the page
@@ -433,7 +504,11 @@ end
 -- that opts in with `vertext-page: true` gets exactly the same treatment as
 -- one that wraps its content by hand — an author writing a vertical document
 -- should not have to fence the entire thing.
-local function encode_blocks(blocks)
+--
+-- Declared before the definition because a Div recurses back into it.
+local encode_blocks
+
+function encode_blocks(blocks)
   local parts = {}
   for _, block in ipairs(blocks) do
     if block.t == "CodeBlock" then
@@ -468,6 +543,21 @@ local function encode_blocks(blocks)
       -- `Chinese`, indistinguishable from prose.
       table.insert(parts,
         heading_marker(block.level) .. content_of(block) .. MODE_PROSE)
+    elseif block.t == "Div" then
+      -- Recurse rather than stringify. A Div is a wrapper, and the blocks
+      -- inside it deserve exactly the treatment they would get at top level:
+      -- a CodeBlock in here is still code and must reach the branch above.
+      --
+      -- Stringifying instead is not merely lossy, it is silently *empty*:
+      -- `pandoc.utils.stringify` walks inlines, and a CodeBlock's text is not
+      -- inlines, so a Div wrapping code stringifies to "" and the whole block
+      -- disappears from the document. That is how Quarto's executed output
+      -- vanished -- `.cell-output` is a Div around a CodeBlock, so every
+      -- `Sum: 15` a notebook printed was dropped while the prose around it
+      -- survived, making it look like an output-specific bug. It is not
+      -- specific to `.cell-output`; any Div holding code was erased.
+      local inner = encode_blocks(block.content)
+      if inner ~= "" then table.insert(parts, inner) end
     else
       -- Everything else is still flattened to its characters: inline emphasis,
       -- links, and list structure do not survive. Documented in the README
@@ -525,6 +615,20 @@ end
 -- with RawBlocks by the time this runs.
 function Pandoc(doc)
   if not quarto.doc.is_format("html") then return nil end
+  -- Laying out an already-laid-out document is not a smaller version of the
+  -- job; it is a different and wrong one. The filter can be applied twice --
+  -- the theme's format defaults name it AND a page may name it again in its own
+  -- `filters:` -- and the second pass sees a document whose prose is inert
+  -- RawBlocks but whose title and heading anchors are still live nodes. Only
+  -- those get laid out again, so the page came back with its title and every
+  -- heading drawn TWICE, side by side, and nothing else changed.
+  --
+  -- The guard is on `doc.meta` rather than a module-level flag on purpose:
+  -- Quarto reuses one Lua state for every document in a project render, so a
+  -- flag set for one page would silence the filter for every page after it.
+  -- It also cannot key off "are there vertext RawBlocks already", because the
+  -- `Div` handler above produces exactly those, earlier in THIS same pass.
+  if doc.meta['vertext-rendered'] then return nil end
   -- A document that only carries an explicit `.vertext-page` div still needs
   -- its page style attached; it just has no body to lay out.
   if not document_mode then
@@ -536,6 +640,7 @@ function Pandoc(doc)
       includes[#includes + 1] = pandoc.MetaBlocks({
         pandoc.RawBlock('html', page_style(progression) .. SCROLL_SCRIPT) })
       doc.meta['header-includes'] = includes
+      doc.meta['vertext-rendered'] = true
       return doc
     end
     return nil
@@ -573,6 +678,49 @@ function Pandoc(doc)
     pending = {}
   end
 
+  -- Structural HTML with text inside it: keep the structure, lay out the text.
+  --
+  -- Passing such a Div through whole is right for a code listing, which is one
+  -- opaque lump of rendered markup. It is wrong for a hand-written panel -- the
+  -- crew roster is the case that named this -- where the raw tags are the
+  -- CARDS and the Chinese between them is ordinary prose that should be set in
+  -- columns like every other paragraph on the site. Passing it through left the
+  -- one page of hand-written HTML reading horizontally.
+  --
+  -- So walk it: raw tags survive untouched and keep the layout they describe,
+  -- nested Divs recurse, and each run of real content between them becomes its
+  -- own small strip. That is what "every micro div gets the normal treatment"
+  -- means -- the container decides where the card sits, the engine decides how
+  -- the text inside it reads.
+  local function relayout_raw(block)
+    if block.t ~= "Div" or not block.content then return block end
+    local out, group = {}, {}
+    local function flush_group()
+      if #group == 0 then return end
+      local text = encode_blocks(group)
+      local html = text ~= "" and render(text, strip_args) or nil
+      if html then
+        table.insert(out, pandoc.RawBlock("html", html))
+      else
+        for _, b in ipairs(group) do table.insert(out, b) end
+      end
+      group = {}
+    end
+    for _, inner in ipairs(block.content) do
+      if inner.t == "RawBlock" then
+        flush_group()
+        table.insert(out, inner)
+      elseif inner.t == "Div" then
+        flush_group()
+        table.insert(out, relayout_raw(inner))
+      else
+        table.insert(group, inner)
+      end
+    end
+    flush_group()
+    return pandoc.Div(out, block.attr)
+  end
+
   -- Quarto carries its own machinery in the document AST as hidden divs --
   -- `quarto-navigation-envelope` holds the navbar and footer,
   -- `quarto-meta-markdown` the title and description -- and extracts them into
@@ -581,21 +729,120 @@ function Pandoc(doc)
   -- gets `Pegboard /external/pegboard/index.html` set in columns at the end of
   -- the text, and the title pasted three times. They must pass through
   -- untouched, because Quarto still needs them to build the page.
+  --
+  -- `quarto-embedded-source-code` is the same kind of thing and had to be
+  -- added after it shipped: `code-tools: true` puts the document's ENTIRE
+  -- source, frontmatter and all, into a hidden div for the "View Source"
+  -- modal. Quarto keeps it out of sight with CSS; this filter saw an ordinary
+  -- CodeBlock, laid it out, and printed the whole `.qmd` -- `---`, `title:`
+  -- and all -- as a code strip at the end of every page. It looks like the
+  -- document dumping its own source, which is exactly what it is, and it only
+  -- appears on projects that enable the feature.
+  local CHROME_CLASSES = {
+    hidden = true,
+    ["quarto-embedded-source-code"] = true,
+    -- An anchor this pass emitted on a PREVIOUS run. The filter can legitimately
+    -- run twice on one document -- the theme's format defaults carry it, and a
+    -- page may also name it in its own `filters:` -- and everything else it
+    -- produced comes back as a RawBlock, which passes through untouched. These
+    -- do not: an anchor holds a REAL `Header` node, because that is the entire
+    -- reason it exists (see below), so a second pass laid it out into a strip
+    -- of its own and every heading rendered TWICE, side by side. Measured on
+    -- the Mongolian lesson page, the only one carrying a page-level `filters:`:
+    -- 66 heading columns against 36 anchors. Skipping them here makes the pass
+    -- idempotent, which is the property that was missing -- rather than relying
+    -- on no document ever declaring the filter twice.
+    ["vertext-toc-anchor"] = true,
+  }
   local function is_quarto_chrome(block)
     if not (block.attr and block.attr.classes) then return false end
     for _, class in ipairs(block.attr.classes) do
-      if class == "hidden" then return true end
+      if CHROME_CLASSES[class] then return true end
     end
     return false
+  end
+
+  -- A Div holding a RawBlock must not reach the encoder.
+  --
+  -- The wire format is text, and `pandoc.utils.stringify` on a RawBlock returns
+  -- "" -- so such a block does not merely lose its markup, it DISAPPEARS. This
+  -- is the third time this exact trap has bitten (Div-wrapping-CodeBlock, then
+  -- executed output, now this) and it hides the same way every time: silently
+  -- empty, never an error.
+  --
+  -- What it cost: every code listing in the Crust book. The `%%rust` and
+  -- `%%cpp` magics emit their syntax-highlighted source as a RawBlock html
+  -- inside `.cell-output-display`, with `#| echo: false` hiding the Python
+  -- wrapper -- so the page kept each program's printed result (a CodeBlock,
+  -- which the encoder does handle) and dropped every line of the Rust and C++
+  -- the lesson was actually about. A page of answers with no questions.
+  --
+  -- Passing the Div through untouched is right rather than merely expedient:
+  -- the content is already rendered HTML that Quarto styles, and laying out
+  -- pre-highlighted markup as vertical slots would destroy the highlighting
+  -- that is the point of it.
+  local function holds_raw_block(block)
+    if block.t == "RawBlock" then return true end
+    if block.t ~= "Div" or not block.content then return false end
+    for _, inner in ipairs(block.content) do
+      if holds_raw_block(inner) then return true end
+    end
+    return false
+  end
+
+  -- Headings are carried across in BOTH forms, and the reason is Quarto's
+  -- table of contents.
+  --
+  -- Pandoc fills `$toc$` by walking `Header` blocks, and by the time it looks
+  -- there are none left: every heading has been encoded into the strip and
+  -- comes back as a `vertext-column-heading` div inside one RawBlock. Nothing
+  -- errors -- the page just renders with no TOC, on every vertext document
+  -- there has ever been, and Quarto then stamps `.zindex-bottom` on the empty
+  -- sidebar and parks it off-screen, which reads like a placement bug in the
+  -- theme rather than a missing heading two files away.
+  --
+  -- Filter ORDERING cannot fix it (both `pre-quarto` and `post-quarto` were
+  -- tried): `$toc$` is computed by the WRITER, after every filter has run. The
+  -- headings have to be real `Header` nodes sitting in the AST this pass
+  -- returns. So each one is emitted next to the strip that draws it, keeping
+  -- document order so the TOC reads in the right sequence. The stylesheet
+  -- takes them out of the visual flow -- they are already drawn, in columns,
+  -- inside the strip.
+  local function emit_toc_headings(blocks)
+    for _, block in ipairs(blocks) do
+      if block.t == "Header" then
+        table.insert(rendered,
+          pandoc.Div({ pandoc.Header(block.level, block.content, block.attr) },
+                     pandoc.Attr("", { "vertext-toc-anchor" }, {})))
+      elseif block.t == "Div" and block.content then
+        emit_toc_headings(block.content)
+      end
+    end
   end
 
   for _, block in ipairs(doc.blocks) do
     -- A RawBlock at this point is a strip `Div` already rendered; emitting it
     -- as-is keeps an author's explicit fences intact.
-    if block.t == "RawBlock" or is_quarto_chrome(block) then
+    if block.t ~= "RawBlock" and not is_quarto_chrome(block) and holds_raw_block(block) then
+      -- Passed through, but NOT unstyled. The region it lands in is
+      -- `writing-mode: vertical-rl`, so already-rendered HTML inherits it and a
+      -- code listing comes out running down the page one character at a time.
+      -- Code is horizontal in this layout by rule -- it is set as a wrapped
+      -- horizontal block, not poured into vertical slots -- and passing the
+      -- markup through untouched silently opted it out of that rule.
+      flush()
+      table.insert(rendered,
+        pandoc.Div({ block }, pandoc.Attr("", { "vertext-raw" }, {})))
+    elseif block.t == "RawBlock" or is_quarto_chrome(block) then
       flush()
       table.insert(rendered, block)
     else
+      if block.t == "Header" or block.t == "Div" then
+        -- Flush first so the anchor lands AFTER the strip carrying the text
+        -- before it, keeping the reading order Pandoc will walk.
+        flush()
+        emit_toc_headings({ block })
+      end
       table.insert(pending, block)
     end
   end
@@ -616,6 +863,7 @@ function Pandoc(doc)
   end
 
   doc.blocks = rendered
+  doc.meta['vertext-rendered'] = true
   return doc
 end
 

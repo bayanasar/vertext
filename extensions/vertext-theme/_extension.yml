@@ -24,8 +24,29 @@ contributes:
       filters:
         - vertext
         - vertext-theme.lua
-      theme:
-        - vertext-theme.scss
+      # NO `theme:` default, deliberately, and this cost a render to learn.
+      #
+      # Declaring `theme: [vertext-theme.scss]` here works for a site with one
+      # appearance, but makes the theme UNUSABLE by any site that declares the
+      # light/dark MAP form: Quarto merges the flat list and the map into a map
+      # where it expects a path, then dies inside `layerTheme` with a bare
+      #
+      #     TypeError: Path must be a string, received "{"light":[...]}"
+      #
+      # naming neither this file nor the theme. There is no override that
+      # rescues it -- `theme: null` in the site's own block is a duplicate YAML
+      # key, not a reset. Supporting light/dark at all means not declaring it.
+      #
+      # So `vertext-theme.scss` ships as an ASSET the site points at. Copy it
+      # next to the site's own `.scss` files and append it LAST, so the
+      # rotated-chrome rules land on top of the bootswatch base:
+      #
+      #     theme:
+      #       light: [cosmo, mysite.scss, vertext-theme.scss]
+      #       dark:  [darkly, mysite-dark.scss, vertext-theme.scss]
+      #
+      # A single-appearance site writes the same thing as a flat list.
+
       # Choosing the theme IS the opt-in. The content filter lays out a whole
       # document only when it sees `vertext: true`, and requiring every page to
       # carry that in its own frontmatter would be precisely the per-document

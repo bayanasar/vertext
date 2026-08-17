@@ -1,13 +1,18 @@
 [package]
 name = "vertext-cli"
-version = "0.1.0"
-edition = "2024"
-license = "MIT"
+description = "Command-line renderer for top-to-bottom, right-to-left text — the binary Quarto and other hosts invoke"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+readme.workspace = true
+keywords.workspace = true
+categories.workspace = true
 
 [[bin]]
 name = "vertext"
 path = "src/main.rs"
 
 [dependencies]
-vertext-core = { version = "0.1.0", path = "../vertext-core" }
-vertext-html = { path = "../vertext-html" }
+vertext-core.workspace = true
+vertext-html.workspace = true
