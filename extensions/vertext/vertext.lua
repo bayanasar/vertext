@@ -312,6 +312,116 @@ local SCROLL_SCRIPT = [[
 </script>
 ]]
 
+-- A vertical page spends its DEPTH on chrome, and depth is the scarce axis:
+-- a top strip that costs 11rem out of a 100vh column is a tenth of every line
+-- of text on the page, on every page. Horizontally that same strip costs
+-- nothing anyone notices. So a vertical theme needs a way to give the depth
+-- back, and this is it.
+--
+-- The control is the engine's; the geometry stays the theme's. The theme
+-- publishes its strip depth as `--vertext-nav-depth` and uses that property
+-- everywhere it currently writes the number -- the strip's own size AND the
+-- content region's inset. This script then swaps the property and the whole
+-- geometry follows from one value.
+--
+-- The opt-in is the PROPERTY BEING DECLARED, not a class or an attribute in
+-- the markup, and that is deliberate. A theme that still bakes its depth into
+-- a Sass constant would get a button that renders, clicks, flips a class, and
+-- moves nothing -- which is the worst outcome available here, worse than no
+-- button, because it looks like it worked. Reading the computed property is
+-- the one check that proves the theme actually routed its geometry through a
+-- runtime value. No property, no button.
+--
+-- The strip element is found by `[data-vertext-edge="nav"]` when a host emits
+-- its own chrome, and falls back to Quarto's `#quarto-header`, which is
+-- template output and cannot be given an attribute from a filter.
+local NAV_TOGGLE = [[
+<style id="vertext-nav-toggle">
+  body.vertext-nav-collapsed {
+    --vertext-nav-depth: var(--vertext-nav-depth-collapsed, 2.1rem);
+  }
+  /* The list goes; the strip and its button stay. Hiding the strip outright
+     would take the control with it, and a control you cannot get back to is
+     not a collapse, it is a one-way door. `visibility` rather than `display`
+     so the strip does not reflow its own button on the way down. */
+  body.vertext-nav-collapsed [data-vertext-edge="nav"] > *:not(.vertext-nav-toggle),
+  body.vertext-nav-collapsed #quarto-header > *:not(.vertext-nav-toggle) {
+    visibility: hidden;
+  }
+  /* Physical properties deliberately: this button is pinned to a viewport
+     edge, and under a vertical writing mode the logical ones swap under it. */
+  .vertext-nav-toggle {
+    position: absolute;
+    top: .35rem;
+    right: .45rem;
+    z-index: 2;
+    /* Hit-testing goes by BOXES, not by paint. A control that renders in the
+       right place and is not clickable has happened in this extension before
+       and passed every markup assertion in the suite, so the button gets a
+       real box with real padding rather than relying on a glyph's own ink. */
+    min-width: 1.9rem;
+    min-height: 1.9rem;
+    padding: 0;
+    line-height: 1;
+    writing-mode: horizontal-tb;
+    cursor: pointer;
+    background: transparent;
+    border: 1px solid rgba(128, 128, 128, .4);
+    border-radius: .25rem;
+    color: inherit;
+    opacity: .75;
+  }
+  .vertext-nav-toggle:hover { opacity: 1; }
+  .vertext-nav-toggle:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+</style>
+<script>
+(function () {
+  var KEY = 'vertext-nav-collapsed';
+  function ready(fn) {
+    if (document.readyState !== 'loading') { fn(); }
+    else { document.addEventListener('DOMContentLoaded', fn); }
+  }
+  ready(function () {
+    var strip = document.querySelector('[data-vertext-edge="nav"]')
+             || document.getElementById('quarto-header');
+    if (!strip) { return; }
+    // The theme must have routed its depth through the property, or the
+    // button would flip a class that changes nothing. See the note above.
+    var depth = getComputedStyle(document.body).getPropertyValue('--vertext-nav-depth');
+    if (!depth || !depth.trim()) { return; }
+
+    var root = document.documentElement;
+    var open = root.getAttribute('data-vertext-nav-label') || 'Collapse navigation';
+    var shut = root.getAttribute('data-vertext-nav-label-collapsed') || 'Expand navigation';
+
+    var button = document.createElement('button');
+    button.className = 'vertext-nav-toggle';
+    button.type = 'button';
+    if (getComputedStyle(strip).position === 'static') { strip.style.position = 'relative'; }
+    strip.appendChild(button);
+
+    function apply(collapsed) {
+      document.body.classList.toggle('vertext-nav-collapsed', collapsed);
+      button.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+      button.setAttribute('aria-label', collapsed ? shut : open);
+      button.setAttribute('title', collapsed ? shut : open);
+      button.textContent = collapsed ? '▸' : '▾';
+    }
+    var stored = null;
+    // Storage throws outright in some contexts -- private windows, thumbnail
+    // capture, browsers set to block site data -- so it is never read bare.
+    try { stored = localStorage.getItem(KEY); } catch (e) {}
+    apply(stored === '1');
+    button.addEventListener('click', function () {
+      var collapsed = !document.body.classList.contains('vertext-nav-collapsed');
+      apply(collapsed);
+      try { localStorage.setItem(KEY, collapsed ? '1' : '0'); } catch (e) {}
+    });
+  });
+})();
+</script>
+]]
+
 local function page_style(mode)
   local writing_mode = (mode == 'lr') and 'vertical-lr' or 'vertical-rl'
   return ([[
@@ -638,7 +748,7 @@ function Pandoc(doc)
         includes = pandoc.MetaList({ includes })
       end
       includes[#includes + 1] = pandoc.MetaBlocks({
-        pandoc.RawBlock('html', page_style(progression) .. SCROLL_SCRIPT) })
+        pandoc.RawBlock('html', page_style(progression) .. SCROLL_SCRIPT .. NAV_TOGGLE) })
       doc.meta['header-includes'] = includes
       doc.meta['vertext-rendered'] = true
       return doc
@@ -858,7 +968,8 @@ function Pandoc(doc)
     end
     local style = (page_mode or page_div_rendered)
       and page_style(progression) or document_style()
-    includes[#includes + 1] = pandoc.MetaBlocks({ pandoc.RawBlock('html', style .. SCROLL_SCRIPT) })
+    includes[#includes + 1] = pandoc.MetaBlocks({
+      pandoc.RawBlock('html', style .. SCROLL_SCRIPT .. NAV_TOGGLE) })
     doc.meta['header-includes'] = includes
   end
 

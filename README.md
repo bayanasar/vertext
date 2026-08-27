@@ -119,6 +119,44 @@ Quarto's own title block is hidden, so the title obeys the same layout rules
 as the body it heads. Rotating it with `text-orientation: sideways` would have
 been a transform wearing the costume of vertical text.
 
+### Collapsing the top strip
+
+On a vertical page, depth is the scarce axis: a navigation strip that costs
+11rem out of a 100vh column takes a tenth of every line of text, on every
+page. Horizontally the same strip costs nothing anyone notices.
+
+So the extension ships a control that hands that depth back, and a theme opts
+in by publishing its top-edge depth as a custom property:
+
+```css
+:root {
+  --vertext-nav-depth: 11rem;        /* the strip AND the content inset read this */
+  --vertext-nav-depth-collapsed: 2.1rem;   /* optional; this is the default */
+}
+```
+
+Every rule that would otherwise write the number — the strip's own size, the
+content region's top inset, any `calc()` deriving a height from it — must read
+`var(--vertext-nav-depth)` instead. That is the whole contract: one value
+moves, and the geometry follows.
+
+The extension then builds the button itself and appends it to the strip, which
+it finds by `[data-vertext-edge="nav"]`, falling back to Quarto's
+`#quarto-header`. Collapsing sets `vertext-nav-collapsed` on the body; the
+choice is remembered in `localStorage`. The strip shrinks to a bar that still
+carries the button — never to nothing, because a control you cannot get back
+to is a one-way door, not a collapse.
+
+**A page that does not declare `--vertext-nav-depth` gets no button at all.**
+That is deliberate. A theme still baking its depth into a build-time constant
+would otherwise get a control that renders, clicks, flips a class and moves
+nothing — which is worse than no control, because it looks like it worked.
+Reading the computed property back is the one check that proves the geometry
+really is a runtime value.
+
+Two optional attributes on `<html>` localize the tooltip, which defaults to
+English: `data-vertext-nav-label` and `data-vertext-nav-label-collapsed`.
+
 ## Layout
 
 Columns run top-to-bottom; a source newline starts the column to the *left*.
@@ -173,9 +211,18 @@ mapping, and editable text in chaji.
 ## Tests
 
 ```sh
-cargo test --workspace        # layout engine and renderer
-./examples/test-extension.sh  # the Quarto filter, through real `quarto render`
+cargo test --workspace         # layout engine and renderer
+./examples/test-extension.sh   # the Quarto filter, through real `quarto render`
+node examples/test-nav-toggle.js   # the collapse control's branches, in a stub DOM
 ```
+
+The last one exists because the other two cannot run a script: `cargo test`
+stops at the renderer and `test-extension.sh` greps markup. It covers the
+opt-in rule, persistence, and the way back — and it explicitly does **not**
+cover hit-testing or layout. A control that renders in the right place and is
+unclickable has shipped from here before, with every check green the whole
+way; only a real browser driving a real mouse event catches that, and the
+`kele` repo's `tools/check-nav-toggle.py` is that test.
 
 Layout invariants and the mode protocol are unit-tested; the README's
 山川异域，风月同天 sample is pinned as a golden. Correctness claims for a

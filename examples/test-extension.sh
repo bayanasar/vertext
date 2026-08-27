@@ -621,6 +621,22 @@ else
   failures=$((failures + 1))
 fi
 
+# Everything above greps markup, and markup cannot answer whether a script
+# runs. The nav-collapse control is script, so its branches are checked in a
+# stub DOM instead. Skipped rather than failed where node is absent: this file
+# already needs cargo and quarto, and a third hard dependency for one test
+# would cost more than it buys.
+printf '\n'
+if command -v node >/dev/null 2>&1; then
+  if node "$root/examples/test-nav-toggle.js"; then
+    :
+  else
+    failures=$((failures + 1))
+  fi
+else
+  printf 'skip nav-toggle logic (no node)\n'
+fi
+
 printf '\n'
 if [ "$failures" -eq 0 ]; then
   printf 'all extension checks passed\n'
