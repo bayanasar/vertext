@@ -143,25 +143,38 @@ pub struct Row {
 pub fn prefers_horizontal(text: &str) -> bool {
     let (mut vertical, mut horizontal) = (0usize, 0usize);
     let mut in_word = false;
+    // Which script holds the open word. The suffix separator joins bichig and
+    // nothing else, so the measure has to know which kind of word it is inside
+    // before it can decide whether that mark ends one.
+    let mut in_bichig = false;
     for cluster in text.graphemes(true) {
         let Some(base) = cluster.chars().next() else { continue };
         if is_cjk(base) {
             vertical += 1;
             in_word = false;
+            in_bichig = false;
         } else if is_mongolian(base) {
             // A Mongolian run is one slot, so only its start counts.
             if !in_word {
                 vertical += 1;
             }
             in_word = true;
+            in_bichig = true;
         } else if is_word_char(base) || (in_word && is_word_connector(base)) {
             // A whole Latin word is one slot; count only where it begins.
             if !in_word {
                 horizontal += 1;
             }
             in_word = true;
+            in_bichig = false;
+        } else if in_bichig && is_suffix_separator(base) {
+            // The word continues across the joint. A stem and its case ending
+            // are one word and one slot — see `is_suffix_separator` — and
+            // counting them twice weighs the same word twice, which is the
+            // measure disagreeing with the layout about what a slot is.
         } else {
             in_word = false;
+            in_bichig = false;
         }
     }
     horizontal > vertical
@@ -225,6 +238,12 @@ pub fn layout_text(input: &str, config: &LayoutConfig) -> Layout {
     // turns next to a space, which is what left a line of prose with some
     // brackets rotated and some not.
     let mut connectors_may_join = true;
+    // A suffix separator waiting to learn what follows it. Bichig on the right
+    // claims it into the run; anything else — an ideograph, a newline, the end
+    // of the input — leaves it the narrow space it is also named for. The same
+    // deferral as `pending_connectors`, for the same reason: one pass over the
+    // text, and only the next cluster can tell the two readings apart.
+    let mut pending_separator = String::new();
 
     let flush_latin = |columns: &mut Vec<Column>, word: &mut String| {
         if word.is_empty() { return; }
@@ -246,6 +265,15 @@ pub fn layout_text(input: &str, config: &LayoutConfig) -> Layout {
             Some(base) => base,
             None => continue,
         };
+        // A buffered separator learns here what followed it. This settles
+        // before the branches so every one of them sees a decided state, and
+        // it closes the run first: the mark goes after the stem it failed to
+        // join, never ahead of it.
+        if !pending_separator.is_empty() && !is_mongolian(base) {
+            flush_mongolian(&mut columns, &mut mongolian_run);
+            columns.last_mut().unwrap().slots
+                .push(Slot::Space(std::mem::take(&mut pending_separator)));
+        }
         if base == '\n' || base == '\r' {
             // "\r\n" is one cluster and must open one column, not two.
             flush_latin(&mut columns, &mut latin_word);
@@ -254,6 +282,13 @@ pub fn layout_text(input: &str, config: &LayoutConfig) -> Layout {
             connectors_may_join = true;
             columns.push(Column { slots: Vec::new() });
         } else if base.is_whitespace() {
+            if is_suffix_separator(base) && !mongolian_run.is_empty() {
+                // Not a space here: the joint that holds a case ending onto
+                // its stem. Hold it until the next cluster says whether a
+                // suffix actually follows.
+                pending_separator.push_str(cluster);
+                continue;
+            }
             flush_latin(&mut columns, &mut latin_word);
             flush_mongolian(&mut columns, &mut mongolian_run);
             flush_pending(&mut columns, &mut pending_connectors);
@@ -276,6 +311,9 @@ pub fn layout_text(input: &str, config: &LayoutConfig) -> Layout {
             // Bichig is not Latin: `ᠱ(S)` is a script paired with its
             // transliteration, so the bracket belongs to the sentence.
             connectors_may_join = false;
+            // A separator the previous letter held back has its answer: the
+            // suffix arrived, so the joint goes into the run it joins.
+            mongolian_run.push_str(&std::mem::take(&mut pending_separator));
             mongolian_run.push_str(cluster);
         } else if is_word_char(base) {
             flush_mongolian(&mut columns, &mut mongolian_run);
@@ -326,6 +364,10 @@ pub fn layout_text(input: &str, config: &LayoutConfig) -> Layout {
     }
     flush_latin(&mut columns, &mut latin_word);
     flush_mongolian(&mut columns, &mut mongolian_run);
+    // Nothing followed it, so it was the narrow space after all.
+    if !pending_separator.is_empty() {
+        columns.last_mut().unwrap().slots.push(Slot::Space(pending_separator));
+    }
     flush_pending(&mut columns, &mut pending_connectors);
     Layout { columns, progression: config.progression }
 }
@@ -416,6 +458,30 @@ fn split_latin_word(word: &str, limit: usize) -> Vec<String> {
 }
 
 fn is_mongolian(ch: char) -> bool { matches!(ch as u32, 0x1800..=0x18AF | 0x11660..=0x1167F) }
+
+/// U+202F NARROW NO-BREAK SPACE — in bichig, the suffix separator.
+///
+/// This mark is not a space between words but a joint inside one. `ᠮᠣᠩᠭᠣᠯ` +
+/// NNBSP + `ᠤᠨ` is the genitive "Mongolia's": the separator holds the stem's
+/// last letter in its final form, opens the suffix in its initial form, and
+/// forbids a break between them — UAX #14 gives it class GL, non-breaking on
+/// both sides. The case suffixes are all attached this way.
+///
+/// Unicode nonetheless gives it `White_Space=Yes`, so `char::is_whitespace`
+/// answers true and an engine that asks only that question sets a case ending
+/// as a separate word: a half-em gap in the column with the suffix stranded
+/// below it, and the joining that carries the grammar cut in two. That one
+/// property is what this function exists to override — and only where bichig
+/// holds the mark on both sides, because U+202F is also the ordinary narrow
+/// space that its name describes.
+///
+/// U+180E MONGOLIAN VOWEL SEPARATOR needs no such rescue. It was `Zs` until
+/// Unicode 6.3 and is `Cf` now, so it is not whitespace to begin with, and it
+/// already rides inside the run as an ordinary character of the Mongolian
+/// block — as do the free variation selectors U+180B–180D, which are `Extend`
+/// and never leave the cluster they modify.
+fn is_suffix_separator(ch: char) -> bool { ch == '\u{202F}' }
+
 fn is_cjk(ch: char) -> bool { matches!(ch as u32,
     0x3400..=0x4DBF | 0x4E00..=0x9FFF | 0xF900..=0xFAFF |
     0x3040..=0x30FF | 0x31F0..=0x31FF | 0xAC00..=0xD7AF
@@ -913,6 +979,116 @@ mod tests {
         let config = LayoutConfig { progression: Progression::LeftToRight, ..Default::default() };
         assert_eq!(layout_text("ᠮᠣᠩᠭᠤᠯ", &config).progression, Progression::LeftToRight);
     }
+    /// The suffix separator holds a case ending onto its stem, and the layout
+    /// must keep them in one run.
+    ///
+    /// `ᠮᠣᠩᠭᠣᠯ` + U+202F + `ᠤᠨ` is one word, the genitive "Mongolia's". Because
+    /// Unicode gives U+202F `White_Space=Yes`, the whitespace branch used to
+    /// close the run, emit a `Space` slot, and open a second run — which on
+    /// the page is a half-em gap with the case ending stranded below it, read
+    /// by anyone who reads the script as two words instead of one.
+    #[test]
+    fn a_suffix_separator_is_part_of_the_word_not_a_space() {
+        let genitive = "ᠮᠣᠩᠭᠣᠯ\u{202F}ᠤᠨ";
+        assert_eq!(layout_text(genitive, &LayoutConfig::default()).columns[0].slots,
+            vec![Slot::MongolianRun(genitive.into())],
+            "the joint must stay inside the run it joins");
+        // Every case ending attaches the same way, and a word may carry more
+        // than one joint.
+        let dative = "ᠮᠣᠩᠭᠣᠯ\u{202F}ᠳᠤ\u{202F}ᠪᠠᠨ";
+        assert_eq!(layout_text(dative, &LayoutConfig::default()).columns[0].slots,
+            vec![Slot::MongolianRun(dative.into())]);
+        // A word space between two suffixed words is still a word space: the
+        // fix must not swallow the boundary it does not own.
+        let phrase = "ᠮᠣᠩᠭᠣᠯ\u{202F}ᠤᠨ ᠲᠡᠦᠬᠡ\u{202F}ᠶᠢ";
+        assert_eq!(layout_text(phrase, &LayoutConfig::default()).columns[0].slots, vec![
+            Slot::MongolianRun("ᠮᠣᠩᠭᠣᠯ\u{202F}ᠤᠨ".into()),
+            Slot::Space(" ".into()),
+            Slot::MongolianRun("ᠲᠡᠦᠬᠡ\u{202F}ᠶᠢ".into()),
+        ]);
+    }
+
+    /// The other half of the contract: U+202F joins only where bichig holds it
+    /// on both sides. Elsewhere it is the narrow space its name describes —
+    /// French uses it before a colon, and typography uses it to group digits —
+    /// so it keeps its own slot there, exactly as any other space would.
+    #[test]
+    fn a_narrow_space_outside_bichig_is_still_a_space() {
+        // Nothing Mongolian on the left.
+        assert_eq!(layout_text("好\u{202F}ᠤᠨ", &LayoutConfig::default()).columns[0].slots, vec![
+            Slot::Upright("好".into()),
+            Slot::Space("\u{202F}".into()),
+            Slot::MongolianRun("ᠤᠨ".into()),
+        ]);
+        // Nothing Mongolian on the right: the run closes and the mark falls
+        // back to being the space it also is.
+        assert_eq!(layout_text("ᠮᠣᠩᠭᠣᠯ\u{202F}好", &LayoutConfig::default()).columns[0].slots, vec![
+            Slot::MongolianRun("ᠮᠣᠩᠭᠣᠯ".into()),
+            Slot::Space("\u{202F}".into()),
+            Slot::Upright("好".into()),
+        ]);
+        // A newline is not a suffix either, and the mark must not follow the
+        // column break: it belongs to the column the stem is in.
+        let broken = layout_text("ᠮᠣᠩᠭᠣᠯ\u{202F}\nᠤᠨ", &LayoutConfig::default());
+        assert_eq!(broken.columns[0].slots, vec![
+            Slot::MongolianRun("ᠮᠣᠩᠭᠣᠯ".into()),
+            Slot::Space("\u{202F}".into()),
+        ]);
+        assert_eq!(broken.columns[1].slots, vec![Slot::MongolianRun("ᠤᠨ".into())]);
+        // Nothing follows it at all.
+        assert_eq!(layout_text("ᠮᠣᠩᠭᠣᠯ\u{202F}", &LayoutConfig::default()).columns[0].slots, vec![
+            Slot::MongolianRun("ᠮᠣᠩᠭᠣᠯ".into()),
+            Slot::Space("\u{202F}".into()),
+        ]);
+        // Latin on both sides is not bichig: the mark never joins the word.
+        assert_eq!(layout_text("Chapitre\u{202F}: 1", &LayoutConfig::default()).columns[0].slots, vec![
+            Slot::LatinWord("Chapitre".into()),
+            Slot::Space("\u{202F}".into()),
+            Slot::VerticalPunctuation(":".into()),
+            Slot::Space(" ".into()),
+            Slot::LatinWord("1".into()),
+        ]);
+    }
+
+    /// `layout_never_alters_a_single_character`, over text full of joints.
+    /// Whether a separator joined a word or stood as a space, it must come
+    /// back in place and in order — a buffered mark that resurfaces on the
+    /// wrong side of a run is the same defect as a dropped one.
+    #[test]
+    fn suffix_separators_survive_the_round_trip() {
+        let source = "ᠮᠣᠩᠭᠣᠯ\u{202F}ᠤᠨ ᠲᠡᠦᠬᠡ\u{202F}ᠶᠢ 读\u{202F}好 ᠪᠢ\u{202F}\nᠮᠣᠩᠭᠣᠯ\u{202F}";
+        let layout = layout_text(source, &LayoutConfig::default());
+        let mut rebuilt = String::new();
+        for (index, column) in layout.columns.iter().enumerate() {
+            if index > 0 { rebuilt.push('\n'); }
+            for slot in &column.slots {
+                match slot {
+                    Slot::Upright(s) | Slot::LatinWord(s) | Slot::MongolianRun(s)
+                    | Slot::VerticalPunctuation(s) | Slot::CornerPunctuation(s)
+                    | Slot::Neutral(s) | Slot::Space(s) => rebuilt.push_str(s),
+                }
+            }
+        }
+        assert_eq!(rebuilt, source, "a joint must not be added, dropped, or moved");
+    }
+
+    /// The orientation measure counts slots, so it has to count a suffixed
+    /// word the way the layout does: once.
+    #[test]
+    fn the_orientation_measure_counts_a_suffixed_word_once() {
+        let genitive = "ᠮᠣᠩᠭᠣᠯ\u{202F}ᠤᠨ";
+        assert_eq!(layout_text(genitive, &LayoutConfig::default()).columns[0].slots.len(), 1);
+        // Two Latin slots against one Mongolian slot. Counted as two the word
+        // would have tied the line and held it vertical — the same word
+        // weighed twice. The unsuffixed stem in the same sentence has always
+        // gone this way, so the fix only made the two agree; it is not a
+        // judgment that bichig belongs on a horizontal line.
+        assert!(prefers_horizontal("ᠮᠣᠩᠭᠣᠯ is written"));
+        assert!(prefers_horizontal(&format!("{genitive} is written")));
+        // And bichig on its own is never called horizontal, joints or not.
+        assert!(!prefers_horizontal("ᠮᠣᠩᠭᠣᠯ\u{202F}ᠤᠨ ᠲᠡᠦᠬᠡ\u{202F}ᠶᠢ"));
+    }
+
     #[test]
     fn code_mode_keeps_indentation_as_blank_rows() {
         let config = LayoutConfig { max_latin_word_width: 24, preserve_spaces: true, ..Default::default() };

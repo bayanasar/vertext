@@ -604,6 +604,27 @@ mod tests {
         assert!(cjk.contains("data-column-advance=\"left\""));
     }
 
+    /// A case ending reaches the DOM inside its stem's span.
+    ///
+    /// This is the artifact the browser actually shapes. Split across two
+    /// spans with a `vertext-space` between them, the stylesheet gives that
+    /// space a fixed half-em box (`.vertext-space { height: .5em }`) and the
+    /// suffix drops a row: a genitive set as a separate word. One span is also
+    /// what lets the font join across the joint and keeps the browser from
+    /// breaking a line there, which U+202F forbids.
+    #[test]
+    fn a_suffix_separator_reaches_the_dom_inside_the_run() {
+        let options = RenderOptions {
+            progression: Progression::LeftToRight,
+            ..Default::default()
+        };
+        let html = render_document("ᠮᠣᠩᠭᠣᠯ\u{202F}ᠤᠨ", options);
+        assert!(html.contains("<span class=\"vertext-mongolian\">ᠮᠣᠩᠭᠣᠯ\u{202F}ᠤᠨ</span>"),
+            "the stem and its case ending must share one span: {html}");
+        assert!(!html.contains("vertext-space"),
+            "no word space belongs inside a suffixed word: {html}");
+    }
+
     /// The renderer must never substitute a character. Presentation forms
     /// like U+FE35 look right and destroy the document: copy-paste, find,
     /// and screen readers all yield codepoints the author never typed. The

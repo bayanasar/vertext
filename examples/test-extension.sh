@@ -97,12 +97,20 @@ else
   failures=$((failures + 1))
 fi
 
+# U+202F NARROW NO-BREAK SPACE is the bichig suffix separator, not a space:
+# `ᠮᠣᠩᠭᠤᠯ` + U+202F + `ᠤᠨ` is one word, the genitive. Unicode gives the mark
+# `White_Space=Yes`, so any layer that asks only "is this whitespace" cuts a
+# case ending off its stem. Written as an octal escape rather than pasted in,
+# because an invisible character in a fixture is a fixture nobody can read.
+nnbsp=$(printf '\342\200\257')
+
 # A Mongolian-primary document declares its progression and every layer must
 # follow: the strip's data attribute, and the page's writing-mode. Getting this
 # backwards does not look wrong — it reads the document in reverse.
 printf '%s\n' '---' 'title: "ᠮᠣᠩᠭᠤᠯ"' 'vertext-page: true' 'vertext-progression: lr' \
   'filters: [vertext]' 'format: {vertext-html: default}' '---' '' '::: {.vertext}' \
-  'ᠮᠣᠩᠭᠤᠯ ᠤᠯᠤᠰ ᠮᠠᠨᠳᠤᠨ᠎ᠠ' '' 'ᠪᠢᠴᠢᠭ ᠨᠢ ᠳᠡᠭᠡᠳᠦ ᠡᠴᠡ ᠳᠣᠣᠷ᠎ᠠ' '' 'ᠬᠢᠴᠢᠶᠡᠯ ᠑–᠕ ᠪᠠ ᠑—᠕' ':::' > "$work/mn.qmd"
+  'ᠮᠣᠩᠭᠤᠯ ᠤᠯᠤᠰ ᠮᠠᠨᠳᠤᠨ᠎ᠠ' '' 'ᠪᠢᠴᠢᠭ ᠨᠢ ᠳᠡᠭᠡᠳᠦ ᠡᠴᠡ ᠳᠣᠣᠷ᠎ᠠ' '' \
+  "ᠮᠣᠩᠭᠤᠯ${nnbsp}ᠤᠨ ᠲᠡᠦᠬᠡ" '' 'ᠬᠢᠴᠢᠶᠡᠯ ᠑–᠕ ᠪᠠ ᠑—᠕' ':::' > "$work/mn.qmd"
 quarto render "$work/mn.qmd" --quiet
 mn="$work/mn.html"
 check        "declared progression reaches the strip" 'data-column-advance="right"' "$mn"
@@ -114,6 +122,12 @@ check_absent "no CJK progression leaks in"     'data-column-advance="left"' "$mn
 # correctly. Both are asserted so the pair cannot drift apart again.
 check        "an en dash turns like its family" 'vertext-vform">–' "$mn"
 check        "an em dash still turns"           'vertext-vform">—' "$mn"
+# The joint has to survive pandoc, the Lua filter, and the engine. This is the
+# only check that watches it make the whole crossing — `cargo test` seals the
+# engine alone, and a mark eaten upstream would leave the suffix a separate
+# word on the page with every unit test still green.
+check        "a case ending stays inside its word" "vertext-mongolian\">ᠮᠣᠩᠭᠤᠯ${nnbsp}ᠤᠨ<" "$mn"
+check_absent "no word space splits a suffix"       "vertext-space\">${nnbsp}" "$mn"
 # The wheel handler lives on the region and sees a nested scroller's events
 # bubble through it. Turning those into column advance would leave a capped
 # stack's overflow reachable by scrollbar only -- which makes the cap a hidden
