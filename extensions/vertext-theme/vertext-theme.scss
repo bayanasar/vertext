@@ -30,28 +30,6 @@ $vertext-toc-size:     8rem !default;     // the bottom edge
 // circular. Rotated like everything else, it needs the same depth as the
 // site's nav strip.
 $vertext-book-nav-size: $vertext-nav-size !default;
-
-// The top edge's depth is published as a CUSTOM PROPERTY, not left as the Sass
-// constant above, and that is what makes it collapsible. Sass resolves once at
-// build time; a control that hands the depth back has to change the value at
-// RUNTIME. One value is all it may change: every rule below reads this
-// property, so the strip's own size and the content region's inset cannot
-// drift apart the way two hand-written numbers do.
-//
-// Declaring it is also the OPT-IN. The engine's collapse control (NAV_TOGGLE
-// in vertext.lua) reads it back off the computed style and attaches nothing
-// when it is absent, because a button that clicks and moves no pixels is worse
-// than no button -- it looks like it worked.
-//
-// Declared on `:root`, overridden by the engine on `body`. That is deliberate
-// and it is not a specificity contest: body inherits from root, so the
-// collapsed value always wins -- including on a book page, whose base depth
-// comes from the `:has()` branch below.
-:root {
-  --vertext-nav-depth: #{$vertext-nav-size};
-  --vertext-nav-depth-collapsed: 2.1rem;
-}
-:root:has(.chapter-title) { --vertext-nav-depth: #{$vertext-book-nav-size}; }
 $vertext-status-size:  1.75rem !default;  // the end edge (left under rl)
 // Clearance between the end of a text column and the strip below it. The
 // columns used to wrap at the WINDOW's bottom rather than the region's, so the
@@ -80,6 +58,42 @@ $vertext-column-gap:   2rem !default;
  * keyboard access; moving them in the DOM breaks all of it. The theme decides
  * where they sit and leaves what they are alone.
  */
+
+/* The top edge's depth is published as a CUSTOM PROPERTY, not left as the Sass
+   constant it comes from, and that is what makes it collapsible. Sass resolves
+   once at build time; a control that hands the depth back has to change the
+   value at RUNTIME. One value is all it may change: every rule below reads
+   this property, so the strip's own size and the content region's inset cannot
+   drift apart the way two hand-written numbers do.
+
+   Declaring it is also the OPT-IN. The engine's collapse control (NAV_TOGGLE
+   in vertext.lua) reads it back off the computed style and attaches nothing
+   when it is absent, because a button that clicks and moves no pixels is worse
+   than no button -- it looks like it worked.
+
+   `--vertext-nav-target` names the element that depth SIZES. Publishing the
+   depth without it was a real bug, not a tidiness point: the engine fell back
+   to `#quarto-header`, which in this theme is the banner pinned to the right
+   edge, so the button landed on the banner and the collapse blanked the
+   banner's own brand and links while the actual strip kept its full list.
+   Depth and target are declared together here so a theme that moves its strip
+   moves both or neither.
+
+   Declared on `:root`, overridden by the engine on `body`. That is deliberate
+   and it is not a specificity contest: body inherits from root, so the
+   collapsed value always wins -- including on a book page, whose base depth
+   comes from the `:has()` branch below.
+
+   These are rules, not defaults. They were written in the `scss:defaults`
+   layer, between two `$` variables, where they compiled and worked; that
+   section's contract is variables, and a rule sitting in it is the kind of
+   thing that breaks the day Quarto changes how the layers are assembled. */
+:root {
+  --vertext-nav-depth: #{$vertext-nav-size};
+  --vertext-nav-depth-collapsed: 2.1rem;
+  --vertext-nav-target: "#quarto-sidebar";
+}
+:root:has(.chapter-title) { --vertext-nav-depth: #{$vertext-book-nav-size}; }
 
 /* The body no longer scrolls: each edge is pinned and the content region owns
    the single scroll axis. Without this the page gets a second, vertical

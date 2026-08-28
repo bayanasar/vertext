@@ -224,6 +224,33 @@ unclickable has shipped from here before, with every check green the whole
 way; only a real browser driving a real mouse event catches that, and the
 `kele` repo's `tools/check-nav-toggle.py` is that test.
 
+### Getting a browser and a pandoc without installing Quarto
+
+Neither of the last two needs Quarto itself, and neither needs root. This is
+worth writing down because "no browser here" was believed on this project for
+longer than it was true, and a control shipped unclicked on the strength of it.
+
+```sh
+uv pip install --target . pypandoc_binary      # pandoc + lua, ./pypandoc/files/pandoc
+npx @puppeteer/browsers install chrome@stable  # a real Chrome, into ./chrome
+npx sass extensions/vertext-theme/vertext-theme.scss theme.css
+```
+
+With those three, the whole crossing can be driven by hand: pandoc parses the
+markdown, the real `vertext.lua` runs over the AST with Quarto's four `quarto.*`
+calls shimmed, and the real `vertext` binary lays it out. For the collapse
+control, build a page carrying the compiled theme and the `NAV_TOGGLE` block
+read straight out of `vertext.lua` — extracted, never retyped, or the thing
+under test is a copy of it — serve it, and point `check-nav-toggle.py` at it
+with Chrome started as:
+
+```sh
+chrome --headless=new --remote-debugging-port=9222 --window-size=1400,900
+```
+
+Run the check against the previous commit as well. A rig that cannot reproduce
+the failure is not evidence that the failure is gone.
+
 Layout invariants and the mode protocol are unit-tested; the README's
 山川异域，风月同天 sample is pinned as a golden. Correctness claims for a
 script require a reference rendering behind them — "it parses" is not "it
