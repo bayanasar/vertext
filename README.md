@@ -174,6 +174,17 @@ cap truncates silently instead of wrapping visibly. Dictionary-aware
 hyphenation is a later opt-in because it needs a language tag and a
 hyphenation dictionary, and a hyphenation without a language is a guess.
 
+A Mongolian run is kept whole, and U+202F NARROW NO-BREAK SPACE is kept inside
+it. In bichig that mark is not a space between words but the joint inside one:
+`ᠮᠣᠩᠭᠣᠯ` + U+202F + `ᠤᠨ` is the genitive "Mongolia's". The separator holds the
+stem's last letter in its final form, opens the suffix in its initial form, and
+forbids a break between the two — UAX #14 gives it class GL. Unicode
+nevertheless gives it `White_Space=Yes`, so an engine that asks only
+`is_whitespace` sets every case ending as a separate word: a half-em gap in the
+column with the suffix stranded a row below it. It joins only where Mongolian
+holds it on both sides; anywhere else — French before a colon, digit grouping —
+it is the narrow space its name describes and keeps its own slot.
+
 ## Workspace
 
 | Crate | Role |
