@@ -59,6 +59,42 @@ $vertext-column-gap:   2rem !default;
  * where they sit and leaves what they are alone.
  */
 
+/* The top edge's depth is published as a CUSTOM PROPERTY, not left as the Sass
+   constant it comes from, and that is what makes it collapsible. Sass resolves
+   once at build time; a control that hands the depth back has to change the
+   value at RUNTIME. One value is all it may change: every rule below reads
+   this property, so the strip's own size and the content region's inset cannot
+   drift apart the way two hand-written numbers do.
+
+   Declaring it is also the OPT-IN. The engine's collapse control (NAV_TOGGLE
+   in vertext.lua) reads it back off the computed style and attaches nothing
+   when it is absent, because a button that clicks and moves no pixels is worse
+   than no button -- it looks like it worked.
+
+   `--vertext-nav-target` names the element that depth SIZES. Publishing the
+   depth without it was a real bug, not a tidiness point: the engine fell back
+   to `#quarto-header`, which in this theme is the banner pinned to the right
+   edge, so the button landed on the banner and the collapse blanked the
+   banner's own brand and links while the actual strip kept its full list.
+   Depth and target are declared together here so a theme that moves its strip
+   moves both or neither.
+
+   Declared on `:root`, overridden by the engine on `body`. That is deliberate
+   and it is not a specificity contest: body inherits from root, so the
+   collapsed value always wins -- including on a book page, whose base depth
+   comes from the `:has()` branch below.
+
+   These are rules, not defaults. They were written in the `scss:defaults`
+   layer, between two `$` variables, where they compiled and worked; that
+   section's contract is variables, and a rule sitting in it is the kind of
+   thing that breaks the day Quarto changes how the layers are assembled. */
+:root {
+  --vertext-nav-depth: #{$vertext-nav-size};
+  --vertext-nav-depth-collapsed: 2.1rem;
+  --vertext-nav-target: "#quarto-sidebar";
+}
+:root:has(.chapter-title) { --vertext-nav-depth: #{$vertext-book-nav-size}; }
+
 /* The body no longer scrolls: each edge is pinned and the content region owns
    the single scroll axis. Without this the page gets a second, vertical
    scrollbar that does nothing -- the "trapped in a frame" feeling where the
@@ -370,7 +406,7 @@ body:has(.chapter-title) #quarto-margin-sidebar {
   /* Between the two strips: the nav strip owns the top edge corner-to-corner
      and the page TOC owns the bottom one, so the status spine runs the length
      that is left between them rather than under either. */
-  top: $vertext-nav-size;
+  top: var(--vertext-nav-depth);
   bottom: $vertext-toc-size;
   right: auto;
   width: $vertext-status-size;
@@ -449,7 +485,7 @@ body:has(.chapter-title):has(#quarto-header .navbar-nav a) #quarto-sidebar {
      list. It used to say `100vh`, which also let the strip grow the whole
      window deep if the chapter list ever wrapped -- over the text, since the
      region insets by a fixed amount. Capped at the strip's own depth instead. */
-  max-height: $vertext-book-nav-size !important;
+  max-height: var(--vertext-nav-depth) !important;
   height: auto !important;
   visibility: visible !important;
   /* `top` also has to be forced, and for a different reason than the rest:
@@ -481,8 +517,8 @@ body:has(.chapter-title) #quarto-sidebar {
   left: $vertext-status-size;
   right: $vertext-banner-size;
   width: auto;
-  height: $vertext-book-nav-size;
-  max-height: $vertext-book-nav-size;
+  height: var(--vertext-nav-depth);
+  max-height: var(--vertext-nav-depth);
   z-index: 1030;
   /* Rotated with the page, exactly like the site's nav strip. Under
      `vertical-rl` the strip's length runs DOWN in layout terms, so its
@@ -571,7 +607,7 @@ body:has(.chapter-title) .footer {
    back otherwise. */
 #quarto-content {
   position: fixed;
-  top: $vertext-nav-size;
+  top: var(--vertext-nav-depth);
   right: $vertext-banner-size;
   left: $vertext-status-size;
   bottom: $vertext-toc-size;
@@ -590,7 +626,7 @@ body:has(.chapter-title) .footer {
      child's forced height won, the auto-height parent grew to the child, and
      the region measured 717px inside a 605px gap -- the last rows hanging off
      the bottom of the window while every inset read correctly. */
-  height: calc(100vh - #{$vertext-nav-size} - #{$vertext-toc-size}) !important;
+  height: calc(100vh - var(--vertext-nav-depth) - #{$vertext-toc-size}) !important;
   min-height: 0 !important;
   max-width: none;
   margin: 0;
@@ -712,8 +748,8 @@ body:not(:has(.chapter-title)) #quarto-sidebar {
   right: $vertext-banner-size;
   width: auto;
   max-width: none;
-  height: $vertext-nav-size;
-  max-height: $vertext-nav-size !important;
+  height: var(--vertext-nav-depth);
+  max-height: var(--vertext-nav-depth) !important;
   z-index: 1020;
   /* Rotated with the page, like the banner and the bottom strip. Horizontal
      text here would be the one piece of chrome still reading left-to-right on
@@ -842,7 +878,7 @@ body:not(:has(#quarto-sidebar .sidebar-item)) #quarto-content {
 }
 body:not(:has(#quarto-margin-sidebar a)) #quarto-content {
   bottom: 0;
-  height: calc(100vh - #{$vertext-nav-size}) !important;
+  height: calc(100vh - var(--vertext-nav-depth)) !important;
 }
 /* Neither strip: the text gets the whole height. Written out because the two
    rules above each state only their own edge, and a page with no sidebar AND
@@ -861,15 +897,15 @@ body:not(:has(#quarto-sidebar .sidebar-item)):not(:has(#quarto-margin-sidebar a)
    handed the 11rem inset back. Naming both branches of the `:has()` explicitly
    puts this at (2,1,1), which wins either way round. */
 body:has(.chapter-title):has(#quarto-margin-sidebar a) #quarto-content {
-  top: $vertext-book-nav-size;
+  top: var(--vertext-nav-depth);
   bottom: $vertext-toc-size;
-  height: calc(100vh - #{$vertext-book-nav-size} - #{$vertext-toc-size}) !important;
+  height: calc(100vh - var(--vertext-nav-depth) - #{$vertext-toc-size}) !important;
 }
 /* A chapter with no headings of its own has no page TOC to reserve for. */
 body:has(.chapter-title):not(:has(#quarto-margin-sidebar a)) #quarto-content {
-  top: $vertext-book-nav-size;
+  top: var(--vertext-nav-depth);
   bottom: 0;
-  height: calc(100vh - #{$vertext-book-nav-size}) !important;
+  height: calc(100vh - var(--vertext-nav-depth)) !important;
 }
 
 /* ── How far a column runs before it wraps ───────────────────────────────
@@ -910,7 +946,7 @@ body {
      wrap and nothing else -- much better than five branches that can drift
      apart, which is how the region insets went wrong in the first place. */
   --vertext-cell-cap:
-    calc(100vh - #{$vertext-nav-size} - #{$vertext-toc-size} - #{$vertext-column-gap});
+    calc(100vh - var(--vertext-nav-depth) - #{$vertext-toc-size} - #{$vertext-column-gap});
 }
 /* The glass overlay belongs to the slide-in behaviour, which no longer
    happens: the sidebar is pinned. Left visible it covers the page. */
