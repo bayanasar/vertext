@@ -189,9 +189,13 @@ Two consequences the code enforces:
    marker the filter emitted from one a document contained, so a paste
    containing U+E000 would switch the rest of itself into code mode. PUA is rare
    in prose, and rare is not never.
-2. **Both sides carry the same constants**, Rust and Lua, and the
-   `mode_markers_are_the_wire_protocol` test pins the values so a drift on the
-   Rust side cannot pass silently.
+2. **Both sides carry the same constants**, Rust and Lua, and
+   `mode_markers_are_the_wire_protocol` asserts every one of the thirteen
+   against its literal codepoint, so renumbering any of them on the Rust side
+   fails the build rather than passing silently. A round-trip test cannot do
+   this job — comparing a constant to itself stays green through a
+   renumbering, while the literal in `vertext.lua` quietly comes to mean
+   something else.
 
 What is *not* enforced: that the filter and the binary in a given installation
 were built from the same source. There is no version handshake, and a mismatched

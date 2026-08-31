@@ -418,7 +418,20 @@ mod tests {
         assert_eq!(MODE_CODE, '\u{E000}');
         assert_eq!(MODE_PROSE, '\u{E001}');
         assert_eq!(heading_marker(1), '\u{E002}');
+        assert_eq!(heading_marker(2), '\u{E003}');
+        assert_eq!(heading_marker(3), '\u{E004}');
+        assert_eq!(heading_marker(4), '\u{E005}');
+        assert_eq!(heading_marker(5), '\u{E006}');
         assert_eq!(heading_marker(6), '\u{E007}');
+        assert_eq!(MODE_TABLE, '\u{E008}');
+        assert_eq!(CELL_SEP, '\u{E009}');
+        assert_eq!(ROW_SEP, '\u{E00A}');
+        assert_eq!(MODE_LIST, '\u{E00B}');
+        assert_eq!(MODE_LIST_ORDERED, '\u{E00C}');
+        // Every reserved codepoint is pinned above. A round-trip test cannot
+        // stand in for this one: it compares a constant against itself, so
+        // renumbering MODE_TABLE would leave it green while the literal in
+        // extensions/vertext/vertext.lua silently means something else.
         // Out-of-range levels clamp rather than producing a stray codepoint.
         assert_eq!(heading_marker(0), heading_marker(1));
         assert_eq!(heading_marker(9), heading_marker(6));

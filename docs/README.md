@@ -40,3 +40,10 @@ anyone edits a doc comment — the same drift class as a vendored filter running
 ahead of its pinned binary, which this project has already been bitten by once.
 Read `crates/vertext-core/src/lib.rs` directly if you have no toolchain; it is
 written to be read that way.
+
+**One known exception, and it is a debt rather than a policy:**
+`examples/_extensions/` and the rendered demo output under `examples/` are
+generated artifacts that *are* committed. `.gitignore` already lists the path —
+the files were tracked before the rule existed, so the rule never took effect,
+and the committed copy of the filter is now two commits behind
+`extensions/vertext/`. Tracked as issue #16.

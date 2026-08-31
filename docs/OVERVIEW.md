@@ -34,16 +34,21 @@ far.
 
 ## Where it stands
 
-| | Stage | Evidence |
-|---|---|---|
-| `vertext` | The Quarto path works end to end. CJK correct; Mongolian suffix joining correct in the engine, unproven in the font. | `cargo test --workspace` 53 green on `0e38451`; U+202F verified across pandoc → filter → binary; the collapse control clicked by a real mouse event in headless Chrome 152 |
-| `frontend-kele` | 13 pages build and render vertically against the merged engine. | full build on `vertext@0e38451`; nav collapse PASS under real `Input.dispatchMouseEvent` |
-| `alcuka/docs` | Consuming a mismatched pair at the time of writing: vendored filter from 2026-08-16, binary pinned to 2026-08-07, across a commit that changed block encoding. | the two SHAs, read off the repository |
+Which claims have been run, and which have not, lives in each repository's
+`PROGRESS.md` — rewritten at every seal, with the run behind each claim. It is
+deliberately not repeated here: a table of test counts and commit SHAs ages by
+the commit, and would pull this document's shelf life down to its shortest
+entry.
 
-Seven adapters are named in `apps/` — browser extension, browser, chaji, notes,
-nvim, quarto-theme, web-ide — and every one of them is a README with no code.
-The Quarto path is the only shipped host. `vertext-wasm` does not exist yet; the
-core is kept pure so that it can.
+What holds across commits:
+
+- **Quarto is the only shipped host.** Seven adapters are named in `apps/` —
+  browser extension, browser, chaji, notes, nvim, quarto-theme, web-ide — and
+  every one of them is a README with no code. `vertext-wasm` does not exist
+  yet; the core is kept pure so that it can.
+- **`kele` cannot drift from the engine; `alcuka/docs` can.** The binding table
+  above is the reason, and it is structural rather than a passing state: two
+  independent pins have already drifted apart once.
 
 ## What is not proven
 
