@@ -1,0 +1,33 @@
+# Continuous integration on the Forgejo instance.
+#
+# `runs-on: anton` is the host-mode runner registered on that machine — there
+# is no container, so a job sees the toolchain the machine actually carries.
+# Every step here must either use something already installed (cargo, node,
+# python3) or install it itself. Nothing may depend on an image.
+#
+# Placed under .forgejo/ rather than .github/: .github/workflows holds the
+# GitHub mirror job, which asks for `ubuntu-latest`. No runner here offers that
+# label, so it can only ever sit queued.
+
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    name: tests
+    runs-on: anton
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Layout engine and renderer
+        run: |
+          export PATH="$HOME/.cargo/bin:$PATH"
+          cargo --version
+          cargo test --workspace
+
+      - name: Nav-collapse logic
+        run: node examples/test-nav-toggle.js
