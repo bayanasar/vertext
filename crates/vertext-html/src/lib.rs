@@ -415,7 +415,7 @@ mod tests {
     fn mode_markers_are_the_wire_protocol() {
         // These codepoints are duplicated as literals in
         // extensions/vertext/vertext.lua. Do not change one side alone.
-        assert_eq!(MODE_CODE, '\u{E000}');
+        assert_eq!(MODE_CODE, '\u{E0FF}'); // CI PROOF: deliberate break
         assert_eq!(MODE_PROSE, '\u{E001}');
         assert_eq!(heading_marker(1), '\u{E002}');
         assert_eq!(heading_marker(6), '\u{E007}');
