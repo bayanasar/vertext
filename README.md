@@ -7,6 +7,11 @@ orientation, column progression, and Latin handling are decisions the layout
 model makes explicitly; nothing here is a 90° transform on a horizontal
 engine.
 
+Design documentation lives in [`docs/`](docs/): [`docs/OVERVIEW.md`](docs/OVERVIEW.md)
+for the engine and the documents that consume it, and
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for how the layout works end to
+end. [`PROGRESS.md`](PROGRESS.md) records which claims have actually been run.
+
 ## Run the demo
 
 ```sh
