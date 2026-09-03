@@ -21,8 +21,15 @@
 const fs = require('fs');
 const path = require('path');
 
-const lua = fs.readFileSync(
-  path.join(__dirname, '..', 'extensions', 'vertext', 'vertext.lua'), 'utf8');
+// Both copies of the filter. vertext-theme vendors its own, and the first cut
+// of this fix went into the engine's copy alone -- which is precisely how the
+// two drifted apart to begin with, so the gate reads both rather than trusting
+// anyone to remember the second one.
+const FILTERS = [
+  ['engine', path.join(__dirname, '..', 'extensions', 'vertext', 'vertext.lua')],
+  ['theme',  path.join(__dirname, '..', 'extensions', 'vertext-theme',
+                       '_extensions', 'vertext', 'vertext.lua')],
+];
 
 let failures = 0;
 const check = (name, ok, detail) => {
@@ -32,8 +39,11 @@ const check = (name, ok, detail) => {
 
 // Each mode's stylesheet, taken by its id so a renamed block fails loudly
 // rather than matching some other <style> further down the file.
-for (const [mode, id] of [['document', 'vertext-document-mode'],
-                          ['page', 'vertext-page-mode']]) {
+for (const [copy, file] of FILTERS) {
+ const lua = fs.readFileSync(file, 'utf8');
+ for (const [modeName, id] of [['document', 'vertext-document-mode'],
+                               ['page', 'vertext-page-mode']]) {
+  const mode = `${copy}/${modeName}`;
   const block = new RegExp(`<style id="${id}">([\\s\\S]*?)</style>`).exec(lua);
   if (!block) { check(`${mode} mode: stylesheet found`, false, `no <style id="${id}">`); continue; }
   // Comments first, and before anything reads the text. Both mode stylesheets
@@ -63,6 +73,7 @@ for (const [mode, id] of [['document', 'vertext-document-mode'],
   // `.vertext` would not have it.
   const onBody = new RegExp(`body\\s*\\{[^{}]*--vertext-column-height`).test(css);
   check(`${mode} mode declares it on body`, onBody);
+ }
 }
 
 if (failures) { console.error(`\nFAIL: ${failures} check(s)`); process.exit(1); }

@@ -476,6 +476,17 @@ local function page_style(mode)
     padding: 1.5rem 2rem;
     overflow-x: auto;
     overflow-y: hidden;
+    /* Declared for the same reason it is declared in the engine's own copy of
+       this filter: `--vertext-column-theme-height` is the hook a theme states
+       its strip depth through, and page mode never declared the variable the
+       hook feeds, so the answer went nowhere. The fallback is vertext.css's
+       own `34em`, so this moves no pixel where no theme answers.
+
+       This file is a vendored copy and it has drifted from
+       extensions/vertext/vertext.lua — see PROGRESS. The fix is applied to
+       both because shipping it to one is how the copies drifted in the first
+       place. */
+    --vertext-column-height: var(--vertext-column-theme-height, 34em);
   }
   /* Quarto's grid chrome assumes a horizontal axis. Collapse it to plain block
      flow so the page's writing mode, not a grid template, decides placement.

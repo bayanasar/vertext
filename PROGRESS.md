@@ -69,9 +69,12 @@ nothing in the core may foreclose it.
   documented way a theme states its strip depth — went into a variable no rule
   read, and vertext.css fell through to its own fallback without saying so.
   Two people hit that separately before it was found. Both modes now declare
-  it on `body` and route it through the hook, with a fallback each. Shown red
-  two ways: with page mode's declaration removed (the shipped state), and with
-  document mode's hook bypassed rather than merely absent.
+  it on `body` and route it through the hook, with a fallback each, **in both
+  copies of the filter** — the gate reads the engine's and the theme's vendored
+  one, because the first cut of the fix went into the engine's alone. Shown red
+  three ways: page mode's declaration removed (the shipped state), document
+  mode's hook bypassed rather than merely absent, and the theme copy's
+  declaration removed while the engine's stands.
 
   The test was itself wrong first, and the way it was wrong is the reason to
   say so here: both stylesheets explain this variable in a comment that writes
@@ -136,6 +139,17 @@ nothing in the core may foreclose it.
   without it. Zero advance means the word measures the same either way.
 
 ## Open
+
+- **The theme's vendored `vertext.lua` describes a protocol it does not
+  implement.** `extensions/vertext-theme/_extensions/vertext/vertext.lua` is
+  code-identical to `extensions/vertext/vertext.lua` — `RESERVED_COUNT = 13` in
+  both, and after 2026-09-02 no non-comment line differs. Two of its comments
+  still describe the old 8-codepoint block: "these two codepoints", and
+  "U+E000 through U+E007 are stripped", four lines from the constant that says
+  13. Nothing renders wrong. What is wrong is that the file reads as an older
+  version than it is, so the next person to diff the copies has to read the
+  code to find out that the drift is only prose — and the person before them
+  did not, which is how the column-budget fix went into one copy.
 
 - **CI logs cannot be read back.** `actions/runs`, `actions/jobs` and
   `actions/workflows` all return 404 on this instance; only `actions/tasks`
