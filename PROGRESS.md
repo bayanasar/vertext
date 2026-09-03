@@ -29,11 +29,22 @@ nothing in the core may foreclose it.
   that cannot reproduce the failure is not evidence that it is gone.
 - **CI runs on every pull request, and the gate has been shown to fail.** The
   `anton` runner (a container, not the host — see below),
-  `.forgejo/workflows/ci.yml`: run 15 green on `673692f9`,
-  run 16 **red** on `8067c09e` with `MODE_CODE`'s assertion deliberately
-  changed to `'\u{E0FF}'`, run 17 green again on `67afac27` after the revert.
-  Both commits are in `main`'s history. A gate that has never gone red is a
-  gate whose every green is untested.
+  `.forgejo/workflows/ci.yml`: run **3** green on `673692f9`, run **4** red on
+  `8067c09e` with `MODE_CODE`'s assertion deliberately changed to
+  `'\u{E0FF}'`, run **5** green again on `67afac27` after the revert. Both
+  commits are in `main`'s history.
+
+  Those were recorded here as runs 15/16/17 until 2026-09-03. The SHAs and the
+  outcomes were right and the numbers were not — the instance says 3, 4 and 5.
+  It matters now because 15, 16 and 17 have since been issued to real runs, and
+  two of them are red: 15 on `a38f3bc` and 16 on `7bf49cc` failed because the
+  shaping step assumed a host runner, and 17 on `6e416d3` is green after the
+  fix. Anyone reading "run 16 red" as the deliberate one would be reading my
+  mistake as the seal.
+
+  A gate that has never gone red is a gate whose every green is untested. This
+  one has now gone red twice without anyone asking it to, which is the stronger
+  version of the same evidence.
 - `node examples/test-nav-toggle.js` — 7 green; 3 fail against `bedecdb`.
 - `npx sass@1.77.8` — theme compiles clean, `--vertext-nav-target` published.
 
