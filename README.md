@@ -94,21 +94,27 @@ fences still work for laying out one region of an otherwise horizontal page.
 ### What markdown survives
 
 The filter flattens each block to characters before handing it to the binary,
-so structure only crosses the boundary where the wire protocol carries it.
-Today that is two things:
+so structure only crosses the boundary where the wire protocol carries it:
 
 | Markdown | Result |
 |---|---|
 | Headings (`#`–`######`) | Own block, level-scaled, with a section rule |
 | Fenced / indented code | Own block, horizontal, indentation preserved |
 | Tables | Real `<table>`; rows become columns, cells never hyphenate |
+| Bullet / ordered lists | Each item is its own block, oriented on its own. An ordered item carries its number as text |
 | Paragraphs | Own block, oriented by the rule above |
-| Emphasis, links, lists | **Flattened to their text.** The markup is lost |
+| Emphasis, links | **Flattened to their text.** The markup is lost |
+| A list nested inside a list item | Flattened into that item's text |
 
-The last row is a real limitation, not a rounding error: `*emphasis*` arrives
-as the bare word. Each construct needs its own marker in the protocol before
-it can be rendered as itself, and until it has one it should be listed here
-rather than silently implied. Lists are the next worth carrying across.
+The last two rows are real limitations, not rounding errors: `*emphasis*`
+arrives as the bare word. Each construct needs its own marker in the protocol
+before it can be rendered as itself, and until it has one it belongs in this
+table rather than being silently implied.
+
+Items are classified one at a time on purpose. Flattening a list into a single
+string welds the items together and classifies them as a lump: six
+mostly-Chinese items that each carry a Latin term add up to a Latin-majority
+blob, and the whole list turns horizontal.
 
 ### Whole-page vertical flow
 
