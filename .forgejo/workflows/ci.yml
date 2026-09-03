@@ -45,3 +45,16 @@ jobs:
 
       - name: Nav-collapse logic
         run: node examples/test-nav-toggle.js
+
+      # Shaping is a property of the FONT, so this step pins the shaper as well
+      # as vendoring the face: a harfbuzz bump can change the glyphs a font
+      # yields without anyone touching the repo, and the golden should be able
+      # to say which of the two moved. --prove re-establishes, on every run,
+      # that the golden still diffs when joining is off; a golden that has
+      # never gone red is a golden whose every green is untested.
+      - name: Mongolian shaping golden
+        run: |
+          python3 -m venv /tmp/vertext-shaping
+          /tmp/vertext-shaping/bin/pip install --quiet 'uharfbuzz==0.56.1'
+          /tmp/vertext-shaping/bin/python tools/shaping-golden.py
+          /tmp/vertext-shaping/bin/python tools/shaping-golden.py --prove

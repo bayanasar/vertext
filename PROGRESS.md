@@ -36,12 +36,20 @@ nothing in the core may foreclose it.
 - `node examples/test-nav-toggle.js` — 7 green; 3 fail against `bedecdb`.
 - `npx sass@1.77.8` — theme compiles clean, `--vertext-nav-target` published.
 
+- **The bichig joins, and a gate says so.** `tools/shaping-golden.py`,
+  172 runs — 160 distinct Mongolian runs lifted from the kele lessons at
+  `kele@409d212`, plus 12 constructed cases for the two in-word separators.
+  `PASS`. The golden records the positional form the shaper picks for each
+  letter (`uni1828.N.init uni1823.O.medi uni182E.M.fina` for `ᠨᠣᠮ`), not a
+  picture, so nobody has to read bichig to run it. Shown red three ways:
+  `--prove` disables `init`/`medi`/`fina` — a non-joining font in all but name —
+  and every joined run diffs while no already-isolated run does; a byte appended
+  to the font trips the checksum gate ahead of any glyph comparison; and a
+  hand-edited expectation diffs. Font and shaper are both pinned
+  (`805a55e1…`, harfbuzz 14.4.0), because either can move the glyphs alone.
+
 ## Not sealed
 
-- **Mongolian shaping.** The joint reaches the DOM inside one span, which is
-  what lets a font join across it; nothing checks that it *does*, or that
-  initial/medial/final forms are chosen right. Missing: a golden of real bichig.
-  Until there is one, a page can look plausible and read wrong.
 - **`page_style()` never declares `--vertext-column-height`.** Missing: any test
   of the column budget in page mode. The documented
   `--vertext-column-theme-height` hook is therefore dead there, in silence.
@@ -71,6 +79,24 @@ nothing in the core may foreclose it.
   the reason it would ever be taken is print, where there is no browser to
   delegate to. The one state nobody could defend was having neither the feature
   nor the boundary in writing.
+
+- 2026-09-02 **The shaping golden is held to Noto Sans Mongolian, vendored**
+  (issue #7). Licensing decided it: Mongolian Baiti has the widest install base
+  and Menksoft is what Inner Mongolian print actually looks like, and neither
+  can ship with the tests — a golden nobody outside this machine can run is not
+  a seal. Noto is OFL 1.1, so `goldens/fonts/` carries the face itself and the
+  golden is checksummed against it. Two things the run then settled, neither of
+  which the issue had right:
+  **U+202F is invisible to the font.** Stem and suffix take the same forms
+  across it as across a plain space (`…L.fina nnbsp AO.init A.fina`), and it
+  measures a full em, exactly like a space. The font will never carry the
+  no-break; keeping the joint in one span is doing all of the work, and the
+  golden can only pin `nnbsp` against `space` as glyph names.
+  **U+180E detaches, and that is correct.** The issue said the letters either
+  side "must still join". They must not: the separator exists to cut a final
+  vowel loose, and the font does it at zero advance — `ᠨ` takes `A.fina` and the
+  vowel `AA.isol`, against `A.medi` + `A.fina` for the same letters written
+  without it. Zero advance means the word measures the same either way.
 
 ## Open
 

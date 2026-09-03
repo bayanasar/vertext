@@ -1,0 +1,3819 @@
+{
+ "font": {
+  "file": "goldens/fonts/NotoSansMongolian-Regular.ttf",
+  "sha256": "805a55e10492c547ccadc1ad04faabdef61a74a5c02ecce69748378d66ef032d",
+  "upem": 1000
+ },
+ "shaper": {
+  "harfbuzz": "14.4.0",
+  "uharfbuzz": "0.56.1"
+ },
+ "corpus": {
+  "source": "kele",
+  "commit": "409d212",
+  "runs": [
+   "ᠰᠠᠶᠢᠨ",
+   "ᠪᠢ",
+   "ᠴᠢ",
+   "ᠲᠠ",
+   "ᠨᠡᠷ᠎ᠡ",
+   "ᠪᠠᠶᠠᠷᠯᠠᠯ᠎ᠠ",
+   "ᠪᠠᠶᠠᠷᠲᠠᠢ",
+   "ᠲᠡᠶᠢᠮᠦ",
+   "ᠦᠭᠡᠢ",
+   "ᠪᠠᠶᠢᠨ᠎ᠠ",
+   "ᠤᠤ",
+   "ᠰᠠᠶᠢᠨ᠂",
+   "ᠲᠠᠨ",
+   "ᠤ",
+   "ᠬᠡᠨ",
+   "ᠪᠤᠢ",
+   "ᠮᠢᠨᠦ",
+   "ᠪᠠᠲᠤ᠃",
+   "ᠪᠠᠶᠠᠷᠯᠠᠯ᠎ᠠ᠂",
+   "ᠦᠦ",
+   "ᠨᠢᠭᠡ",
+   "ᠬᠣᠶᠠᠷ",
+   "ᠭᠤᠷᠪᠠ",
+   "ᠨ",
+   "ᠳᠥᠷᠪᠡ",
+   "ᠲᠠᠪᠤ",
+   "ᠵᠢᠷᠭᠤᠭ᠎ᠠ",
+   "ᠳᠣᠯᠣᠭ᠎ᠠ",
+   "ᠨᠠᠢᠮᠠ",
+   "ᠶᠢᠰᠦ",
+   "ᠠᠷᠪᠠ",
+   "ᠡᠨᠡ",
+   "ᠲᠡᠷᠡ",
+   "ᠶᠠᠭᠤ",
+   "ᠨᠣᠮ",
+   "ᠮᠣᠷᠢ",
+   "ᠬᠡᠳᠦ",
+   "ᠨᠣᠮ᠃",
+   "ᠬᠡᠳᠦᠨ",
+   "ᠭᠤᠷᠪᠠᠨ",
+   "ᠮᠣᠷᠢ᠃",
+   "ᠲᠠᠪᠤᠨ",
+   "ᠪᠢᠰᠢ",
+   "ᠨᠣᠬᠠᠢ",
+   "ᠭᠡᠷ",
+   "ᠬᠦᠮᠦᠨ",
+   "ᠨᠠᠳᠠ",
+   "ᠳᠤ",
+   "ᠴᠢᠮᠠ",
+   "ᠪᠠᠶᠢᠨ᠎ᠠ᠂",
+   "ᠪᠠᠶᠢᠨ᠎ᠠ᠃",
+   "ᠦᠭᠡᠢ᠂",
+   "ᠦᠭᠡᠢ᠃",
+   "ᠲᠦ",
+   "ᠳᠥᠷᠪᠡᠨ",
+   "ᠠᠪᠤ",
+   "ᠡᠵᠢ",
+   "ᠠᠬ᠎ᠠ",
+   "ᠡᠭᠡᠴᠢ",
+   "ᠳᠡᠭᠦᠦ",
+   "ᠡᠪᠦᠭᠡ",
+   "ᠡᠮᠡᠭᠡ",
+   "ᠬᠡᠦᠬᠡᠳ",
+   "ᠴᠢᠨᠦ",
+   "ᠲᠡᠭᠦᠨ",
+   "ᠦ",
+   "ᠪᠢᠳᠡᠨ",
+   "ᠦᠨ",
+   "ᠶᠢᠨ",
+   "ᠲᠡᠶᠢᠮᠦ᠂",
+   "ᠠᠪᠤ᠃",
+   "ᠳᠦ",
+   "ᠶᠠᠪᠤᠬᠤ",
+   "ᠢᠷᠡᠬᠦ",
+   "ᠢᠳᠡᠬᠦ",
+   "ᠤᠤᠭᠤᠬᠤ",
+   "ᠦᠵᠡᠬᠦ",
+   "ᠤᠩᠰᠢᠬᠤ",
+   "ᠴᠠᠢ",
+   "ᠮᠢᠬ᠎ᠠ",
+   "ᠮᠠᠷᠭᠠᠰᠢ",
+   "ᠤᠩᠰᠢᠨ᠎ᠠ",
+   "ᠤᠤᠭᠤᠨ᠎ᠠ᠃",
+   "ᠢᠷᠡᠨ᠎ᠡ",
+   "ᠢᠷᠡᠨ᠎ᠡ᠃",
+   "ᠤᠤᠭᠤᠨ᠎ᠠ",
+   "ᠢᠳᠡᠨ᠎ᠡ",
+   "ᠩ",
+   "ᠭ",
+   "ᠱ",
+   "ᠥ",
+   "ᠬᠠᠮᠢᠭ᠎ᠠ",
+   "ᠳᠡᠭᠡᠷ᠎ᠡ",
+   "ᠳᠣᠣᠷ᠎ᠠ",
+   "ᠳᠣᠲᠣᠷ᠎ᠠ",
+   "ᠭᠠᠳᠠᠨ᠎ᠠ",
+   "ᠡᠮᠦᠨ᠎ᠡ",
+   "ᠬᠣᠶᠢᠨ᠎ᠠ",
+   "ᠰᠢᠷᠡᠭᠡ",
+   "ᠡᠭᠦᠳᠡ",
+   "ᠬᠣᠲᠠ",
+   "ᠠᠯᠢ",
+   "ᠰᠢᠷᠡᠭᠡᠨ",
+   "ᠡᠭᠦᠳᠡᠨ",
+   "ᠨᠠᠷ",
+   "ᠨᠡᠷ",
+   "ᠤᠳ",
+   "ᠦᠳ",
+   "ᠰ",
+   "ᠪᠠᠭᠰᠢ",
+   "ᠰᠤᠷᠤᠭᠴᠢ",
+   "ᠡᠳᠡ",
+   "ᠲᠡᠳᠡ",
+   "ᠮᠠᠰᠢ",
+   "ᠣᠯᠠᠨ",
+   "ᠪᠠᠭᠰᠢᠨᠠᠷ᠃",
+   "ᠨᠣᠮᠤᠳ᠃",
+   "ᠣᠯᠠᠨ᠃",
+   "ᠰᠤᠷᠤᠭᠴᠢᠨᠠᠷ",
+   "ᠮᠣᠷᠢᠰ",
+   "ᠨᠣᠮᠤᠳ",
+   "ᠠᠪᠬᠤ",
+   "ᠥᠭᠬᠦ",
+   "ᠮᠡᠳᠡᠬᠦ",
+   "ᠳᠤᠷᠠᠯᠠᠬᠤ",
+   "ᠤᠰᠤ",
+   "ᠠᠶᠢᠯ",
+   "ᠠᠪᠤᠨ᠎ᠠ",
+   "ᠢ",
+   "ᠠᠪᠤᠨ᠎ᠠ᠃",
+   "ᠶᠢ",
+   "ᠮᠡᠳᠡᠨ᠎ᠡ",
+   "ᠮᠡᠳᠡᠨ᠎ᠡ᠃",
+   "ᠳᠤᠷᠠᠯᠠᠨ᠎ᠠ᠃",
+   "ᠳᠤᠷᠠᠯᠠᠨ᠎ᠠ",
+   "ᠤᠰᠤᠨ",
+   "ᠥᠭᠨ᠎ᠡ",
+   "ᠠᠴᠠ",
+   "ᠡᠴᠡ",
+   "ᠨᠠᠶᠢᠵᠠ",
+   "ᠰᠤᠷᠭᠠᠭᠤᠯᠢ",
+   "ᠭᠠᠵᠠᠷ",
+   "ᠶᠠᠪᠤᠨ᠎ᠠ",
+   "ᠶᠠᠪᠤᠨ᠎ᠠ᠃",
+   "ᠥᠭᠨ᠎ᠡ᠃",
+   "ᠲᠣᠮ",
+   "ᠵᠢᠵᠢᠭ",
+   "ᠮᠠᠭᠤ",
+   "ᠤᠷᠲᠤ",
+   "ᠣᠬᠣᠷ",
+   "ᠰᠠᠶᠢᠬᠠᠨ",
+   "ᠬᠤᠷᠳᠤᠨ",
+   "ᠲᠣᠮ᠃",
+   "ᠬᠤᠷᠳᠤᠨ᠃",
+   "ᠡᠩ",
+   "ᠬᠡᠯᠡ",
+   "ᠣ",
+   "ᠬ",
+   "ᠴ",
+   "ᠵ"
+  ]
+ },
+ "shaped": {
+  "suffix-202f": [
+   {
+    "g": "uni182E.M.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1823.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1829.AG.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182D.G.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1823.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182F.L.fina",
+    "adv": -1000
+   },
+   {
+    "g": "nnbsp",
+    "adv": -1000
+   },
+   {
+    "g": "uni1824.AO.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1828.A.fina",
+    "adv": -1000
+   }
+  ],
+  "suffix-space": [
+   {
+    "g": "uni182E.M.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1823.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1829.AG.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182D.G.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1823.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182F.L.fina",
+    "adv": -1000
+   },
+   {
+    "g": "space",
+    "adv": -1000
+   },
+   {
+    "g": "uni1824.AO.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1828.A.fina",
+    "adv": -1000
+   }
+  ],
+  "stem-alone": [
+   {
+    "g": "uni182E.M.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1823.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1829.AG.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182D.G.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1823.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182F.L.fina",
+    "adv": -1000
+   }
+  ],
+  "suffix-alone": [
+   {
+    "g": "uni1824.AO.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1828.A.fina",
+    "adv": -1000
+   }
+  ],
+  "vowel-180e": [
+   {
+    "g": "uni182A.B.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1836.Y.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1822.I.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1828.A.fina",
+    "adv": -1000
+   },
+   {
+    "g": "space",
+    "adv": 0
+   },
+   {
+    "g": "uni1820.AA.isol",
+    "adv": -1000
+   }
+  ],
+  "vowel-none": [
+   {
+    "g": "uni182A.B.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1836.Y.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1822.I.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1828.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.fina",
+    "adv": -1000
+   }
+  ],
+  "joined-nom": [
+   {
+    "g": "uni1828.N.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1823.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182E.M.fina",
+    "adv": -1000
+   }
+  ],
+  "spaced-nom": [
+   {
+    "g": "uni1828.N.init._isol",
+    "adv": -1000
+   },
+   {
+    "g": "space",
+    "adv": -1000
+   },
+   {
+    "g": "uni1823.AO.isol",
+    "adv": -1000
+   },
+   {
+    "g": "space",
+    "adv": -1000
+   },
+   {
+    "g": "uni182E.M.init._isol",
+    "adv": -1000
+   }
+  ],
+  "joined-ger": [
+   {
+    "g": "uni182D.Hx.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1821.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1837.R.fina",
+    "adv": -1000
+   }
+  ],
+  "spaced-ger": [
+   {
+    "g": "uni182D.Hx.init._isol",
+    "adv": -1000
+   },
+   {
+    "g": "space",
+    "adv": -1000
+   },
+   {
+    "g": "uni1821.A.isol",
+    "adv": -1000
+   },
+   {
+    "g": "space",
+    "adv": -1000
+   },
+   {
+    "g": "uni1837.R.init._isol",
+    "adv": -1000
+   }
+  ],
+  "joined-mori": [
+   {
+    "g": "uni182E.M.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1823.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1837.R.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1822.I.fina",
+    "adv": -1000
+   }
+  ],
+  "spaced-mori": [
+   {
+    "g": "uni182E.M.init._isol",
+    "adv": -1000
+   },
+   {
+    "g": "space",
+    "adv": -1000
+   },
+   {
+    "g": "uni1823.AO.isol",
+    "adv": -1000
+   },
+   {
+    "g": "space",
+    "adv": -1000
+   },
+   {
+    "g": "uni1837.R.init._isol",
+    "adv": -1000
+   },
+   {
+    "g": "space",
+    "adv": -1000
+   },
+   {
+    "g": "uni1822.AI.isol",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠰᠠᠶᠢᠨ": [
+   {
+    "g": "uni1830.S.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1836.Y.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1822.I.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1828.A.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠪᠢ": [
+   {
+    "g": "uni182A.B.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1822.I.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠴᠢ": [
+   {
+    "g": "uni1834.Ch.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1822.I.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠲᠠ": [
+   {
+    "g": "uni1832.T.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠨᠡᠷ᠎ᠡ": [
+   {
+    "g": "uni1828.N.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1821.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1837.R.fina",
+    "adv": -1000
+   },
+   {
+    "g": "space",
+    "adv": 0
+   },
+   {
+    "g": "uni1821.A.isol",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠪᠠᠶᠠᠷᠯᠠᠯ᠎ᠠ": [
+   {
+    "g": "uni182A.B.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1836.Y.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1837.R.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182F.L.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182F.L.fina",
+    "adv": -1000
+   },
+   {
+    "g": "space",
+    "adv": 0
+   },
+   {
+    "g": "uni1820.AA.isol",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠪᠠᠶᠠᠷᠲᠠᠢ": [
+   {
+    "g": "uni182A.B.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1836.Y.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1837.R.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1832.D.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1822.I.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠲᠡᠶᠢᠮᠦ": [
+   {
+    "g": "uni1832.T.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1821.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1836.Y.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1822.I.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182E.M.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1826.U.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠦᠭᠡᠢ": [
+   {
+    "g": "uni1826.AOI.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni182D.G.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1821.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1822.I.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠪᠠᠶᠢᠨ᠎ᠠ": [
+   {
+    "g": "uni182A.B.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1836.Y.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1822.I.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1828.A.fina",
+    "adv": -1000
+   },
+   {
+    "g": "space",
+    "adv": 0
+   },
+   {
+    "g": "uni1820.AA.isol",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠤᠤ": [
+   {
+    "g": "uni1824.AO.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1824.U.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠰᠠᠶᠢᠨ᠂": [
+   {
+    "g": "uni1830.S.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1836.Y.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1822.I.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1828.A.fina",
+    "adv": -1000
+   },
+   {
+    "g": "uni1802",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠲᠠᠨ": [
+   {
+    "g": "uni1832.T.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1828.A.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠤ": [
+   {
+    "g": "uni1824.AO.isol",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠬᠡᠨ": [
+   {
+    "g": "uni182C.H.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1821.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1828.A.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠪᠤᠢ": [
+   {
+    "g": "uni182A.B.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1824.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1822.I.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠮᠢᠨᠦ": [
+   {
+    "g": "uni182E.M.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1822.I.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1828.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1826.U.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠪᠠᠲᠤ᠃": [
+   {
+    "g": "uni182A.B.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1832.D.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1824.U.fina",
+    "adv": -1000
+   },
+   {
+    "g": "uni1803",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠪᠠᠶᠠᠷᠯᠠᠯ᠎ᠠ᠂": [
+   {
+    "g": "uni182A.B.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1836.Y.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1837.R.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182F.L.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182F.L.fina",
+    "adv": -1000
+   },
+   {
+    "g": "space",
+    "adv": 0
+   },
+   {
+    "g": "uni1820.AA.isol",
+    "adv": -1000
+   },
+   {
+    "g": "uni1802",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠦᠦ": [
+   {
+    "g": "uni1826.AOI.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1826.U.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠨᠢᠭᠡ": [
+   {
+    "g": "uni1828.N.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1822.I.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182D.G.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1821.A.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠬᠣᠶᠠᠷ": [
+   {
+    "g": "uni182C.H.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1823.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1836.Y.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1837.R.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠭᠤᠷᠪᠠ": [
+   {
+    "g": "uni182D.Hx.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1824.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1837.R.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182A.B.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠨ": [
+   {
+    "g": "uni1828.N.init._isol",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠳᠥᠷᠪᠡ": [
+   {
+    "g": "uni1833.T.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1825.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1837.R.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182A.B.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1821.A.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠲᠠᠪᠤ": [
+   {
+    "g": "uni1832.T.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182A.B.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1824.U.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠵᠢᠷᠭᠤᠭ᠎ᠠ": [
+   {
+    "g": "uni1835.I.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1822.I.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1837.R.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182D.G.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1824.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182D.G.fina",
+    "adv": -1000
+   },
+   {
+    "g": "space",
+    "adv": 0
+   },
+   {
+    "g": "uni1820.AA.isol",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠳᠣᠯᠣᠭ᠎ᠠ": [
+   {
+    "g": "uni1833.T.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1823.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182F.L.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1823.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182D.G.fina",
+    "adv": -1000
+   },
+   {
+    "g": "space",
+    "adv": 0
+   },
+   {
+    "g": "uni1820.AA.isol",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠨᠠᠢᠮᠠ": [
+   {
+    "g": "uni1828.N.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1822.I.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182E.M.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠶᠢᠰᠦ": [
+   {
+    "g": "uni1836.Y.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1822.I.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1830.S.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1826.U.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠠᠷᠪᠠ": [
+   {
+    "g": "uni1820.AA.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1837.R.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182A.B.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠡᠨᠡ": [
+   {
+    "g": "uni1821.A.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1828.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1821.A.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠲᠡᠷᠡ": [
+   {
+    "g": "uni1832.T.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1821.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1837.R.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1821.A.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠶᠠᠭᠤ": [
+   {
+    "g": "uni1836.Y.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182D.G.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1824.U.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠨᠣᠮ": [
+   {
+    "g": "uni1828.N.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1823.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182E.M.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠮᠣᠷᠢ": [
+   {
+    "g": "uni182E.M.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1823.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1837.R.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1822.I.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠬᠡᠳᠦ": [
+   {
+    "g": "uni182C.H.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1821.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1833.Dd.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1826.U.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠨᠣᠮ᠃": [
+   {
+    "g": "uni1828.N.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1823.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182E.M.fina",
+    "adv": -1000
+   },
+   {
+    "g": "uni1803",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠬᠡᠳᠦᠨ": [
+   {
+    "g": "uni182C.H.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1821.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1833.Dd.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1826.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1828.A.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠭᠤᠷᠪᠠᠨ": [
+   {
+    "g": "uni182D.Hx.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1824.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1837.R.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182A.B.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1828.A.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠮᠣᠷᠢ᠃": [
+   {
+    "g": "uni182E.M.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1823.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1837.R.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1822.I.fina",
+    "adv": -1000
+   },
+   {
+    "g": "uni1803",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠲᠠᠪᠤᠨ": [
+   {
+    "g": "uni1832.T.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182A.B.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1824.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1828.A.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠪᠢᠰᠢ": [
+   {
+    "g": "uni182A.B.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1822.I.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1830.S.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1822.I.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠨᠣᠬᠠᠢ": [
+   {
+    "g": "uni1828.N.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1823.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182C.G.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1822.I.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠭᠡᠷ": [
+   {
+    "g": "uni182D.Hx.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1821.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1837.R.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠬᠦᠮᠦᠨ": [
+   {
+    "g": "uni182C.H.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1826.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182E.M.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1826.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1828.A.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠨᠠᠳᠠ": [
+   {
+    "g": "uni1828.N.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1833.Dd.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠳᠤ": [
+   {
+    "g": "uni1833.T.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1824.U.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠴᠢᠮᠠ": [
+   {
+    "g": "uni1834.Ch.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1822.I.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182E.M.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠪᠠᠶᠢᠨ᠎ᠠ᠂": [
+   {
+    "g": "uni182A.B.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1836.Y.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1822.I.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1828.A.fina",
+    "adv": -1000
+   },
+   {
+    "g": "space",
+    "adv": 0
+   },
+   {
+    "g": "uni1820.AA.isol",
+    "adv": -1000
+   },
+   {
+    "g": "uni1802",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠪᠠᠶᠢᠨ᠎ᠠ᠃": [
+   {
+    "g": "uni182A.B.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1836.Y.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1822.I.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1828.A.fina",
+    "adv": -1000
+   },
+   {
+    "g": "space",
+    "adv": 0
+   },
+   {
+    "g": "uni1820.AA.isol",
+    "adv": -1000
+   },
+   {
+    "g": "uni1803",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠦᠭᠡᠢ᠂": [
+   {
+    "g": "uni1826.AOI.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni182D.G.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1821.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1822.I.fina",
+    "adv": -1000
+   },
+   {
+    "g": "uni1802",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠦᠭᠡᠢ᠃": [
+   {
+    "g": "uni1826.AOI.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni182D.G.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1821.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1822.I.fina",
+    "adv": -1000
+   },
+   {
+    "g": "uni1803",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠲᠦ": [
+   {
+    "g": "uni1832.T.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1826.U.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠳᠥᠷᠪᠡᠨ": [
+   {
+    "g": "uni1833.T.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1825.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1837.R.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182A.B.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1821.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1828.A.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠠᠪᠤ": [
+   {
+    "g": "uni1820.AA.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni182A.B.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1824.U.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠡᠵᠢ": [
+   {
+    "g": "uni1821.A.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1835.J.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1822.I.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠠᠬ᠎ᠠ": [
+   {
+    "g": "uni1820.AA.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni182C.H.fina",
+    "adv": -1000
+   },
+   {
+    "g": "space",
+    "adv": 0
+   },
+   {
+    "g": "uni1820.AA.isol",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠡᠭᠡᠴᠢ": [
+   {
+    "g": "uni1821.A.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni182D.G.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1821.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1834.Ch.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1822.I.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠳᠡᠭᠦᠦ": [
+   {
+    "g": "uni1833.T.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1821.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182D.G.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1826.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1826.U.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠡᠪᠦᠭᠡ": [
+   {
+    "g": "uni1821.A.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni182A.B.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1826.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182D.G.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1821.A.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠡᠮᠡᠭᠡ": [
+   {
+    "g": "uni1821.A.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni182E.M.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1821.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182D.G.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1821.A.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠬᠡᠦᠬᠡᠳ": [
+   {
+    "g": "uni182C.H.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1821.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1826.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182C.G.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1821.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1833.Dd.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠴᠢᠨᠦ": [
+   {
+    "g": "uni1834.Ch.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1822.I.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1828.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1826.U.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠲᠡᠭᠦᠨ": [
+   {
+    "g": "uni1832.T.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1821.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182D.G.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1826.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1828.A.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠦ": [
+   {
+    "g": "uni1826.AUe.isol",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠪᠢᠳᠡᠨ": [
+   {
+    "g": "uni182A.B.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1822.I.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1833.Dd.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1821.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1828.A.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠦᠨ": [
+   {
+    "g": "uni1826.AOI.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1828.A.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠶᠢᠨ": [
+   {
+    "g": "uni1836.Y.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1822.I.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1828.A.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠲᠡᠶᠢᠮᠦ᠂": [
+   {
+    "g": "uni1832.T.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1821.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1836.Y.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1822.I.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182E.M.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1826.U.fina",
+    "adv": -1000
+   },
+   {
+    "g": "uni1802",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠠᠪᠤ᠃": [
+   {
+    "g": "uni1820.AA.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni182A.B.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1824.U.fina",
+    "adv": -1000
+   },
+   {
+    "g": "uni1803",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠳᠦ": [
+   {
+    "g": "uni1833.T.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1826.U.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠶᠠᠪᠤᠬᠤ": [
+   {
+    "g": "uni1836.Y.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182A.B.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1824.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182C.G.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1824.U.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠢᠷᠡᠬᠦ": [
+   {
+    "g": "uni1822.AI.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1837.R.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1821.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182C.G.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1826.U.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠢᠳᠡᠬᠦ": [
+   {
+    "g": "uni1822.AI.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1833.Dd.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1821.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182C.G.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1826.U.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠤᠤᠭᠤᠬᠤ": [
+   {
+    "g": "uni1824.AO.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1824.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182D.G.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1824.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182C.G.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1824.U.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠦᠵᠡᠬᠦ": [
+   {
+    "g": "uni1826.AOI.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1835.J.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1821.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182C.G.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1826.U.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠤᠩᠰᠢᠬᠤ": [
+   {
+    "g": "uni1824.AO.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1829.AG.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1830.S.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1822.I.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182C.G.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1824.U.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠴᠠᠢ": [
+   {
+    "g": "uni1834.Ch.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1822.I.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠮᠢᠬ᠎ᠠ": [
+   {
+    "g": "uni182E.M.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1822.I.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182C.H.fina",
+    "adv": -1000
+   },
+   {
+    "g": "space",
+    "adv": 0
+   },
+   {
+    "g": "uni1820.AA.isol",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠮᠠᠷᠭᠠᠰᠢ": [
+   {
+    "g": "uni182E.M.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1837.R.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182D.G.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1830.S.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1822.I.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠤᠩᠰᠢᠨ᠎ᠠ": [
+   {
+    "g": "uni1824.AO.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1829.AG.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1830.S.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1822.I.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1828.A.fina",
+    "adv": -1000
+   },
+   {
+    "g": "space",
+    "adv": 0
+   },
+   {
+    "g": "uni1820.AA.isol",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠤᠤᠭᠤᠨ᠎ᠠ᠃": [
+   {
+    "g": "uni1824.AO.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1824.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182D.G.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1824.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1828.A.fina",
+    "adv": -1000
+   },
+   {
+    "g": "space",
+    "adv": 0
+   },
+   {
+    "g": "uni1820.AA.isol",
+    "adv": -1000
+   },
+   {
+    "g": "uni1803",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠢᠷᠡᠨ᠎ᠡ": [
+   {
+    "g": "uni1822.AI.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1837.R.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1821.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1828.A.fina",
+    "adv": -1000
+   },
+   {
+    "g": "space",
+    "adv": 0
+   },
+   {
+    "g": "uni1821.A.isol",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠢᠷᠡᠨ᠎ᠡ᠃": [
+   {
+    "g": "uni1822.AI.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1837.R.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1821.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1828.A.fina",
+    "adv": -1000
+   },
+   {
+    "g": "space",
+    "adv": 0
+   },
+   {
+    "g": "uni1821.A.isol",
+    "adv": -1000
+   },
+   {
+    "g": "uni1803",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠤᠤᠭᠤᠨ᠎ᠠ": [
+   {
+    "g": "uni1824.AO.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1824.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182D.G.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1824.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1828.A.fina",
+    "adv": -1000
+   },
+   {
+    "g": "space",
+    "adv": 0
+   },
+   {
+    "g": "uni1820.AA.isol",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠢᠳᠡᠨ᠎ᠡ": [
+   {
+    "g": "uni1822.AI.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1833.Dd.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1821.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1828.A.fina",
+    "adv": -1000
+   },
+   {
+    "g": "space",
+    "adv": 0
+   },
+   {
+    "g": "uni1821.A.isol",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠩ": [
+   {
+    "g": "uni1829.AG.medi._isol",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠭ": [
+   {
+    "g": "uni182D.Hx.init._isol",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠱ": [
+   {
+    "g": "uni1831.Sh.init._isol",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠥ": [
+   {
+    "g": "uni1825.AUe.isol",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠬᠠᠮᠢᠭ᠎ᠠ": [
+   {
+    "g": "uni182C.H.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182E.M.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1822.I.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182D.G.fina",
+    "adv": -1000
+   },
+   {
+    "g": "space",
+    "adv": 0
+   },
+   {
+    "g": "uni1820.AA.isol",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠳᠡᠭᠡᠷ᠎ᠡ": [
+   {
+    "g": "uni1833.T.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1821.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182D.G.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1821.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1837.R.fina",
+    "adv": -1000
+   },
+   {
+    "g": "space",
+    "adv": 0
+   },
+   {
+    "g": "uni1821.A.isol",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠳᠣᠣᠷ᠎ᠠ": [
+   {
+    "g": "uni1833.T.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1823.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1823.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1837.R.fina",
+    "adv": -1000
+   },
+   {
+    "g": "space",
+    "adv": 0
+   },
+   {
+    "g": "uni1820.AA.isol",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠳᠣᠲᠣᠷ᠎ᠠ": [
+   {
+    "g": "uni1833.T.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1823.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1832.D.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1823.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1837.R.fina",
+    "adv": -1000
+   },
+   {
+    "g": "space",
+    "adv": 0
+   },
+   {
+    "g": "uni1820.AA.isol",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠭᠠᠳᠠᠨ᠎ᠠ": [
+   {
+    "g": "uni182D.Hx.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1833.Dd.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1828.A.fina",
+    "adv": -1000
+   },
+   {
+    "g": "space",
+    "adv": 0
+   },
+   {
+    "g": "uni1820.AA.isol",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠡᠮᠦᠨ᠎ᠡ": [
+   {
+    "g": "uni1821.A.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni182E.M.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1826.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1828.A.fina",
+    "adv": -1000
+   },
+   {
+    "g": "space",
+    "adv": 0
+   },
+   {
+    "g": "uni1821.A.isol",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠬᠣᠶᠢᠨ᠎ᠠ": [
+   {
+    "g": "uni182C.H.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1823.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1836.Y.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1822.I.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1828.A.fina",
+    "adv": -1000
+   },
+   {
+    "g": "space",
+    "adv": 0
+   },
+   {
+    "g": "uni1820.AA.isol",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠰᠢᠷᠡᠭᠡ": [
+   {
+    "g": "uni1830.S.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1822.I.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1837.R.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1821.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182D.G.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1821.A.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠡᠭᠦᠳᠡ": [
+   {
+    "g": "uni1821.A.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni182D.G.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1826.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1833.Dd.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1821.A.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠬᠣᠲᠠ": [
+   {
+    "g": "uni182C.H.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1823.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1832.D.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠠᠯᠢ": [
+   {
+    "g": "uni1820.AA.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni182F.L.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1822.I.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠰᠢᠷᠡᠭᠡᠨ": [
+   {
+    "g": "uni1830.S.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1822.I.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1837.R.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1821.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182D.G.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1821.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1828.A.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠡᠭᠦᠳᠡᠨ": [
+   {
+    "g": "uni1821.A.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni182D.G.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1826.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1833.Dd.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1821.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1828.A.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠨᠠᠷ": [
+   {
+    "g": "uni1828.N.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1837.R.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠨᠡᠷ": [
+   {
+    "g": "uni1828.N.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1821.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1837.R.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠤᠳ": [
+   {
+    "g": "uni1824.AO.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1833.Dd.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠦᠳ": [
+   {
+    "g": "uni1826.AOI.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1833.Dd.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠰ": [
+   {
+    "g": "uni1830.S.init._isol",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠪᠠᠭᠰᠢ": [
+   {
+    "g": "uni182A.B.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182D.G.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1830.S.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1822.I.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠰᠤᠷᠤᠭᠴᠢ": [
+   {
+    "g": "uni1830.S.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1824.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1837.R.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1824.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182D.G.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1834.Ch.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1822.I.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠡᠳᠡ": [
+   {
+    "g": "uni1821.A.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1833.Dd.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1821.A.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠲᠡᠳᠡ": [
+   {
+    "g": "uni1832.T.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1821.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1833.Dd.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1821.A.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠮᠠᠰᠢ": [
+   {
+    "g": "uni182E.M.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1830.S.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1822.I.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠣᠯᠠᠨ": [
+   {
+    "g": "uni1823.AO.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni182F.L.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1828.A.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠪᠠᠭᠰᠢᠨᠠᠷ᠃": [
+   {
+    "g": "uni182A.B.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182D.G.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1830.S.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1822.I.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1828.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1837.R.fina",
+    "adv": -1000
+   },
+   {
+    "g": "uni1803",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠨᠣᠮᠤᠳ᠃": [
+   {
+    "g": "uni1828.N.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1823.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182E.M.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1824.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1833.Dd.fina",
+    "adv": -1000
+   },
+   {
+    "g": "uni1803",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠣᠯᠠᠨ᠃": [
+   {
+    "g": "uni1823.AO.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni182F.L.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1828.A.fina",
+    "adv": -1000
+   },
+   {
+    "g": "uni1803",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠰᠤᠷᠤᠭᠴᠢᠨᠠᠷ": [
+   {
+    "g": "uni1830.S.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1824.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1837.R.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1824.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182D.G.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1834.Ch.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1822.I.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1828.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1837.R.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠮᠣᠷᠢᠰ": [
+   {
+    "g": "uni182E.M.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1823.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1837.R.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1822.I.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1830.S.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠨᠣᠮᠤᠳ": [
+   {
+    "g": "uni1828.N.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1823.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182E.M.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1824.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1833.Dd.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠠᠪᠬᠤ": [
+   {
+    "g": "uni1820.AA.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni182A.B.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182C.G.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1824.U.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠥᠭᠬᠦ": [
+   {
+    "g": "uni1825.AOI.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni182D.G.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182C.G.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1826.U.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠮᠡᠳᠡᠬᠦ": [
+   {
+    "g": "uni182E.M.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1821.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1833.Dd.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1821.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182C.G.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1826.U.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠳᠤᠷᠠᠯᠠᠬᠤ": [
+   {
+    "g": "uni1833.T.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1824.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1837.R.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182F.L.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182C.G.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1824.U.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠤᠰᠤ": [
+   {
+    "g": "uni1824.AO.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1830.S.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1824.U.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠠᠶᠢᠯ": [
+   {
+    "g": "uni1820.AA.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1836.Y.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1822.I.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182F.L.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠠᠪᠤᠨ᠎ᠠ": [
+   {
+    "g": "uni1820.AA.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni182A.B.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1824.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1828.A.fina",
+    "adv": -1000
+   },
+   {
+    "g": "space",
+    "adv": 0
+   },
+   {
+    "g": "uni1820.AA.isol",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠢ": [
+   {
+    "g": "uni1822.AI.isol",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠠᠪᠤᠨ᠎ᠠ᠃": [
+   {
+    "g": "uni1820.AA.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni182A.B.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1824.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1828.A.fina",
+    "adv": -1000
+   },
+   {
+    "g": "space",
+    "adv": 0
+   },
+   {
+    "g": "uni1820.AA.isol",
+    "adv": -1000
+   },
+   {
+    "g": "uni1803",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠶᠢ": [
+   {
+    "g": "uni1836.Y.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1822.I.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠮᠡᠳᠡᠨ᠎ᠡ": [
+   {
+    "g": "uni182E.M.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1821.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1833.Dd.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1821.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1828.A.fina",
+    "adv": -1000
+   },
+   {
+    "g": "space",
+    "adv": 0
+   },
+   {
+    "g": "uni1821.A.isol",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠮᠡᠳᠡᠨ᠎ᠡ᠃": [
+   {
+    "g": "uni182E.M.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1821.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1833.Dd.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1821.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1828.A.fina",
+    "adv": -1000
+   },
+   {
+    "g": "space",
+    "adv": 0
+   },
+   {
+    "g": "uni1821.A.isol",
+    "adv": -1000
+   },
+   {
+    "g": "uni1803",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠳᠤᠷᠠᠯᠠᠨ᠎ᠠ᠃": [
+   {
+    "g": "uni1833.T.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1824.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1837.R.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182F.L.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1828.A.fina",
+    "adv": -1000
+   },
+   {
+    "g": "space",
+    "adv": 0
+   },
+   {
+    "g": "uni1820.AA.isol",
+    "adv": -1000
+   },
+   {
+    "g": "uni1803",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠳᠤᠷᠠᠯᠠᠨ᠎ᠠ": [
+   {
+    "g": "uni1833.T.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1824.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1837.R.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182F.L.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1828.A.fina",
+    "adv": -1000
+   },
+   {
+    "g": "space",
+    "adv": 0
+   },
+   {
+    "g": "uni1820.AA.isol",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠤᠰᠤᠨ": [
+   {
+    "g": "uni1824.AO.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1830.S.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1824.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1828.A.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠥᠭᠨ᠎ᠡ": [
+   {
+    "g": "uni1825.AOI.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni182D.G.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1828.A.fina",
+    "adv": -1000
+   },
+   {
+    "g": "space",
+    "adv": 0
+   },
+   {
+    "g": "uni1821.A.isol",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠠᠴᠠ": [
+   {
+    "g": "uni1820.AA.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1834.Ch.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠡᠴᠡ": [
+   {
+    "g": "uni1821.A.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1834.Ch.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1821.A.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠨᠠᠶᠢᠵᠠ": [
+   {
+    "g": "uni1828.N.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1836.Y.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1822.I.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1835.J.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠰᠤᠷᠭᠠᠭᠤᠯᠢ": [
+   {
+    "g": "uni1830.S.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1824.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1837.R.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182D.G.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182D.G.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1824.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182F.L.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1822.I.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠭᠠᠵᠠᠷ": [
+   {
+    "g": "uni182D.Hx.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1835.J.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1837.R.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠶᠠᠪᠤᠨ᠎ᠠ": [
+   {
+    "g": "uni1836.Y.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182A.B.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1824.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1828.A.fina",
+    "adv": -1000
+   },
+   {
+    "g": "space",
+    "adv": 0
+   },
+   {
+    "g": "uni1820.AA.isol",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠶᠠᠪᠤᠨ᠎ᠠ᠃": [
+   {
+    "g": "uni1836.Y.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182A.B.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1824.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1828.A.fina",
+    "adv": -1000
+   },
+   {
+    "g": "space",
+    "adv": 0
+   },
+   {
+    "g": "uni1820.AA.isol",
+    "adv": -1000
+   },
+   {
+    "g": "uni1803",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠥᠭᠨ᠎ᠡ᠃": [
+   {
+    "g": "uni1825.AOI.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni182D.G.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1828.A.fina",
+    "adv": -1000
+   },
+   {
+    "g": "space",
+    "adv": 0
+   },
+   {
+    "g": "uni1821.A.isol",
+    "adv": -1000
+   },
+   {
+    "g": "uni1803",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠲᠣᠮ": [
+   {
+    "g": "uni1832.T.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1823.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182E.M.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠵᠢᠵᠢᠭ": [
+   {
+    "g": "uni1835.I.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1822.I.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1835.J.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1822.I.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182D.G.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠮᠠᠭᠤ": [
+   {
+    "g": "uni182E.M.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182D.G.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1824.U.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠤᠷᠲᠤ": [
+   {
+    "g": "uni1824.AO.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1837.R.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1832.D.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1824.U.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠣᠬᠣᠷ": [
+   {
+    "g": "uni1823.AO.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni182C.G.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1823.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1837.R.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠰᠠᠶᠢᠬᠠᠨ": [
+   {
+    "g": "uni1830.S.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1836.Y.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1822.I.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182C.G.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1820.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1828.A.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠬᠤᠷᠳᠤᠨ": [
+   {
+    "g": "uni182C.H.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1824.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1837.R.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1833.Dd.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1824.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1828.A.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠲᠣᠮ᠃": [
+   {
+    "g": "uni1832.T.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1823.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182E.M.fina",
+    "adv": -1000
+   },
+   {
+    "g": "uni1803",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠬᠤᠷᠳᠤᠨ᠃": [
+   {
+    "g": "uni182C.H.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1824.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1837.R.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1833.Dd.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1824.O.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1828.A.fina",
+    "adv": -1000
+   },
+   {
+    "g": "uni1803",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠡᠩ": [
+   {
+    "g": "uni1821.A.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1829.AG.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠬᠡᠯᠡ": [
+   {
+    "g": "uni182C.H.init",
+    "adv": -1000
+   },
+   {
+    "g": "uni1821.A.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni182F.L.medi",
+    "adv": -1000
+   },
+   {
+    "g": "uni1821.A.fina",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠣ": [
+   {
+    "g": "uni1823.AO.isol",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠬ": [
+   {
+    "g": "uni182C.H.init._isol",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠴ": [
+   {
+    "g": "uni1834.Ch.init._isol",
+    "adv": -1000
+   }
+  ],
+  "corpus:ᠵ": [
+   {
+    "g": "uni1835.I.init._isol",
+    "adv": -1000
+   }
+  ]
+ }
+}
