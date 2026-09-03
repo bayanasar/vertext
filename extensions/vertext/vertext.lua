@@ -7,12 +7,15 @@
 -- external so an SSG gets deterministic, static HTML and no browser
 -- JavaScript is required.
 --
--- Wire protocol: these two codepoints are also declared in
--- crates/vertext-html/src/lib.rs as MODE_CODE / MODE_PROSE, pinned there by
--- the `mode_markers_are_the_wire_protocol` test. Do not change one side alone.
+-- Wire protocol: all thirteen of these codepoints are also declared in
+-- crates/vertext-html/src/lib.rs, each pinned to its literal value by the
+-- `mode_markers_are_the_wire_protocol` test, and the upper bound pinned by
+-- `the_reserved_range_ends_where_the_filter_stops_stripping`. Do not change
+-- one side alone.
 
--- The reserved block runs from MODE_CODE_POINT to MODE_CODE_POINT + 7:
--- code, prose, then heading levels 1-6.
+-- The reserved block runs from MODE_CODE_POINT to MODE_CODE_POINT + 12:
+-- code, prose, heading levels 1-6, table with its cell and row separators,
+-- and the two kinds of list item.
 local MODE_CODE_POINT = 0xE000
 local RESERVED_COUNT = 13 -- U+E000 .. U+E00C inclusive
 local MODE_CODE = "\u{E000}"
@@ -541,7 +544,8 @@ end
 -- a legacy PUA encoding is a real document, not a hypothetical one.
 --
 -- So author text is sanitized at the point it enters the protocol. U+E000
--- through U+E007 are stripped; everything else passes through untouched.
+-- through U+E00C are stripped — the whole reserved block, which is what
+-- RESERVED_COUNT counts; everything else passes through untouched.
 -- Note the loop: Lua patterns match BYTES, so a range class written as
 -- `[\u{E000}-\u{E007}]` is not a codepoint range at all. It is the byte set
 -- implied by those characters' UTF-8 encodings, and it happily deletes the

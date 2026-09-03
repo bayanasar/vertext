@@ -42,9 +42,13 @@ pub const MODE_LIST: char = '\u{E00B}';
 /// the text, so they must not also be given a bullet; a marker of their own
 /// is what lets the stylesheet tell them apart.
 pub const MODE_LIST_ORDERED: char = '\u{E00C}';
-/// One past the last reserved codepoint. The filter strips this whole range
-/// from author text; keep the two in step.
-pub const RESERVED_END: u32 = 0xE00C;
+/// One past the last reserved codepoint — exclusive, like every other Rust
+/// upper bound. The filter strips `MODE_CODE ..RESERVED_END` from author
+/// text; keep the two in step. `vertext.lua` expresses the same bound as
+/// `MODE_CODE_POINT + RESERVED_COUNT`, and
+/// `the_reserved_range_ends_where_the_filter_stops_stripping` pins them to
+/// each other.
+pub const RESERVED_END: u32 = 0xE00D;
 
 /// The marker introducing a heading of `level` (clamped to 1–6).
 pub fn heading_marker(level: u8) -> char {
@@ -410,6 +414,25 @@ pub fn column_advance(layout: &Layout) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The Rust upper bound and the Lua strip loop must name the same edge.
+    ///
+    /// `RESERVED_END` exists for one reason — "keep the two in step" — and
+    /// until now nothing checked that it did. It said "one past the last"
+    /// while holding the last, so anyone implementing a stripper from its own
+    /// documentation would have left `MODE_LIST_ORDERED` in the author's text:
+    /// an ordered-list marker surviving into a document, no error, no warning.
+    ///
+    /// `vertext.lua` writes the same edge as `MODE_CODE_POINT +
+    /// RESERVED_COUNT`, with `RESERVED_COUNT = 13`. Changing either side alone
+    /// now fails here.
+    #[test]
+    fn the_reserved_range_ends_where_the_filter_stops_stripping() {
+        assert_eq!(RESERVED_END, MODE_LIST_ORDERED as u32 + 1);
+        assert_eq!(RESERVED_END, MODE_CODE as u32 + 13);
+        assert!(Mode::from_marker(MODE_LIST_ORDERED).is_some());
+        assert!(char::from_u32(RESERVED_END).and_then(Mode::from_marker).is_none());
+    }
 
     #[test]
     fn mode_markers_are_the_wire_protocol() {
