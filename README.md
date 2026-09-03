@@ -177,6 +177,27 @@ because progression is a property of the script, not a property of the engine.
 The renderer stamps it on the root as `data-column-advance` and the stylesheet
 follows.
 
+### What the engine does not decide
+
+**Line breaking, and with it the kinsoku rules, belong to the host.** The core
+places glyphs into slots and hands you columns; it does not decide where a
+column ends. A vertical column's length is the CSS budget
+`--vertext-column-height`, and wrapping inside a horizontal block is the
+browser's, which is the only party here holding font metrics.
+
+That is a consequence of the core being metric-free, not a postponement. To
+forbid a column from beginning with `。` or ending with `（` you must first own
+the break, and to own the break you must measure — which means fonts at layout
+time, which is the one thing `vertext-core` cannot have while it stays pure
+enough to cross `wasm32` with no I/O. So today: no kinsoku, no widow and orphan
+control, no line-adjustment (追い出し / 追い込み). A host that needs them must
+supply them, and the print path would need the core to grow metrics first.
+
+What the engine *does* guarantee at a break is narrower and worth stating: a
+Mongolian run is never split, a suffix separator never becomes a break
+opportunity, and a Latin word breaks only at a hyphen it already contained or
+at the declared cap, with the hyphen visible.
+
 Prose Latin slots are capped at 12 characters; long words are hard-wrapped
 with a visible hyphen. Code blocks use 24 so conventional compound identifiers
 stay intact. The caps are declared once, in `vertext-html`, and published to

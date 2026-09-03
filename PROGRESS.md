@@ -62,6 +62,16 @@ nothing in the core may foreclose it.
   text than the shapes already broken — the separator exists to carry a
   Mongolian suffix. The debt stands until #4 lands.
 
+- 2026-09-02 **Line breaking and kinsoku are the host's, and the boundary is
+  now written down** (issue #11, Bayanasar's call). Not a deferral: forbidding a
+  column from opening with `。` means owning where the column ends, which means
+  measuring, which means fonts at layout time — and a core that holds fonts is
+  no longer a core that crosses `wasm32` with no I/O. The alternative on the
+  table was pulling break decisions into `vertext-core`; it was not taken, and
+  the reason it would ever be taken is print, where there is no browser to
+  delegate to. The one state nobody could defend was having neither the feature
+  nor the boundary in writing.
+
 ## Open
 
 - **issue #4 — a transliteration pair changes direction with writing order.**
