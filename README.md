@@ -204,18 +204,20 @@ it is the narrow space its name describes and keeps its own slot.
 | `vertext-html` | Shared `Layout` → HTML renderer and the mode protocol. Every HTML host goes through it, so the slot-to-class mapping exists once. |
 | `vertext-cli` | Thin stdin-to-stdout shell over `vertext-html`. |
 
-Products in `apps/` are adapters over the same core:
+**One host ships.** The Markdown/Quarto extension in `extensions/vertext` is
+in production. Every other adapter is a design document and no code — they are
+indexed in [`docs/ROADMAP.md`](docs/ROADMAP.md), with what each is waiting on:
 
 | Product | Status |
 |---|---|
 | Markdown / Quarto extension (`extensions/vertext`) | **Done** — shipping in production |
-| [VertexT Quarto theme](apps/quarto-theme/README.md) | Planned next — Asian-native page chrome; unblocked |
-| [chaji 侘寂 (Flutter)](apps/chaji/README.md) | Planned — layout theme over `vertext-core`, sibling to the wabisabi widget kit |
-| [Browser extension](apps/browser-extension/README.md) | Planned — blocked on `vertext-wasm` |
-| [Notes](apps/notes/README.md) | Planned — blocked on `vertext-wasm` and slot geometry |
-| [Neovim plugin](apps/nvim/README.md) | Planned — an honest lossy projection onto the terminal grid |
-| [Web IDE](apps/web-ide/README.md) | Planned |
-| [Browser](apps/browser/README.md) | Planned, last in the queue |
+| [Quarto theme](docs/roadmap/quarto-theme.md) | Partly real — `extensions/vertext-theme/` ships the SCSS and the nav collapse; the design describes more |
+| [chaji 侘寂 (Flutter)](docs/roadmap/chaji.md) | Design only — layout theme over `vertext-core`, sibling to the wabisabi widget kit |
+| [Browser extension](docs/roadmap/browser-extension.md) | Design only — blocked on `vertext-wasm` |
+| [Notes](docs/roadmap/notes.md) | Design only — blocked on `vertext-wasm` and slot geometry |
+| [Neovim plugin](docs/roadmap/nvim.md) | Design only — an honest lossy projection onto the terminal grid |
+| [Web IDE](docs/roadmap/web-ide.md) | Design only |
+| [Browser](docs/roadmap/browser.md) | Design only, last in the queue |
 
 The markdown path is complete: the filter renders real documents end to end
 and is in production. It is a Pandoc filter with four Quarto-specific calls,

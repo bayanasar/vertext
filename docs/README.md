@@ -20,6 +20,9 @@ a fact drift, and the reader cannot tell which half is stale.
 - [`OVERVIEW.md`](OVERVIEW.md) — the family. One engine and the documents that
   consume it, how each consumer binds to it, and where the whole thing stands.
   Start here if you have never seen this project.
+- [`ROADMAP.md`](ROADMAP.md) — the hosts that have been designed and not
+  written, and what each is waiting on. The design documents themselves are in
+  [`roadmap/`](roadmap/).
 - [`ARCHITECTURE.md`](ARCHITECTURE.md) — how the layout works end to end: the
   slot model, the orientation measure, progression, the document model, and the
   wire protocol between the Quarto filter and the binary.
