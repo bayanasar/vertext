@@ -28,7 +28,8 @@ nothing in the core may foreclose it.
   PASS. Same rig on `bedecdb`: `FAIL: strip did not shrink (757 → 757)`. A rig
   that cannot reproduce the failure is not evidence that it is gone.
 - **CI runs on every pull request, and the gate has been shown to fail.** The
-  `anton` host runner, `.forgejo/workflows/ci.yml`: run 15 green on `673692f9`,
+  `anton` runner (a container, not the host — see below),
+  `.forgejo/workflows/ci.yml`: run 15 green on `673692f9`,
   run 16 **red** on `8067c09e` with `MODE_CODE`'s assertion deliberately
   changed to `'\u{E0FF}'`, run 17 green again on `67afac27` after the revert.
   Both commits are in `main`'s history. A gate that has never gone red is a
@@ -81,6 +82,24 @@ nothing in the core may foreclose it.
   `body { --vertext-column-height: ... }` as an example, and the first draft
   matched that sentence instead of the code. It reported the hook present on a
   stylesheet stripped of it. Comments are removed before anything is read now.
+
+- **The `anton` runner is a container, and the whole job has been run inside
+  it.** Its registration reads `anton:docker://azura-ci:latest`, so a job sees
+  that image's toolchain — cargo 1.98, node 18, python3.11 — and not the
+  machine's. `ci.yml`'s header asserted the opposite ("there is no container")
+  from the day it was written, and the first step written to its word went red:
+  runs 15 and 16 (tasks 70, 71) failed on `a38f3bc` and `7bf49cc`, because
+  Debian splits `venv` and `pip` out of `python3` into `python3-venv` and the
+  image does not carry it. Every one of the five steps has now been executed
+  against `azura-ci:latest` on this machine, in order, and the shaping step
+  installs what it is missing before using it. The header says what the runner
+  is.
+
+  The failure is worth keeping in view: the belief was three weeks old, written
+  in a comment nobody had reason to doubt, and it cost two red runs to find —
+  which is the same shape as the dead theme hook and the blank column above.
+  None of the three was a hard bug. All three were something true that stopped
+  being true with nothing watching.
 
 ## Not sealed
 
