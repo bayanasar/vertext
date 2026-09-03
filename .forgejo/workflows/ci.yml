@@ -16,6 +16,13 @@ on:
   push:
     branches: [main]
 
+# One host runner, capacity 1. Without this, pushing twice to a pull request
+# queues both revisions against the same machine and the older one holds it
+# while already being pointless.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     name: tests
@@ -23,11 +30,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Every `run:` is its own shell, so an `export` in one step is gone by
+      # the next. $GITHUB_PATH is the mechanism that outlives a step -- the
+      # version print below runs in a different shell than this line, which is
+      # what makes it a check rather than a comment.
+      - name: Put the Rust toolchain on PATH
+        run: echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+
+      - name: Toolchain
+        run: cargo --version
+
       - name: Layout engine and renderer
-        run: |
-          export PATH="$HOME/.cargo/bin:$PATH"
-          cargo --version
-          cargo test --workspace
+        run: cargo test --workspace
 
       - name: Nav-collapse logic
         run: node examples/test-nav-toggle.js

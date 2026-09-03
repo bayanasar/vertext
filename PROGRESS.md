@@ -27,6 +27,12 @@ nothing in the core may foreclose it.
   (strip 201→59, columns 549→691) and kele's own lesson (96→34, 486→548), both
   PASS. Same rig on `bedecdb`: `FAIL: strip did not shrink (757 → 757)`. A rig
   that cannot reproduce the failure is not evidence that it is gone.
+- **CI runs on every pull request, and the gate has been shown to fail.** The
+  `anton` host runner, `.forgejo/workflows/ci.yml`: run 15 green on `673692f9`,
+  run 16 **red** on `8067c09e` with `MODE_CODE`'s assertion deliberately
+  changed to `'\u{E0FF}'`, run 17 green again on `67afac27` after the revert.
+  Both commits are in `main`'s history. A gate that has never gone red is a
+  gate whose every green is untested.
 - `node examples/test-nav-toggle.js` — 7 green; 3 fail against `bedecdb`.
 - `npx sass@1.77.8` — theme compiles clean, `--vertext-nav-target` published.
 
@@ -67,6 +73,12 @@ nothing in the core may foreclose it.
   mixing both orders flips direction line by line. Carries the U+202F regression
   above. Fix: let `in_bichig` answer *which script owns the open word*, and lock
   the invariant that the measure's slot count equals `layout_text`'s.
+- **CI logs cannot be read back.** `actions/runs`, `actions/jobs` and
+  `actions/workflows` all return 404 on this instance; only `actions/tasks`
+  answers, and it carries status without log text. A reviewer can see that a
+  run was green and not what ran inside it — which is how the red run above
+  came to be asked for a second time after it had already been performed. The
+  gap is in the review path, not in the gate.
 - **`alcuka/docs` runs a mismatched pair today.** Its vendored `vertext.lua` is
   blob `9938d18b` (`1ac79f0`, 2026-08-16) while `install-vertext.sh` pins
   `VERTEXT_REF=ebd004c` (2026-08-07) — nine days apart across a commit that
