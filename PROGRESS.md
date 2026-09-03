@@ -63,13 +63,33 @@ nothing in the core may foreclose it.
   it no longer fires on the newline that ends the file, which every file has.
   Three tests, shown red against the old condition.
 
+- **The column budget's theme hook is live in both modes, and tested.**
+  `examples/test-column-budget.js`, run by CI. `page_style()` never declared
+  `--vertext-column-height` at all, so `--vertext-column-theme-height` — the
+  documented way a theme states its strip depth — went into a variable no rule
+  read, and vertext.css fell through to its own fallback without saying so.
+  Two people hit that separately before it was found. Both modes now declare
+  it on `body` and route it through the hook, with a fallback each. Shown red
+  two ways: with page mode's declaration removed (the shipped state), and with
+  document mode's hook bypassed rather than merely absent.
+
+  The test was itself wrong first, and the way it was wrong is the reason to
+  say so here: both stylesheets explain this variable in a comment that writes
+  `body { --vertext-column-height: ... }` as an example, and the first draft
+  matched that sentence instead of the code. It reported the hook present on a
+  stylesheet stripped of it. Comments are removed before anything is read now.
+
 ## Not sealed
 
-- **`page_style()` never declares `--vertext-column-height`.** Missing: any test
-  of the column budget in page mode. The documented
-  `--vertext-column-theme-height` hook is therefore dead there, in silence.
-  `document_style()` does declare it, which is why the browser runs pass.
-  Hit independently by two people.
+- **Page mode's column budget is a fixed `34em`, and nobody has measured
+  whether it should be.** The theme hook now reaches it (below), but the
+  fallback when no theme answers is still the flat `34em` vertext.css always
+  fell through to, while document mode budgets against the viewport
+  (`calc(100vh - 12rem)`). Page mode owns the whole viewport, so a fixed depth
+  is the one shape that cannot be right at two window sizes. Missing: a
+  measurement in a real browser, because changing it moves every rendered page
+  — kele's included, whose seal carries pixel numbers. Not a reasoning
+  exercise; whoever has a browser should measure it.
 - **Nothing checks that the filter and the binary came from the same source.**
   No `--version`, no comparison, and the two `0.1.0` constants are hand-typed,
   equal by coincidence. A mismatched pair renders wrong with every check green —

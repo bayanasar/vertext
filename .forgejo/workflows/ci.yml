@@ -46,6 +46,9 @@ jobs:
       - name: Nav-collapse logic
         run: node examples/test-nav-toggle.js
 
+      - name: Column budget and the theme hook
+        run: node examples/test-column-budget.js
+
       # Shaping is a property of the FONT, so this step pins the shaper as well
       # as vendoring the face: a harfbuzz bump can change the glyphs a font
       # yields without anyone touching the repo, and the golden should be able

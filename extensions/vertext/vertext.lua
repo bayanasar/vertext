@@ -479,6 +479,21 @@ local function page_style(mode)
     padding: 1.5rem 2rem;
     overflow-x: auto;
     overflow-y: hidden;
+    /* The column length budget, declared here for the same reason
+       `document_style` declares it: `--vertext-column-theme-height` is
+       documented as the hook a theme uses to say how deep the strips are, and
+       a hook nothing reads is not a hook. Page mode never declared the
+       variable at all, so the theme's answer went into a value no rule
+       consulted and vertext.css fell through to its own `34em` -- silently,
+       which is why this survived two people hitting it.
+
+       The fallback is that same `34em` ON PURPOSE, so this declaration moves
+       no pixel on any page that does not set the hook. Whether page mode
+       SHOULD budget against the viewport the way document mode does is a
+       separate question and a larger one: it changes every rendered page, and
+       the answer has to be measured in a browser rather than reasoned out
+       here. It is written down in PROGRESS as its own item. */
+    --vertext-column-height: var(--vertext-column-theme-height, 34em);
   }
   /* Quarto's grid chrome assumes a horizontal axis. Collapse it to plain block
      flow so the page's writing mode, not a grid template, decides placement.
