@@ -48,6 +48,21 @@ nothing in the core may foreclose it.
   hand-edited expectation diffs. Font and shaper are both pinned
   (`805a55e1…`, harfbuzz 14.4.0), because either can move the glyphs alone.
 
+- **issue #4 is closed, and so is the U+202F debt it carried.** `3df71a8` let
+  the measure say which script owns the open word. Both orders of the
+  transliteration pair now lay out horizontal — checked again on `35aab87`
+  through the release binary, not only in the unit test.
+  The invariant that made it worth fixing is pinned rather than described:
+  `the_measure_counts_the_slots_the_layout_produces` walks 21 shapes and
+  asserts the measure's slot count equals `layout_text`'s for each. Three of
+  them carry U+202F, including `ᠢᠢ<U+202F>is written` — the exact shape the
+  2026-08-29 decision below left standing as debt. It is discharged.
+
+- **No strip ends in a blank column any more.** `35aab87`. The blank column
+  fires on a paragraph break the author typed, which is what it was always for;
+  it no longer fires on the newline that ends the file, which every file has.
+  Three tests, shown red against the old condition.
+
 ## Not sealed
 
 - **`page_style()` never declares `--vertext-column-height`.** Missing: any test
@@ -68,7 +83,9 @@ nothing in the core may foreclose it.
   `0e38451`. A sealed, correct fix does not wait on an adjacent pre-existing
   defect of the same severity, and `bichig + U+202F + Latin` is rarer in real
   text than the shapes already broken — the separator exists to carry a
-  Mongolian suffix. The debt stands until #4 lands.
+  Mongolian suffix. The debt stood until #4 landed; `3df71a8` landed it and
+  `ᠢᠢ<U+202F>is written` is now one of the shapes the slot-count invariant
+  walks. Closed 2026-09-02.
 
 - 2026-09-02 **Line breaking and kinsoku are the host's, and the boundary is
   now written down** (issue #11, Bayanasar's call). Not a deferral: forbidding a
@@ -100,15 +117,6 @@ nothing in the core may foreclose it.
 
 ## Open
 
-- **issue #4 — a transliteration pair changes direction with writing order.**
-  `ᠰᠠᠶᠢᠨ(sayin) good` comes out a vertical column and `sayin(ᠰᠠᠶᠢᠨ) good` a
-  horizontal line, though both hold 1 vertical and 2 horizontal slots; the first
-  is the wrong one. `prefers_horizontal` carries `in_word` across the script
-  boundary — `(` takes the word-connector branch — so the run after a bichig
-  word goes uncounted, while `layout_text` opens a slot for it. A word list
-  mixing both orders flips direction line by line. Carries the U+202F regression
-  above. Fix: let `in_bichig` answer *which script owns the open word*, and lock
-  the invariant that the measure's slot count equals `layout_text`'s.
 - **CI logs cannot be read back.** `actions/runs`, `actions/jobs` and
   `actions/workflows` all return 404 on this instance; only `actions/tasks`
   answers, and it carries status without log text. A reviewer can see that a
