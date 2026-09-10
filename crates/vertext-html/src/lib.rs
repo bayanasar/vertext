@@ -42,9 +42,13 @@ pub const MODE_LIST: char = '\u{E00B}';
 /// the text, so they must not also be given a bullet; a marker of their own
 /// is what lets the stylesheet tell them apart.
 pub const MODE_LIST_ORDERED: char = '\u{E00C}';
-/// One past the last reserved codepoint. The filter strips this whole range
-/// from author text; keep the two in step.
-pub const RESERVED_END: u32 = 0xE00C;
+/// One past the last reserved codepoint — exclusive, like every other Rust
+/// upper bound. The filter strips `MODE_CODE ..RESERVED_END` from author
+/// text; keep the two in step. `vertext.lua` expresses the same bound as
+/// `MODE_CODE_POINT + RESERVED_COUNT`, and
+/// `the_reserved_range_ends_where_the_filter_stops_stripping` pins them to
+/// each other.
+pub const RESERVED_END: u32 = 0xE00D;
 
 /// The marker introducing a heading of `level` (clamped to 1–6).
 pub fn heading_marker(level: u8) -> char {
@@ -244,8 +248,14 @@ pub fn render_document(input: &str, options: RenderOptions) -> String {
 
     let mut emitted_any = false;
     let mut in_stack = false;
-    for (mode, segment_text) in segments {
-        let trimmed = segment_text.trim_end_matches('\n');
+    let last_index = segments.len().saturating_sub(1);
+    for (index, (mode, segment_text)) in segments.into_iter().enumerate() {
+        let trimmed = segment_text.trim_end_matches(['\n', '\r']);
+        // Counted, not merely detected: the LAST segment's first trailing
+        // newline is the file's line terminator, and every later one is the
+        // author's. Counting '\n' inside the trimmed run keeps CRLF input
+        // answering the same as LF.
+        let trailing_newlines = segment_text[trimmed.len()..].matches('\n').count();
         // A wholly blank segment carries nothing and must stay transparent.
         // The separator newline between a heading and the fenced block under
         // it produces one, and treating it as content made it a vertical block
@@ -294,7 +304,21 @@ pub fn render_document(input: &str, options: RenderOptions) -> String {
                 }
                 // Preserve a blank column for a paragraph break that ends the
                 // segment (source newline immediately before a mode toggle).
-                if trimmed.len() < segment_text.len() && !layout.columns.is_empty() {
+                //
+                // Except at the end of the input, where the last newline is the
+                // file's terminator and not a break the author typed. Every
+                // document ends with one, so counting it put a blank column at
+                // the foot of every strip -- six of them in kele's lesson 01,
+                // each holding open a column's width of nothing. A blank line
+                // deliberately left at the end still reads as a break: it is
+                // the SECOND trailing newline that carries the intent.
+                let ends_the_input = index == last_index;
+                let author_broke = if ends_the_input {
+                    trailing_newlines > 1
+                } else {
+                    trailing_newlines > 0
+                };
+                if author_broke && !layout.columns.is_empty() {
                     html.push_str(&format!("<div class=\"{column_class}\"></div>"));
                 }
             }
@@ -410,6 +434,25 @@ pub fn column_advance(layout: &Layout) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The Rust upper bound and the Lua strip loop must name the same edge.
+    ///
+    /// `RESERVED_END` exists for one reason — "keep the two in step" — and
+    /// until now nothing checked that it did. It said "one past the last"
+    /// while holding the last, so anyone implementing a stripper from its own
+    /// documentation would have left `MODE_LIST_ORDERED` in the author's text:
+    /// an ordered-list marker surviving into a document, no error, no warning.
+    ///
+    /// `vertext.lua` writes the same edge as `MODE_CODE_POINT +
+    /// RESERVED_COUNT`, with `RESERVED_COUNT = 13`. Changing either side alone
+    /// now fails here.
+    #[test]
+    fn the_reserved_range_ends_where_the_filter_stops_stripping() {
+        assert_eq!(RESERVED_END, MODE_LIST_ORDERED as u32 + 1);
+        assert_eq!(RESERVED_END, MODE_CODE as u32 + 13);
+        assert!(Mode::from_marker(MODE_LIST_ORDERED).is_some());
+        assert!(char::from_u32(RESERVED_END).and_then(Mode::from_marker).is_none());
+    }
 
     #[test]
     fn mode_markers_are_the_wire_protocol() {
@@ -663,6 +706,8 @@ mod tests {
         assert!(html.starts_with("<div class=\"vertext vertext-page\""));
     }
 
+    const BLANK_COLUMN: &str = "<div class=\"vertext-column vertext-column-prose\"></div>";
+
     #[test]
     fn user_text_is_escaped() {
         let html = render_document("<script>", RenderOptions::default());
@@ -675,5 +720,33 @@ mod tests {
         let input = format!("散文\n{MODE_CODE}code{MODE_PROSE}");
         let html = render_document(&input, RenderOptions::default());
         assert!(html.contains("<div class=\"vertext-column vertext-column-prose\"></div>"));
+    }
+
+    // The three below divide one condition that used to be a single "were any
+    // trailing newlines trimmed?". Every file ends with a newline, so that
+    // question was answered yes for every document ever rendered, and each one
+    // carried a blank column at its foot holding open a column's width of
+    // nothing -- six in kele's lesson 01. What the blank column is FOR is a
+    // break the author typed, which is why the toggle case above still keeps
+    // one and why a deliberate blank line at the end still counts.
+
+    #[test]
+    fn the_terminating_newline_is_not_a_paragraph_break() {
+        let html = render_document("散文\n", RenderOptions::default());
+        assert!(!html.contains(BLANK_COLUMN), "{html}");
+    }
+
+    #[test]
+    fn a_blank_line_left_at_the_end_still_is_one() {
+        let html = render_document("散文\n\n", RenderOptions::default());
+        assert!(html.contains(BLANK_COLUMN), "{html}");
+    }
+
+    #[test]
+    fn crlf_answers_the_same_as_lf_at_the_end() {
+        let terminator = render_document("散文\r\n", RenderOptions::default());
+        let break_too = render_document("散文\r\n\r\n", RenderOptions::default());
+        assert!(!terminator.contains(BLANK_COLUMN), "{terminator}");
+        assert!(break_too.contains(BLANK_COLUMN), "{break_too}");
     }
 }

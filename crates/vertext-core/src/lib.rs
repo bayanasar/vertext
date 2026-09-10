@@ -141,43 +141,69 @@ pub struct Row {
 /// Punctuation and whitespace do not vote: they are shared by both systems,
 /// and letting them vote would hand the decision to a comma-heavy sentence.
 pub fn prefers_horizontal(text: &str) -> bool {
+    let (vertical, horizontal) = measure_slots(text);
+    horizontal > vertical
+}
+
+/// The slot census behind [`prefers_horizontal`]: vertical slots, then
+/// horizontal ones.
+///
+/// It must agree with [`layout_text`] about what a slot is — the count here
+/// equals the number of [`Slot::Upright`] plus [`Slot::MongolianRun`] slots
+/// that function emits, and the number of [`Slot::LatinWord`] slots. Pinning
+/// the answer for one string is weaker and turns into a puzzle at the next
+/// change; the invariant is that these two ways of counting cannot disagree.
+///
+/// Which script holds the open word is the whole of it. A word ends at a
+/// change of script even where no space separates the two, because that is
+/// where `layout_text` closes its slot and opens the next: `writtenᠢᠢ` is a
+/// Latin word and a bichig run, not one thing. Tracking only *whether* a word
+/// is open loses that boundary, and loses it in both directions — the run
+/// after a Latin word goes uncounted, and so does the word after a run.
+fn measure_slots(text: &str) -> (usize, usize) {
     let (mut vertical, mut horizontal) = (0usize, 0usize);
-    let mut in_word = false;
-    // Which script holds the open word. The suffix separator joins bichig and
-    // nothing else, so the measure has to know which kind of word it is inside
-    // before it can decide whether that mark ends one.
+    // Exactly one of these is true while a word is open, and the pair is the
+    // answer to "whose word is it": the suffix separator joins bichig and
+    // nothing else, and a bracket continues a Latin word and nothing else.
+    let mut in_latin = false;
     let mut in_bichig = false;
     for cluster in text.graphemes(true) {
         let Some(base) = cluster.chars().next() else { continue };
         if is_cjk(base) {
             vertical += 1;
-            in_word = false;
+            in_latin = false;
             in_bichig = false;
         } else if is_mongolian(base) {
-            // A Mongolian run is one slot, so only its start counts.
-            if !in_word {
+            // A Mongolian run is one slot, so only its start counts — and a
+            // Latin word to the left does not make this its continuation.
+            if !in_bichig {
                 vertical += 1;
             }
-            in_word = true;
+            in_latin = false;
             in_bichig = true;
-        } else if is_word_char(base) || (in_word && is_word_connector(base)) {
-            // A whole Latin word is one slot; count only where it begins.
-            if !in_word {
+        } else if is_word_char(base) {
+            // A whole Latin word is one slot; count only where it begins, and
+            // a bichig run to the left does not make this its continuation.
+            if !in_latin {
                 horizontal += 1;
             }
-            in_word = true;
+            in_latin = true;
             in_bichig = false;
+        } else if in_latin && is_word_connector(base) {
+            // Inside the word, as `layout_text` reads it: `kedU(n)`,
+            // `gerel.net`. A connector with no Latin word open is punctuation
+            // there and must be punctuation here too, so it falls through.
         } else if in_bichig && is_suffix_separator(base) {
             // The word continues across the joint. A stem and its case ending
             // are one word and one slot — see `is_suffix_separator` — and
             // counting them twice weighs the same word twice, which is the
             // measure disagreeing with the layout about what a slot is.
         } else {
-            in_word = false;
+            in_latin = false;
             in_bichig = false;
         }
     }
-    horizontal > vertical
+    (vertical, horizontal)
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -1098,5 +1124,92 @@ mod tests {
             Slot::Space(" ".into()),
             Slot::LatinWord("let".into()),
         ]);
+    }
+
+    /// The measure and the layout may not disagree about what a slot is.
+    ///
+    /// This is the invariant, not the answer for any one string. Pinning
+    /// `prefers_horizontal("ᠢᠢis written") == false` records a symptom and
+    /// becomes a puzzle at the next change; a disagreement between these two
+    /// counts is always a defect. Issue #4 was exactly such a disagreement,
+    /// and it ran in both directions: a Latin word swallowed after a bichig
+    /// run, and a bichig run swallowed after a Latin word.
+    ///
+    /// Consecutive `LatinWord` slots count as one, because that is
+    /// hyphenation: `internationalization` lays out as two slots and is one
+    /// word with one opinion about direction. Consecutive `Upright` slots are
+    /// not merged — each ideograph really is its own slot and its own vote.
+    #[test]
+    fn the_measure_counts_the_slots_the_layout_produces() {
+        let cases = [
+            // The pair from issue #4: identical content, opposite order.
+            "ᠰᠠᠶᠢᠨ(sayin) good",
+            "sayin(ᠰᠠᠶᠢᠨ) good",
+            // Script boundaries with no space between, both directions.
+            "writtenᠢᠢ",
+            "ᠢᠢis written",
+            "ᠢᠢ is written",
+            "the ᠮᠣᠩᠭᠣᠬscript",
+            "ᠢᠢ好",
+            "好is written",
+            // The suffix separator, joining and not joining.
+            "ᠮᠣᠩᠭᠣᠬ\u{202F}ᠤᠨ",
+            "ᠢᠢ\u{202F}is written",
+            "ᠢᠢ\u{202F}ᠶᠨ is written",
+            // Connectors inside a word, and one with no word to join.
+            "kedU(n)",
+            "gerel.net",
+            "min-U yabun_a uu/UU",
+            "ᠰᠠᠶᠢᠨ(",
+            // Hyphenation: one word, two slots, one vote.
+            "use-after-free",
+            "internationalization",
+            // Plain cases in both systems.
+            "hello world",
+            "山川异域，风月同天",
+            "ᠢᠢ",
+            "",
+        ];
+
+        for text in cases {
+            let layout = layout_text(text, &LayoutConfig::default());
+            let (mut vertical, mut horizontal) = (0usize, 0usize);
+            let mut previous_was_latin = false;
+            for slot in layout.columns.iter().flat_map(|column| column.slots.iter()) {
+                match slot {
+                    Slot::Upright(_) | Slot::MongolianRun(_) => {
+                        vertical += 1;
+                        previous_was_latin = false;
+                    }
+                    Slot::LatinWord(_) => {
+                        if !previous_was_latin {
+                            horizontal += 1;
+                        }
+                        previous_was_latin = true;
+                    }
+                    _ => previous_was_latin = false,
+                }
+            }
+            assert_eq!(
+                measure_slots(text),
+                (vertical, horizontal),
+                "measure and layout disagree on {text:?}"
+            );
+        }
+    }
+
+    /// A word and its transliteration read the same way whichever comes first.
+    ///
+    /// This is the consequence a reader sees, and the reason issue #4 was not
+    /// the low-severity miscount it first looked like: a glossary written
+    /// bichig-first and one written Latin-first are the same content, and a
+    /// list that mixes the two orders had its direction flip line by line.
+    /// The value itself is not pinned — the pair agreeing is the property.
+    #[test]
+    fn a_transliteration_pair_reads_the_same_way_in_either_order() {
+        assert_eq!(
+            prefers_horizontal("ᠰᠠᠶᠢᠨ(sayin) good"),
+            prefers_horizontal("sayin(ᠰᠠᠶᠢᠨ) good"),
+        );
     }
 }

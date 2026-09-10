@@ -19,8 +19,18 @@ end. [`PROGRESS.md`](PROGRESS.md) records which claims have actually been run.
 ```
 
 That builds the binary, copies the extension into `examples/_extensions/`, and
-renders `examples/quarto-demo.qmd`. The extension directory is generated —
-`extensions/vertext` is the only copy in the repository.
+renders `examples/quarto-demo.qmd`. Both the copied extension directory and the
+rendered output are generated and git-ignored; `examples/render.sh` produces
+them from nothing.
+
+`extensions/vertext` is the source of the filter. It is not the only copy:
+`extensions/vertext-theme` vendors its own, because Quarto requires an
+extension that uses another to carry it inside its own `_extensions/`. Two
+copies of a filter in one repository will drift, and these two have. Refresh
+the vendored one with `cp -R extensions/vertext extensions/vertext-theme/_extensions/`
+rather than editing it — `examples/test-extension.sh` asserts the two are
+byte-identical, and CI's `examples/test-column-budget.js` reads both copies so
+a fix applied to one of them fails there.
 
 Use it in a Quarto document after copying the extension to
 `_extensions/vertext` (or installing it with `quarto add` once this repository
@@ -94,21 +104,27 @@ fences still work for laying out one region of an otherwise horizontal page.
 ### What markdown survives
 
 The filter flattens each block to characters before handing it to the binary,
-so structure only crosses the boundary where the wire protocol carries it.
-Today that is two things:
+so structure only crosses the boundary where the wire protocol carries it:
 
 | Markdown | Result |
 |---|---|
 | Headings (`#`–`######`) | Own block, level-scaled, with a section rule |
 | Fenced / indented code | Own block, horizontal, indentation preserved |
 | Tables | Real `<table>`; rows become columns, cells never hyphenate |
+| Bullet / ordered lists | Each item is its own block, oriented on its own. An ordered item carries its number as text |
 | Paragraphs | Own block, oriented by the rule above |
-| Emphasis, links, lists | **Flattened to their text.** The markup is lost |
+| Emphasis, links | **Flattened to their text.** The markup is lost |
+| A list nested inside a list item | Flattened into that item's text |
 
-The last row is a real limitation, not a rounding error: `*emphasis*` arrives
-as the bare word. Each construct needs its own marker in the protocol before
-it can be rendered as itself, and until it has one it should be listed here
-rather than silently implied. Lists are the next worth carrying across.
+The last two rows are real limitations, not rounding errors: `*emphasis*`
+arrives as the bare word. Each construct needs its own marker in the protocol
+before it can be rendered as itself, and until it has one it belongs in this
+table rather than being silently implied.
+
+Items are classified one at a time on purpose. Flattening a list into a single
+string welds the items together and classifies them as a lump: six
+mostly-Chinese items that each carry a Latin term add up to a Latin-majority
+blob, and the whole list turns horizontal.
 
 ### Whole-page vertical flow
 
@@ -171,6 +187,27 @@ because progression is a property of the script, not a property of the engine.
 The renderer stamps it on the root as `data-column-advance` and the stylesheet
 follows.
 
+### What the engine does not decide
+
+**Line breaking, and with it the kinsoku rules, belong to the host.** The core
+places glyphs into slots and hands you columns; it does not decide where a
+column ends. A vertical column's length is the CSS budget
+`--vertext-column-height`, and wrapping inside a horizontal block is the
+browser's, which is the only party here holding font metrics.
+
+That is a consequence of the core being metric-free, not a postponement. To
+forbid a column from beginning with `。` or ending with `（` you must first own
+the break, and to own the break you must measure — which means fonts at layout
+time, which is the one thing `vertext-core` cannot have while it stays pure
+enough to cross `wasm32` with no I/O. So today: no kinsoku, no widow and orphan
+control, no line-adjustment (追い出し / 追い込み). A host that needs them must
+supply them, and the print path would need the core to grow metrics first.
+
+What the engine *does* guarantee at a break is narrower and worth stating: a
+Mongolian run is never split, a suffix separator never becomes a break
+opportunity, and a Latin word breaks only at a hyphen it already contained or
+at the declared cap, with the hyphen visible.
+
 Prose Latin slots are capped at 12 characters; long words are hard-wrapped
 with a visible hyphen. Code blocks use 24 so conventional compound identifiers
 stay intact. The caps are declared once, in `vertext-html`, and published to
@@ -198,18 +235,20 @@ it is the narrow space its name describes and keeps its own slot.
 | `vertext-html` | Shared `Layout` → HTML renderer and the mode protocol. Every HTML host goes through it, so the slot-to-class mapping exists once. |
 | `vertext-cli` | Thin stdin-to-stdout shell over `vertext-html`. |
 
-Products in `apps/` are adapters over the same core:
+**One host ships.** The Markdown/Quarto extension in `extensions/vertext` is
+in production. Every other adapter is a design document and no code — they are
+indexed in [`docs/ROADMAP.md`](docs/ROADMAP.md), with what each is waiting on:
 
 | Product | Status |
 |---|---|
 | Markdown / Quarto extension (`extensions/vertext`) | **Done** — shipping in production |
-| [VertexT Quarto theme](apps/quarto-theme/README.md) | Planned next — Asian-native page chrome; unblocked |
-| [chaji 侘寂 (Flutter)](apps/chaji/README.md) | Planned — layout theme over `vertext-core`, sibling to the wabisabi widget kit |
-| [Browser extension](apps/browser-extension/README.md) | Planned — blocked on `vertext-wasm` |
-| [Notes](apps/notes/README.md) | Planned — blocked on `vertext-wasm` and slot geometry |
-| [Neovim plugin](apps/nvim/README.md) | Planned — an honest lossy projection onto the terminal grid |
-| [Web IDE](apps/web-ide/README.md) | Planned |
-| [Browser](apps/browser/README.md) | Planned, last in the queue |
+| [Quarto theme](docs/roadmap/quarto-theme.md) | Partly real — `extensions/vertext-theme/` ships the SCSS and the nav collapse; the design describes more |
+| [chaji 侘寂 (Flutter)](docs/roadmap/chaji.md) | Design only — layout theme over `vertext-core`, sibling to the wabisabi widget kit |
+| [Browser extension](docs/roadmap/browser-extension.md) | Design only — blocked on `vertext-wasm` |
+| [Notes](docs/roadmap/notes.md) | Design only — blocked on `vertext-wasm` and slot geometry |
+| [Neovim plugin](docs/roadmap/nvim.md) | Design only — an honest lossy projection onto the terminal grid |
+| [Web IDE](docs/roadmap/web-ide.md) | Design only |
+| [Browser](docs/roadmap/browser.md) | Design only, last in the queue |
 
 The markdown path is complete: the filter renders real documents end to end
 and is in production. It is a Pandoc filter with four Quarto-specific calls,

@@ -212,3 +212,9 @@ pair produces no error — only misplaced text, with every check green. See
   fidelity.
 - **The renderer is shared.** Every HTML-producing host goes through
   `vertext-html`, so the slot-to-class mapping is defined exactly once.
+- **Line breaking is not ours.** The core decides which slot a cluster enters,
+  never where a column ends. Kinsoku — no column beginning with a stop or a
+  closing bracket, none ending with an opening one — requires owning the break,
+  and owning the break requires font metrics at layout time. A pure core has no
+  fonts. This is a boundary, not a backlog item: moving it is the same decision
+  as giving `vertext-core` metrics, and that decision has not been taken.

@@ -1,9 +1,17 @@
 # Continuous integration on the Forgejo instance.
 #
-# `runs-on: anton` is the host-mode runner registered on that machine — there
-# is no container, so a job sees the toolchain the machine actually carries.
-# Every step here must either use something already installed (cargo, node,
-# python3) or install it itself. Nothing may depend on an image.
+# `runs-on: anton` is the runner registered on that machine, and it is NOT
+# host mode: its label is `anton:docker://azura-ci:latest`, so a job runs
+# inside that image and sees the image's toolchain, not the machine's. This
+# header said the opposite until 2026-09-03, and the first step written to its
+# word went red — the image carries cargo 1.98, node 18 and python3.11, but
+# not python3-venv, which Debian splits out of python3 along with pip.
+#
+# The rule the old header stated is still the right one and now has teeth: a
+# step must bring whatever it needs. `azura-ci:latest` is not built from
+# anything in this repo, so nothing here may assume its contents — and a step
+# that installs what it is missing keeps working if the label ever does go
+# back to host mode.
 #
 # Placed under .forgejo/ rather than .github/: .github/workflows holds the
 # GitHub mirror job, which asks for `ubuntu-latest`. No runner here offers that
@@ -16,6 +24,13 @@ on:
   push:
     branches: [main]
 
+# One host runner, capacity 1. Without this, pushing twice to a pull request
+# queues both revisions against the same machine and the older one holds it
+# while already being pointless.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     name: tests
@@ -23,11 +38,47 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Every `run:` is its own shell, so an `export` in one step is gone by
+      # the next. $GITHUB_PATH is the mechanism that outlives a step -- the
+      # version print below runs in a different shell than this line, which is
+      # what makes it a check rather than a comment.
+      - name: Put the Rust toolchain on PATH
+        run: echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+
+      - name: Toolchain
+        run: cargo --version
+
       - name: Layout engine and renderer
-        run: |
-          export PATH="$HOME/.cargo/bin:$PATH"
-          cargo --version
-          cargo test --workspace
+        run: cargo test --workspace
 
       - name: Nav-collapse logic
         run: node examples/test-nav-toggle.js
+
+      - name: Column budget and the theme hook
+        run: node examples/test-column-budget.js
+
+      # Shaping is a property of the FONT, so this step pins the shaper as well
+      # as vendoring the face: a harfbuzz bump can change the glyphs a font
+      # yields without anyone touching the repo, and the golden should be able
+      # to say which of the two moved. --prove re-establishes, on every run,
+      # that the golden still diffs when joining is off; a golden that has
+      # never gone red is a golden whose every green is untested.
+      - name: Mongolian shaping golden
+        run: |
+          # Try first, install only on failure: the venv is all this needs, and
+          # asking apt for it unconditionally would make every run pay for a
+          # package the host mode would already have. A failed venv leaves a
+          # half-built directory behind, so the retry starts by clearing it.
+          #
+          # Both streams are silenced on the try, not just stderr: venv reports
+          # this particular failure on STDOUT, so a step that recovers and goes
+          # green still printed "Failing command:" into the log. The retry is
+          # left loud, so a real failure still says why.
+          python3 -m venv /tmp/vertext-shaping >/dev/null 2>&1 || {
+            rm -rf /tmp/vertext-shaping
+            apt-get update -qq && apt-get install -y -qq python3-venv
+            python3 -m venv /tmp/vertext-shaping
+          }
+          /tmp/vertext-shaping/bin/pip install --quiet 'uharfbuzz==0.56.1'
+          /tmp/vertext-shaping/bin/python tools/shaping-golden.py
+          /tmp/vertext-shaping/bin/python tools/shaping-golden.py --prove

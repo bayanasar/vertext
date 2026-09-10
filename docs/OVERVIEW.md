@@ -42,10 +42,9 @@ entry.
 
 What holds across commits:
 
-- **Quarto is the only shipped host.** Seven adapters are named in `apps/` —
-  browser extension, browser, chaji, notes, nvim, quarto-theme, web-ide — and
-  every one of them is a README with no code. `vertext-wasm` does not exist
-  yet; the core is kept pure so that it can.
+- **Quarto is the only shipped host.** Seven more adapters have been designed
+  and none written; the designs are indexed in [`ROADMAP.md`](ROADMAP.md).
+  `vertext-wasm` does not exist yet; the core is kept pure so that it can.
 - **`kele` cannot drift from the engine; `alcuka/docs` can.** The binding table
   above is the reason, and it is structural rather than a passing state: two
   independent pins have already drifted apart once.
