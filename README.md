@@ -19,8 +19,18 @@ end. [`PROGRESS.md`](PROGRESS.md) records which claims have actually been run.
 ```
 
 That builds the binary, copies the extension into `examples/_extensions/`, and
-renders `examples/quarto-demo.qmd`. The extension directory is generated —
-`extensions/vertext` is the only copy in the repository.
+renders `examples/quarto-demo.qmd`. Both the copied extension directory and the
+rendered output are generated and git-ignored; `examples/render.sh` produces
+them from nothing.
+
+`extensions/vertext` is the source of the filter. It is not the only copy:
+`extensions/vertext-theme` vendors its own, because Quarto requires an
+extension that uses another to carry it inside its own `_extensions/`. Two
+copies of a filter in one repository will drift, and these two have. Refresh
+the vendored one with `cp -R extensions/vertext extensions/vertext-theme/_extensions/`
+rather than editing it — `examples/test-extension.sh` asserts the two are
+byte-identical, and CI's `examples/test-column-budget.js` reads both copies so
+a fix applied to one of them fails there.
 
 Use it in a Quarto document after copying the extension to
 `_extensions/vertext` (or installing it with `quarto add` once this repository

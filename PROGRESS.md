@@ -1,9 +1,9 @@
 # PROGRESS — vertext
 
 <!-- progress -->
-updated: 2026-08-30
+updated: 2026-09-09
 owner: tata
-stage: Quarto path works end to end; Mongolian suffix joining correct in the engine, unproven in the font
+stage: Quarto path works end to end; Mongolian suffix joining now proven in the font by a checksummed shaping golden
 <!-- /progress -->
 
 ## What this is
@@ -112,8 +112,36 @@ nothing in the core may foreclose it.
   None of the three was a hard bug. All three were something true that stopped
   being true with nothing watching.
 
+- **The repository no longer commits its own generated artifacts** (#15).
+  Sixteen files left the index: `examples/_extensions/vertext/` (three) and the
+  `quarto render` output (`examples/quarto-demo.html` plus twelve under
+  `examples/quarto-demo_files/libs/`, ~850KB of it minified third-party
+  bootstrap, popper, tippy, clipboard and anchor carrying no licence or
+  attribution). Three things were checked before they went, not after:
+  the committed filter was blob `9938d18b` against a source at `0c24c158`, and
+  `9938d18b` is the same revision `alcuka/docs` vendored — the drift was real
+  and was the known-bad one; `diff -rq` puts it in `vertext.lua` alone, with
+  `_extension.yml` and `vertext.css` identical; and nothing in the repository
+  reads either path — the one hit for `_extensions` in a test is
+  `examples/test-column-budget.js` reading `extensions/vertext-theme/`'s
+  vendored copy, which is a different, legitimately committed file.
+
+  `.gitignore` had named `/examples/_extensions/` since 2026-08-22 and it never
+  took effect: git applies the file to untracked paths only, and `git
+  check-ignore` answers for a tracked path as though the rule were absent, so
+  the one command anyone would run to test the rule reported it working. An
+  ignore rule added after the fact needs `git rm --cached` in the same commit.
+
 ## Not sealed
 
+- **`examples/render.sh` has been read, not run.** #15 asked for proof that it
+  regenerates everything now removed. Half of that is proven by inspection —
+  `examples/_extensions/` is a `cp -R` from `extensions/vertext`, which is the
+  same operation whose result was just compared byte for byte. The other half
+  is `quarto render`, and **quarto is not installed on this machine**, so the
+  demo output under `examples/` was untracked on the strength of the script's
+  text rather than a run. Whoever has Quarto should run `./examples/render.sh`
+  from a clean checkout and confirm both paths come back.
 - **Page mode's column budget is a fixed `34em`, and nobody has measured
   whether it should be.** The theme hook now reaches it (below), but the
   fallback when no theme answers is still the flat `34em` vertext.css always

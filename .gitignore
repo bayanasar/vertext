@@ -4,10 +4,23 @@
 # extensions/vertext (Quarto's extension discovery does not follow symlinks),
 # so the repository keeps exactly one copy of the filter and stylesheet.
 # Run examples/render.sh to produce this directory.
+#
+# This rule was written before the files it names were untracked, so it did
+# nothing for three weeks: git applies .gitignore to untracked paths only, and
+# `git check-ignore` answers for a tracked path as though the rule were absent.
+# A rule added after the fact needs `git rm --cached` in the same commit or it
+# is decoration.
 /examples/_extensions/
 
 # Soulstem session config — persona stays out of the repository.
 /.claude/
 
-# Quarto copies the extension's stylesheet here at render time.
-/examples/quarto-demo_files/libs/quarto-contrib/
+# `quarto render` output. The rendered page and its support directory are
+# derived from examples/quarto-demo.qmd and the extension, and the support
+# directory is mostly third-party: bootstrap, bootstrap-icons, popper, tippy,
+# clipboard and anchor arrived minified, unlicensed and unattributed, ~850KB of
+# it. Nothing in the repository reads either path — no test, no script, no
+# document links to them — so they were weight and a licence question, not a
+# fixture. Run examples/render.sh to produce them.
+/examples/quarto-demo.html
+/examples/quarto-demo_files/
