@@ -122,6 +122,33 @@ jobs:
           /tmp/vertext-shaping/bin/python tools/delivery-golden.py
           /tmp/vertext-shaping/bin/python tools/delivery-golden.py --prove
 
+      # Everything above this line starts at the BINARY: the goldens hand it
+      # text on stdin. A real document does not arrive that way -- it goes
+      # pandoc -> vertext.lua -> the PUA wire protocol -> the binary -- and that
+      # first half had never been executed by anything that can fail. It is also
+      # the half that moves: #25 found the theme's copy of the filter a whole
+      # commit behind, and the only assertion that would have caught it needed
+      # `quarto render`, so it never ran.
+      #
+      # Quarto is not needed to run the filter. It calls `quarto.*` in exactly
+      # three places, and tools/quarto-shim.lua supplies those three and nothing
+      # else, then loads the real filter unmodified -- the same route urtu took
+      # by hand when the U+202F crossing went into PROGRESS.
+      #
+      # Debian's pandoc, not a pinned 3.x: both were run against these fixtures
+      # and the HTML came back byte-identical, so the apt one (~5s) is bought
+      # instead of a 33MiB tarball. Pin one the way the browser is pinned if
+      # they ever diverge.
+      - name: The filter half of the chain
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          apt-get update -qq
+          apt-get install -y -qq pandoc
+          pandoc --version | head -1
+          /tmp/vertext-shaping/bin/python tools/filter-golden.py
+          /tmp/vertext-shaping/bin/python tools/filter-golden.py --prove
+
       # Everything above this line proves things about text. The gate below is
       # the first one that asks a browser, which is what readers use -- and it
       # is the step this repository spent the longest not having, because

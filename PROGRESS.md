@@ -227,6 +227,36 @@ nothing in the core may foreclose it.
   Found because #33 pinned the horizontal path's existence and #34 asked what it
   looks like; the answer was a defect, not a test gap. **What is still missing is
   the image evidence** — see Not sealed.
+- **The filter half of the chain runs, and CI says so** (#30). Every gate above
+  starts at the binary — they hand it text on stdin. A real document goes
+  pandoc → `vertext.lua` → the PUA wire protocol → the binary, and that first
+  half had never been executed by anything that can fail. It is also the half
+  that moves: #25 found the theme's copy a whole commit behind, and the
+  assertion that would have caught it needed `quarto render`.
+
+  `tools/filter-golden.py` runs the real filter under plain pandoc.
+  `tools/quarto-shim.lua` supplies the three `quarto.*` functions the filter
+  calls — `doc.add_html_dependency`, `doc.is_format`, `log.warning` — and
+  nothing else, then `dofile`s the filter unmodified. That is the route urtu
+  took by hand for the U+202F crossing recorded above; this makes it a gate
+  rather than a memory. 160 corpus runs cross the whole chain as one span each
+  and shape as the golden recorded, every block kind the wire encodes comes back
+  as itself (heading at its level, table with cells, both list kinds, code), and
+  **stderr must be empty**: the filter's own fallback warns and then ships plain
+  horizontal text, which looks like a clean render to everything else.
+
+  Shown red twice. `--prove` takes the binary off PATH — the accident this gate
+  exists for — and the chain falls back to plain text with 0 spans, which the
+  gate reports. And an off-by-one in the filter's `MODE_HEADING_BASE`, the same
+  class as #17's `RESERVED_END`: `cargo test` 59 green, shaping 172 green,
+  delivery 168 green, browser 168 green, **this gate red**, because headings
+  stopped arriving as headings.
+
+  pandoc is Debian's 2.17 rather than Quarto's 3.x. Both were run against these
+  fixtures and the HTML came back byte-identical, so the ~5s apt package is
+  bought instead of a 33MiB tarball; pin a 3.x the way the browser is pinned if
+  they ever diverge. The theme's vendored copy is not run separately — the step
+  above proves the two are byte-identical, so running one runs both.
 
 - **The theme's vendored filter is byte-identical to its source, and CI says so**
   (#25). `extensions/vertext-theme/_extensions/vertext/` carries its own copy of
@@ -322,15 +352,6 @@ nothing in the core may foreclose it.
   reader saying the page is writing rather than marks in the right places, and
   that is Bayanasar himself. `needs-native-reader` on that issue means him
   sitting down with a page, not a third party, so it blocks nothing else.
-- **The delivery chain starts at the binary; the filter half has no gate at all**
-  (#30). Real documents go pandoc → `vertext.lua` → the PUA wire protocol →
-  binary, and all three goldens begin after the filter. That is the half #25 just
-  proved drifts. The one thing in the repository that runs the filter is
-  `examples/test-extension.sh`, which needs `quarto render` and therefore never
-  executes. Feasibility is already on record: the U+202F crossing above was run
-  with pandoc 3.9 and the real filter with four `quarto.*` calls shimmed, and
-  unlike a browser, pandoc is in Debian's archive — so this is not blocked on the
-  image the way #28 is.
 - **`examples/render.sh` has been read, not run.** #15 asked for proof that it
   regenerates everything now removed. Half of that is proven by inspection —
   `examples/_extensions/` is a `cp -R` from `extensions/vertext`, which is the
