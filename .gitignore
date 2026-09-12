@@ -12,8 +12,13 @@
 # is decoration.
 /examples/_extensions/
 
-# Soulstem session config — persona stays out of the repository.
+# Soulstem session config — persona stays out of the repository. Both of these
+# are one agent's local tool setup, and `.kimi-code/skills/` was five symlinks
+# whose targets pointed outside the repository: a symlink's blob content IS its
+# target path, so committing one publishes a machine's directory layout to
+# everyone who clones, and hands them a broken link on arrival.
 /.claude/
+/.kimi-code/
 
 # `quarto render` output. The rendered page and its support directory are
 # derived from examples/quarto-demo.qmd and the extension, and the support
@@ -24,3 +29,7 @@
 # fixture. Run examples/render.sh to produce them.
 /examples/quarto-demo.html
 /examples/quarto-demo_files/
+
+# Python bytecode from the golden tools. tools/delivery-golden.py loads
+# tools/shaping-golden.py through importlib, which writes one of these.
+__pycache__/

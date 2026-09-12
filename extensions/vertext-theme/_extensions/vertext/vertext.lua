@@ -7,12 +7,15 @@
 -- external so an SSG gets deterministic, static HTML and no browser
 -- JavaScript is required.
 --
--- Wire protocol: these two codepoints are also declared in
--- crates/vertext-html/src/lib.rs as MODE_CODE / MODE_PROSE, pinned there by
--- the `mode_markers_are_the_wire_protocol` test. Do not change one side alone.
+-- Wire protocol: all thirteen of these codepoints are also declared in
+-- crates/vertext-html/src/lib.rs, each pinned to its literal value by the
+-- `mode_markers_are_the_wire_protocol` test, and the upper bound pinned by
+-- `the_reserved_range_ends_where_the_filter_stops_stripping`. Do not change
+-- one side alone.
 
--- The reserved block runs from MODE_CODE_POINT to MODE_CODE_POINT + 7:
--- code, prose, then heading levels 1-6.
+-- The reserved block runs from MODE_CODE_POINT to MODE_CODE_POINT + 12:
+-- code, prose, heading levels 1-6, table with its cell and row separators,
+-- and the two kinds of list item.
 local MODE_CODE_POINT = 0xE000
 local RESERVED_COUNT = 13 -- U+E000 .. U+E00C inclusive
 local MODE_CODE = "\u{E000}"
@@ -476,16 +479,20 @@ local function page_style(mode)
     padding: 1.5rem 2rem;
     overflow-x: auto;
     overflow-y: hidden;
-    /* Declared for the same reason it is declared in the engine's own copy of
-       this filter: `--vertext-column-theme-height` is the hook a theme states
-       its strip depth through, and page mode never declared the variable the
-       hook feeds, so the answer went nowhere. The fallback is vertext.css's
-       own `34em`, so this moves no pixel where no theme answers.
+    /* The column length budget, declared here for the same reason
+       `document_style` declares it: `--vertext-column-theme-height` is
+       documented as the hook a theme uses to say how deep the strips are, and
+       a hook nothing reads is not a hook. Page mode never declared the
+       variable at all, so the theme's answer went into a value no rule
+       consulted and vertext.css fell through to its own `34em` -- silently,
+       which is why this survived two people hitting it.
 
-       This file is a vendored copy and it has drifted from
-       extensions/vertext/vertext.lua — see PROGRESS. The fix is applied to
-       both because shipping it to one is how the copies drifted in the first
-       place. */
+       The fallback is that same `34em` ON PURPOSE, so this declaration moves
+       no pixel on any page that does not set the hook. Whether page mode
+       SHOULD budget against the viewport the way document mode does is a
+       separate question and a larger one: it changes every rendered page, and
+       the answer has to be measured in a browser rather than reasoned out
+       here. It is written down in PROGRESS as its own item. */
     --vertext-column-height: var(--vertext-column-theme-height, 34em);
   }
   /* Quarto's grid chrome assumes a horizontal axis. Collapse it to plain block
@@ -552,7 +559,8 @@ end
 -- a legacy PUA encoding is a real document, not a hypothetical one.
 --
 -- So author text is sanitized at the point it enters the protocol. U+E000
--- through U+E007 are stripped; everything else passes through untouched.
+-- through U+E00C are stripped — the whole reserved block, which is what
+-- RESERVED_COUNT counts; everything else passes through untouched.
 -- Note the loop: Lua patterns match BYTES, so a range class written as
 -- `[\u{E000}-\u{E007}]` is not a codepoint range at all. It is the byte set
 -- implied by those characters' UTF-8 encodings, and it happily deletes the

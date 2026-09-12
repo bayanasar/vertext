@@ -1,9 +1,9 @@
 # PROGRESS — vertext
 
 <!-- progress -->
-updated: 2026-09-09
+updated: 2026-09-11
 owner: tata
-stage: Quarto path works end to end; Mongolian suffix joining now proven in the font by a checksummed shaping golden
+stage: Quarto path works end to end; Mongolian joining proven in the font, proven to reach the page in one piece, and proven by CI to be applied by a real browser — no reader has looked at a page yet
 <!-- /progress -->
 
 ## What this is
@@ -59,6 +59,110 @@ nothing in the core may foreclose it.
   to the font trips the checksum gate ahead of any glyph comparison; and a
   hand-edited expectation diffs. Font and shaper are both pinned
   (`805a55e1…`, harfbuzz 14.4.0), because either can move the glyphs alone.
+
+  That gate proves the FONT joins. It does not prove the engine hands the font
+  a whole word, because the binary is nowhere in its chain — see the next item,
+  which is issue #7's layer 1b.
+
+- **And the engine delivers the whole word to it** (#7, layer 1b).
+  `tools/delivery-golden.py`, run by CI: 168 single-run strings — the 160 kele
+  corpus runs plus the 8 constructed cases that contain no plain space — go
+  through the release binary, and the text is taken back OUT of the emitted
+  `vertext-mongolian` span before it is shaped. Exactly one span per run,
+  byte-identical, and shaping what came back matches the shaping golden's own
+  expectation, so the two gates cannot drift apart. The U+202F joint survives:
+  `ᠮᠣᠩᠭᠣᠯ<U+202F>ᠤᠨ` arrives as one span.
+
+  Shown red twice, and the second time is the argument for the layer existing.
+  Split `Slot::MongolianRun` per character in the core: this gate fails 155 of
+  168 while **`shaping-golden.py` still passes all 172** — it is shaping raw
+  strings, so it cannot see an engine at all. Then a subtler cut, in
+  `vertext-html` alone, dropping U+180E on the way out of the span: **`cargo
+  test --workspace` stays 59 green and this gate fails 34 of 168.** A break past
+  the core, in a corpus word no unit test names, is invisible to everything else
+  in the repository.
+
+  Honest boundary: the crude per-character split IS caught by 4 core unit tests.
+  What this gate adds is the seam beyond core — the html layer, the escaping,
+  the binary — measured against 160 real words rather than the handful any test
+  spells out.
+
+- **And a real browser joins what we deliver** (#7, layer 2).
+  `tools/browser-golden.py`: each of the 168 runs is rendered through the real
+  binary and the real `vertext.css`, in headless Chrome 152, twice — once
+  normally and once with `font-feature-settings: "init" 0, "medi" 0, "fina" 0`,
+  which is the browser-side form of the lever `shaping-golden.py --prove`
+  already pulls. The two screenshots are compared cell by cell. All 155
+  multi-letter runs change; all 13 single-letter runs do not, which is what
+  makes the rig discriminating rather than merely noisy, and a cell that
+  rendered nothing fails ahead of either check so the gate cannot pass by
+  comparing blank to blank.
+
+  Shown red the way that matters: split `Slot::MongolianRun` per character in
+  the core and all 155 multi-letter runs render identically with joining on and
+  off — the browser has nothing left to join. Font substitution lands in the
+  same trap, since a fallback face with no Mongolian features cannot differ
+  either.
+
+  It does not say the shapes are the RIGHT ones — that is the shaping golden's
+  job, and this gate deliberately reads pixels it cannot interpret.
+
+  **And it runs in CI** (#28), which it did not when it was written.
+  `azura-ci:latest` has no browser and no `npx`, so the step brings its own:
+  chrome-for-testing at a pinned version, cached by that version, plus the 14
+  apt packages holding the 16 shared libraries it is otherwise missing. Shown
+  red the way #20 requires — run **23** green on `3190420` with the step added,
+  run **24** red on `0ff915b` with `JOINING_OFF` replaced by a declaration that
+  changes nothing, run **25** green on `1c9b055` after the revert.
+
+  The attribution matters because this instance's logs cannot be read back (see
+  Open), so the red has to be placed by what the API does answer: the same suite
+  without this step takes 12–15s (runs 20, 21, 22), the two accidental reds this
+  repository has had failed at 5s, and run 24 failed at **30s** — the suite,
+  plus the cache restoring 391MiB of browser, plus apt, plus the gate running
+  and failing. 99s cold to 30s warm is the cache proving itself as well. The
+  only difference between 23 and 24 is one constant that nothing but that step
+  reads, and the same break reproduces locally with the message the step must
+  have printed.
+
+  Two traps are handled in the step rather than left to be discovered: the zip
+  alone does not run, so the step fails with `ldd`'s list rather than letting
+  the gate time out; and the runner's container gets the default 64MB
+  `/dev/shm`, at which size this grid does not fail but HANGS — `browser-golden`
+  passes `--disable-dev-shm-usage` for that, and `privileged: false` means the
+  shm size is not ours to set.
+
+  The class a run falls in is decided by LETTERS, not codepoints (`e3eb138`).
+  A run arrives from the lessons with what rides along inside it, and 46 of the
+  160 corpus runs already have more codepoints than letters — sentence
+  punctuation, the vowel separator. None of the 46 crosses the "two or more"
+  line, so the first version of this gate was green for the right reason by
+  luck: a single letter plus a free variation selector is two codepoints and one
+  letter, it cannot change when joining is switched off, and the gate would have
+  reported `the browser is not applying the joining features` about a correct
+  browser. Shown red both ways — the old `len()` fails on `("fvs-single", "ᠠ᠋")`
+  while the new count passes the same corpus, and a run with no letter at all
+  now fails loudly instead of passing through unexamined. The counter lives next
+  to `shape()` in `shaping-golden.py`, one definition for all three gates.
+
+  The measurement route was tried first and abandoned: every letter of this font
+  carries the same vertical advance in every positional form, so across all 168
+  runs the joined advance sum equals the per-character isolated sum, and the
+  only advances in the golden are 0 and 1000. Geometry cannot see joining here.
+
+- **The theme's vendored filter is byte-identical to its source, and CI says so**
+  (#25). `extensions/vertext-theme/_extensions/vertext/` carries its own copy of
+  the content extension because Quarto requires an extension that uses another
+  to embed it, and the two had drifted twice: once by a whole commit, and again
+  by comments edited in the copy rather than refreshed from the source, which
+  left it describing the old 8-codepoint block four lines from the constant that
+  says 13. Refreshed with `cp -R`, which is the only way it should ever change.
+
+  The assertion already existed, in `examples/test-extension.sh`, and had never
+  once executed: that script needs `quarto render` and no runner here has
+  Quarto, so the copies sat unequal with every gate green. The comparison needs
+  nothing but `diff`, so it is now its own CI step. Shown red by appending one
+  line to the copy, green again after the refresh.
 
 - **issue #4 is closed, and so is the U+202F debt it carried.** `3df71a8` let
   the measure say which script owns the open word. Both orders of the
@@ -134,6 +238,31 @@ nothing in the core may foreclose it.
 
 ## Not sealed
 
+- **No one who reads the script has looked at a page yet** (#7, layer 3).
+  Layers 1a, 1b and 2 are sealed above: the font joins, the engine delivers a
+  whole word to it, and a real browser applies the joining. None of that is a
+  reader saying the page is writing rather than marks in the right places, and
+  that is Bayanasar himself. `needs-native-reader` on that issue means him
+  sitting down with a page, not a third party, so it blocks nothing else.
+- **The golden corpus is bare runs, out of context** (#29). `extract()` lifts
+  Mongolian codepoints with `RUN.finditer` and `.strip()`, so the 160 corpus
+  runs arrive with no neighbours, and `deliver()` feeds each one to the binary as
+  a whole document. What layers 1b and 2 therefore pin is that *a lone run is
+  not cut* — while the engine's error-prone place is adjacency: brackets, a
+  transliteration pair, a Latin word against bichig, which is all of #4 and #3.
+  A regression that splits a run only in the `ᠰᠠᠶᠢᠨ(sayin)` shape passes all 168.
+  The fix is cheap (a dozen whole lines from the lessons, asserting each run
+  inside still lands in one span) and the ticket's real requirement is the red:
+  that new layer must catch something the 168 cannot.
+- **The delivery chain starts at the binary; the filter half has no gate at all**
+  (#30). Real documents go pandoc → `vertext.lua` → the PUA wire protocol →
+  binary, and all three goldens begin after the filter. That is the half #25 just
+  proved drifts. The one thing in the repository that runs the filter is
+  `examples/test-extension.sh`, which needs `quarto render` and therefore never
+  executes. Feasibility is already on record: the U+202F crossing above was run
+  with pandoc 3.9 and the real filter with four `quarto.*` calls shimmed, and
+  unlike a browser, pandoc is in Debian's archive — so this is not blocked on the
+  image the way #28 is.
 - **`examples/render.sh` has been read, not run.** #15 asked for proof that it
   regenerates everything now removed. Half of that is proven by inspection —
   `examples/_extensions/` is a `cp -R` from `extensions/vertext`, which is the
@@ -142,15 +271,45 @@ nothing in the core may foreclose it.
   demo output under `examples/` was untracked on the strength of the script's
   text rather than a run. Whoever has Quarto should run `./examples/render.sh`
   from a clean checkout and confirm both paths come back.
-- **Page mode's column budget is a fixed `34em`, and nobody has measured
-  whether it should be.** The theme hook now reaches it (below), but the
-  fallback when no theme answers is still the flat `34em` vertext.css always
-  fell through to, while document mode budgets against the viewport
-  (`calc(100vh - 12rem)`). Page mode owns the whole viewport, so a fixed depth
-  is the one shape that cannot be right at two window sizes. Missing: a
-  measurement in a real browser, because changing it moves every rendered page
-  — kele's included, whose seal carries pixel numbers. Not a reasoning
-  exercise; whoever has a browser should measure it.
+- **The two modes have been measured, and what the length SHOULD be is still
+  undecided** (#26). `tools/measure-column-budget.py`, headless Chrome 152, the
+  same source through the real binary in both modes at four window sizes, with
+  a 400-character upright probe to count what fits:
+
+  | window | mode | column | chars/column |
+  |---|---|---|---|
+  | 1280×800 | document | 521px | 24 |
+  | 1280×800 | page | 612px | 29 |
+  | 1920×1080 | document | 801px | 38 |
+  | 1920×1080 | page | 612px | 29 |
+  | 1280×2000 | document | 1721px | 81 |
+  | 1280×2000 | page | 612px | 29 |
+  | 768×1024 | document | 745px | 35 |
+  | 768×1024 | page | 612px | 29 |
+
+  Document mode runs 24 to 81 characters a column across ordinary windows — a
+  3.4× swing in the length of a line, which in vertical setting is the rhythm
+  the eye moves in. Page mode is 29, always, whatever the window.
+
+  That half-inverts the issue's own premise, which reads as though the hardcoded
+  side were the problem: neither number has a provenance, but the swinging one is
+  the one to change first, because a fixed value at least gives the same page
+  twice while a window-derived one does not give the same page on two machines.
+  Recorded on the issue rather than left in the commit.
+
+  Two things the measurement settled that guessing had wrong. **`34em` is not
+  34 characters**: it resolves to 612px and holds 29, because a character cell
+  is ~21.2px at this size and not 1em. And the first metric tried was wrong
+  too — counting characters per `.vertext-column` measures how the SOURCE was
+  chunked, not how the page reads, and grouping them by position fragments on
+  every rotated punctuation mark. Hence the boring probe.
+
+  What is NOT decided is step 2 of the issue: what the length should be a
+  function of — the window, the window minus `--vertext-nav-depth`, or a
+  declared value — and that belongs in the README beside progression, because
+  the measure of a page is data and not an engine constant. Changing it moves
+  every page already rendered, kele's pixel seal included, so the decision is
+  Bayanasar's and the rebuild is `frontend-kele`'s.
 - **Nothing checks that the filter and the binary came from the same source.**
   No `--version`, no comparison, and the two `0.1.0` constants are hand-typed,
   equal by coincidence. A mismatched pair renders wrong with every check green —
@@ -197,17 +356,6 @@ nothing in the core may foreclose it.
   without it. Zero advance means the word measures the same either way.
 
 ## Open
-
-- **The theme's vendored `vertext.lua` describes a protocol it does not
-  implement.** `extensions/vertext-theme/_extensions/vertext/vertext.lua` is
-  code-identical to `extensions/vertext/vertext.lua` — `RESERVED_COUNT = 13` in
-  both, and after 2026-09-02 no non-comment line differs. Two of its comments
-  still describe the old 8-codepoint block: "these two codepoints", and
-  "U+E000 through U+E007 are stripped", four lines from the constant that says
-  13. Nothing renders wrong. What is wrong is that the file reads as an older
-  version than it is, so the next person to diff the copies has to read the
-  code to find out that the drift is only prose — and the person before them
-  did not, which is how the column-budget fix went into one copy.
 
 - **CI logs cannot be read back.** `actions/runs`, `actions/jobs` and
   `actions/workflows` all return 404 on this instance; only `actions/tasks`

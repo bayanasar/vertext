@@ -70,6 +70,32 @@ CASES = [
 
 RUN = re.compile(r"[᠀-᢯ ‍]+")
 
+# MONGOLIAN LETTER A .. MONGOLIAN LETTER CHI -- the codepoints that take a
+# positional form. Deliberately narrower than RUN above, which spans the whole
+# block so that a run arrives from the lessons with whatever rides along inside
+# it: U+1802/U+1803 punctuation ending a sentence, U+180E cutting a final vowel
+# loose, U+180B-180D selecting a variant, U+202F joining a suffix. Not one of
+# those has an initial, medial or final form.
+LETTERS = (0x1820, 0x1842)
+
+
+def letters(text):
+    """How many letters in this run can take a positional form at all.
+
+    The gates that ask "is this run two letters or more?" mean letters, and
+    `len(text)` answers in codepoints. No entry in today's corpus makes the two
+    answers disagree about "two or more" -- but the corpus is frozen, and the
+    next `--update --corpus` can re-extract one that does. A single letter
+    followed by a free variation selector is two codepoints and one letter:
+    counted as two, tools/browser-golden.py requires it to change when joining
+    is switched off, it does not change, and the gate goes red saying "the
+    browser is not applying the joining features" about a browser and a font
+    that are both behaving correctly. A false red that accuses the wrong
+    component is worse than no check, because the next person spends the day
+    in Chrome.
+    """
+    return sum(1 for c in text if LETTERS[0] <= ord(c) <= LETTERS[1])
+
 
 def shape(font, hb, text, features=None):
     buf = hb.Buffer()

@@ -35,6 +35,12 @@ jobs:
   test:
     name: tests
     runs-on: anton
+    env:
+      # Pinned, never `@stable`: a floating browser is a floating answer, the
+      # same reason the shaping golden vendors its font and pins harfbuzz. This
+      # one string is the download URL and the cache key both, so a bump is one
+      # line. It is the version the golden's evidence line was recorded with.
+      CHROME_VERSION: "152.0.7977.75"
     steps:
       - uses: actions/checkout@v4
 
@@ -56,6 +62,27 @@ jobs:
 
       - name: Column budget and the theme hook
         run: node examples/test-column-budget.js
+
+      # The theme carries its own copy of the content extension, because Quarto
+      # requires an extension that uses another to embed it. Two copies of a
+      # filter drift, and these have twice: once by a whole commit, once by
+      # hand-edited comments that made the copy read older than it was.
+      #
+      # examples/test-extension.sh already asserted this, and that assertion
+      # never ran: the script needs `quarto render`, which no runner here has,
+      # so the copies sat unequal with every gate green. The comparison needs
+      # nothing but diff, so it belongs where it will actually execute.
+      #
+      # Refresh the copy, never edit it:
+      #   cp -R extensions/vertext extensions/vertext-theme/_extensions/
+      - name: The theme's vendored filter matches its source
+        run: |
+          diff -r extensions/vertext \
+                  extensions/vertext-theme/_extensions/vertext || {
+            echo "the embedded filter has drifted from extensions/vertext"
+            echo "refresh it: cp -R extensions/vertext extensions/vertext-theme/_extensions/"
+            exit 1
+          }
 
       # Shaping is a property of the FONT, so this step pins the shaper as well
       # as vendoring the face: a harfbuzz bump can change the glyphs a font
@@ -82,3 +109,80 @@ jobs:
           /tmp/vertext-shaping/bin/pip install --quiet 'uharfbuzz==0.56.1'
           /tmp/vertext-shaping/bin/python tools/shaping-golden.py
           /tmp/vertext-shaping/bin/python tools/shaping-golden.py --prove
+
+      # The step above shapes the corpus strings directly -- the binary is not
+      # in that chain, so an engine that split a word in two would leave it
+      # green. This one puts the binary in: every run goes through the real
+      # renderer and the string is taken back out of the HTML before it is
+      # shaped. It reuses the venv the step above built, and needs the release
+      # binary, which nothing before this point produces.
+      - name: Mongolian delivery golden
+        run: |
+          cargo build --release -p vertext-cli
+          /tmp/vertext-shaping/bin/python tools/delivery-golden.py
+          /tmp/vertext-shaping/bin/python tools/delivery-golden.py --prove
+
+      # Everything above this line proves things about text. The gate below is
+      # the first one that asks a browser, which is what readers use -- and it
+      # is the step this repository spent the longest not having, because
+      # `azura-ci:latest` carries no browser and no npx. It brings its own.
+      #
+      # Three things were measured inside that image before this was written,
+      # each of which would otherwise cost an afternoon:
+      #
+      #   * the 185MiB zip is not enough on its own. `ldd` reports 16 `not
+      #     found` in this image, and the apt line below is where those come
+      #     from (~7s). If a browser is ever baked into the image, this whole
+      #     step collapses to the last line.
+      #   * the runner's container gets the default 64MB /dev/shm, and at that
+      #     size the gate's 1728x3360 grid does not fail -- it HANGS (still
+      #     running at 120s, against 1.0s with the flag). `browser-golden.py`
+      #     passes --disable-dev-shm-usage for exactly this; `privileged: false`
+      #     on the runner means the shm size is not ours to change.
+      #   * with both, the gate itself runs in 6-9s, and a COLD run of these
+      #     three steps -- nothing cached, no package lists -- is 25s end to
+      #     end: ~8s to fetch and unpack 185MiB, ~8s of apt, ~9s of gate. The
+      #     cost here is the browser, not the gate.
+      - name: The pinned browser
+        id: browser
+        uses: actions/cache@v4
+        with:
+          path: /opt/chrome
+          key: chrome-for-testing-${{ env.CHROME_VERSION }}-linux64
+
+      - name: Unpack the browser and its libraries
+        env:
+          # Without this, apt's debconf prints five lines about frontends it
+          # cannot initialize -- on a step that went green. A log that cries
+          # wolf on every run is a log nobody reads on the run that matters.
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          # The cache above carries the unpacked browser; the libraries are not
+          # in it, because they are installed into the image's own paths and a
+          # cached /opt says nothing about those. So the download is conditional
+          # and the apt line is not.
+          if [ ! -x /opt/chrome/chrome-linux64/chrome ]; then
+            mkdir -p /opt/chrome
+            curl -sSfL -o /tmp/chrome.zip \
+              "https://storage.googleapis.com/chrome-for-testing-public/$CHROME_VERSION/linux64/chrome-linux64.zip"
+            unzip -q /tmp/chrome.zip -d /opt/chrome
+            rm -f /tmp/chrome.zip
+          fi
+          apt-get update -qq
+          apt-get install -y -qq \
+            libasound2 libatk1.0-0 libatk-bridge2.0-0 libatspi2.0-0 libcups2 \
+            libdbus-1-3 libgbm1 libnspr4 libnss3 libxcomposite1 libxdamage1 \
+            libxfixes3 libxkbcommon0 libxrandr2
+          # A browser that cannot resolve its own libraries must stop here, with
+          # the list, rather than inside the gate as a timeout.
+          missing=$(ldd /opt/chrome/chrome-linux64/chrome | grep "not found" || true)
+          if [ -n "$missing" ]; then
+            echo "the browser is missing shared libraries:"
+            echo "$missing"
+            exit 1
+          fi
+          /opt/chrome/chrome-linux64/chrome --version
+
+      - name: Mongolian browser golden
+        run: |
+          python3 tools/browser-golden.py --chrome /opt/chrome/chrome-linux64/chrome
