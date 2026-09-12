@@ -115,9 +115,16 @@ so structure only crosses the boundary where the wire protocol carries it:
 | Paragraphs | Own block, oriented by the rule above |
 | Emphasis, links | **Flattened to their text.** The markup is lost |
 | A list nested inside a list item | Flattened into that item's text |
+| Mongolian inside a code block | **Rendered in the monospace face, so its letters stay isolated instead of joining** |
 
-The last two rows are real limitations, not rounding errors: `*emphasis*`
-arrives as the bare word. Each construct needs its own marker in the protocol
+The last three rows are real limitations, not rounding errors: `*emphasis*`
+arrives as the bare word, and bichig inside a fenced block keeps the monospace
+face deliberately — a family change mid-line would break the column alignment
+that is the reason code is set in monospace at all. The cost is that those
+letters do not join, which is the failure this library exists to prevent,
+appearing in the one place it is chosen rather than suffered. Declared
+degradation beats pretended fidelity, but only where the reader will see the
+declaration. Each construct needs its own marker in the protocol
 before it can be rendered as itself, and until it has one it belongs in this
 table rather than being silently implied.
 

@@ -145,7 +145,7 @@ def render(pandoc, document, path_extra=None):
         done = subprocess.run(
             [pandoc, "-f", "markdown", "-t", "html", "--wrap=none",
              f"--lua-filter={SHIM}", source],
-            capture_output=True, text=True, env=env, timeout=300)
+            capture_output=True, text=True, env=env, timeout=60)
     finally:
         os.unlink(source)
     if done.returncode != 0:
@@ -183,6 +183,17 @@ STUBS = [
     ("a binary from another release",
      '#!/bin/sh\n[ "$1" = "--version" ] && { echo "vertext 9.9.0"; exit 0; }\n'
      'cat >/dev/null; echo "<p>not ours</p>"\n'),
+    # The shape of 0.1, the binary actually in the wild: no `--version` branch,
+    # so it reads stdin to EOF and prints a render of whatever it got. The
+    # interesting property is that this does not HANG -- `pandoc.pipe` closes the
+    # child's stdin, so the read returns immediately. Verified against a real 0.1
+    # binary built from 4f6ea5b as well, through the real filter: exit 0 in under
+    # a second, no spans, refusal on stderr.
+    #
+    # It stays here as a stub rather than a vendored binary because what must not
+    # regress is the BEHAVIOUR, and `render()` carries a timeout: if some host's
+    # pipe ever leaves stdin open, this test goes red in seconds instead of a
+    # site build hanging for as long as someone is willing to wait.
     ("a binary too old to know --version",
      '#!/bin/sh\ncat >/dev/null; echo "<div class=\\"vertext\\"></div>"\n'),
 ]

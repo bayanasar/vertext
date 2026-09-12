@@ -418,6 +418,25 @@ nothing in the core may foreclose it.
   gate now asserts they are one version: shown red by setting `WIRE_VERSION` to
   `0.2`, where the handshake refuses the very binary it ships with.
 
+  **It guards ONE direction, and the wording matters.** A 0.2 filter refuses a
+  binary that is not 0.2. A 0.1 filter has no handshake in it at all and will
+  drive a 0.2 binary straight into misplaced text, exactly as before — the old
+  half cannot be taught. So "the two refuse each other" is false, and saying it
+  would leave the next person believing both directions are held. The direction
+  that is not held closes only by release discipline: both halves installed from
+  one artifact, which is #9's steps 1 and 2.
+
+  The binary this really guards against is 0.1, which has no `--version` branch
+  and reads stdin instead — so asking it for a version could have meant asking
+  it to WAIT, and a hung site build is harder to attribute than wrong text,
+  because wrong text at least appears. It does not hang, and that is measured,
+  not assumed: a real 0.1 binary built from `4f6ea5b`, first on PATH, through
+  the real filter under pandoc — **exit 0 in under a second, no spans, and the
+  refusal on stderr**. `pandoc.pipe` closes the child's stdin, so the read
+  returns at once. The gate keeps that shape under a stub with a 60s timeout, so
+  a host whose pipe stops closing stdin shows up as a red test rather than a
+  build that hangs for as long as someone will wait.
+
   What this does NOT do is make the mismatch impossible, which is what #9 is
   actually for: two consumers still install the two halves separately, so there
   is still a pair to mismatch. This is the second line of defence the issue

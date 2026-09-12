@@ -74,7 +74,13 @@ end
 -- PandocError` from deep inside pandoc's walk, which names neither the real
 -- problem nor its fix.
 -- The wire version this filter speaks: MAJOR.MINOR of the pair, not the patch.
--- The protocol is what has to match, and a patch release does not move it.
+--
+-- That comparison is a POLICY, not a convenience, and it is stated here because
+-- until now it lived only in the behaviour of one `match`: **a patch release
+-- must not change the wire protocol.** 0.2.1's binary is accepted by 0.2.0's
+-- filter, so anything that moves a reserved codepoint, a separator or a mode
+-- marker is a MINOR bump at least. If that ever stops being true, this
+-- comparison is the thing that has to change first.
 --
 -- Three places declare a version -- this one, `Cargo.toml`'s workspace version,
 -- and `_extension.yml` -- and until now they were equal by coincidence, all
@@ -90,6 +96,22 @@ local wire_agrees = nil
 
 local function binary_speaks_our_wire()
   if wire_agrees ~= nil then return wire_agrees end
+  -- The binary this is really guarding against -- 0.1, the one in the wild --
+  -- has no `--version` branch at all: it reads stdin and renders whatever it
+  -- gets. Asking it for a version could therefore have meant asking it to WAIT,
+  -- and a site build that hangs is worse to diagnose than one that lays text out
+  -- wrong, because wrong text at least appears.
+  --
+  -- It does not hang, and that was measured rather than assumed: a real 0.1
+  -- binary built from `4f6ea5b`, on PATH ahead of everything, through this
+  -- filter under pandoc -- exit 0 in under a second, no spans, and the refusal
+  -- below. `pandoc.pipe` writes the given input (here, nothing) to the child and
+  -- CLOSES its stdin, so that read returns at once. The empty render it prints
+  -- then fails the anchored match, which is the refusal.
+  --
+  -- `tools/filter-golden.py` keeps that shape under a stub, with a timeout, so
+  -- if a host's pipe ever stops closing stdin it surfaces as a red test instead
+  -- of a hung build.
   local ok, reported = pcall(pandoc.pipe, "vertext", { "--version" }, "")
   local theirs = ok and reported and reported:match("^vertext%s+(%d+%.%d+)")
   -- A binary too old to know `--version` does not fail here: it reads the empty
