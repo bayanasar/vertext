@@ -21,8 +21,13 @@ name: CI
 
 on:
   pull_request:
+  # Every branch, not just main. C14 puts one MR per milestone, so a work branch
+  # accumulates issue commits for days before any MR exists — and until this
+  # line, not one of those pushes ran a single gate. A branch whose gates run
+  # only at the end is the defect this repository files tickets about, one level
+  # up. The cost is that a push to a branch WITH an open MR runs twice, once per
+  # event; at 15-30s a run on one runner, that is the cheaper side of the trade.
   push:
-    branches: [main]
 
 # One host runner, capacity 1. Without this, pushing twice to a pull request
 # queues both revisions against the same machine and the older one holds it
@@ -55,12 +60,15 @@ jobs:
         run: cargo --version
 
       - name: Layout engine and renderer
+        id: engine
         run: cargo test --workspace
 
       - name: Nav-collapse logic
+        id: nav-toggle
         run: node examples/test-nav-toggle.js
 
       - name: Column budget and the theme hook
+        id: column-budget
         run: node examples/test-column-budget.js
 
       # The theme carries its own copy of the content extension, because Quarto
@@ -76,6 +84,7 @@ jobs:
       # Refresh the copy, never edit it:
       #   cp -R extensions/vertext extensions/vertext-theme/_extensions/
       - name: The theme's vendored filter matches its source
+        id: filter-copies
         run: |
           diff -r extensions/vertext \
                   extensions/vertext-theme/_extensions/vertext || {
@@ -91,6 +100,7 @@ jobs:
       # that the golden still diffs when joining is off; a golden that has
       # never gone red is a golden whose every green is untested.
       - name: Mongolian shaping golden
+        id: shaping-golden
         run: |
           # Try first, install only on failure: the venv is all this needs, and
           # asking apt for it unconditionally would make every run pay for a
@@ -117,6 +127,7 @@ jobs:
       # shaped. It reuses the venv the step above built, and needs the release
       # binary, which nothing before this point produces.
       - name: Mongolian delivery golden
+        id: delivery-golden
         run: |
           cargo build --release -p vertext-cli
           /tmp/vertext-shaping/bin/python tools/delivery-golden.py
@@ -140,6 +151,7 @@ jobs:
       # instead of a 33MiB tarball. Pin one the way the browser is pinned if
       # they ever diverge.
       - name: The filter half of the chain
+        id: filter-golden
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
@@ -171,13 +183,13 @@ jobs:
       #     end: ~8s to fetch and unpack 185MiB, ~8s of apt, ~9s of gate. The
       #     cost here is the browser, not the gate.
       - name: The pinned browser
-        id: browser
         uses: actions/cache@v4
         with:
           path: /opt/chrome
           key: chrome-for-testing-${{ env.CHROME_VERSION }}-linux64
 
       - name: Unpack the browser and its libraries
+        id: browser-setup
         env:
           # Without this, apt's debconf prints five lines about frontends it
           # cannot initialize -- on a step that went green. A log that cries
@@ -211,5 +223,30 @@ jobs:
           /opt/chrome/chrome-linux64/chrome --version
 
       - name: Mongolian browser golden
+        id: browser-golden
         run: |
           python3 tools/browser-golden.py --chrome /opt/chrome/chrome-linux64/chrome
+
+      # A red run on this instance says "red" and nothing else: `actions/runs`,
+      # `actions/jobs` and `actions/workflows` all 404 on Forgejo 11.0.16, and
+      # `actions/tasks` carries status without log text. So locating a failure
+      # has cost a manual re-run of the whole job inside azura-ci:latest once
+      # (6e416d3, where it turned out to be step 5), and an argument from step
+      # timings once (#28's deliberate red) — a bill payable again on every
+      # future red, by whoever is reviewing rather than by whoever broke it.
+      #
+      # The commit status API does answer on this version, and CI already writes
+      # one status for the job as a whole. This writes one per gate, so
+      # `/api/v1/repos/{owner}/{repo}/commits/{sha}/statuses` names what failed.
+      #
+      # `if: always()` because the interesting case is the one where a step above
+      # has already failed. The outcomes come from `steps`, so the gate list
+      # lives in exactly one place — the ids above — and a gate added later is
+      # reported the day it is added, with nobody remembering to.
+      - name: Report each gate's outcome where a reviewer can read it
+        if: always()
+        env:
+          STATUS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          STEPS: ${{ toJSON(steps) }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: python3 .forgejo/report-gates.py
