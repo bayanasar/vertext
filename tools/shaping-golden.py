@@ -84,6 +84,12 @@ CASES = [
 # The line NUMBER is only provenance -- the text itself is frozen into the
 # golden, because CI checks out vertext alone and a golden that needs a sibling
 # checkout is a golden that does not run.
+# READ THIS BEFORE EDITING THE TABLE. It is provenance and rationale only: the
+# values the gates actually run on -- the line's text AND its pinned path -- are
+# frozen into `goldens/shaping.json` and read from there. Changing a `path` or a
+# line number here changes nothing until `--update --corpus <a kele checkout>`
+# re-extracts, and until then the gate follows the JSON while this table says
+# something else. That is the shape of every drift this repository has paid for.
 LINES = [
     ("lessons/01.md", 7,  "vertical", "table row: bichig hard against | and its transliteration"),
     ("lessons/01.md", 11, "vertical", "table row whose word carries U+180E"),
@@ -154,6 +160,17 @@ def letters(text):
     in Chrome.
     """
     return sum(1 for c in text if LETTERS[0] <= ord(c) <= LETTERS[1])
+
+
+def letters_beyond_our_range(text):
+    """Script letters this file does not count: Todo, Sibe, Manchu, Ali Gali.
+
+    `letters()` deliberately covers U+1820..U+1842 only. A run of Todo letters
+    would therefore count zero and look like a lone punctuation mark to a caller
+    that only asks "are there letters?" -- and be skipped, unexamined, by a gate
+    whose whole job is to examine it. This is how a caller tells the two apart.
+    """
+    return sum(1 for c in text if 0x1843 <= ord(c) <= 0x18AA)
 
 
 def shape(font, hb, text, features=None):
