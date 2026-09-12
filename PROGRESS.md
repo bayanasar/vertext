@@ -176,6 +176,39 @@ nothing in the core may foreclose it.
   runs the joined advance sum equals the per-character isolated sum, and the
   only advances in the golden are 0 and 1000. Geometry cannot see joining here.
 
+- **The bichig on the HORIZONTAL path now gets a face that joins** (#35). A
+  measure whose Latin outweighs its vertical script lays out horizontally — #4's
+  mechanism — and that path emits no `vertext-mongolian` span, which is the class
+  the stylesheet hangs the Mongolian `font-family` on. So bichig inside an
+  English sentence was rendering in whatever face the browser fell back to.
+
+  Measured before it was written and again after, with the lever
+  `browser-golden.py` already uses (`init`/`medi`/`fina` off, compare ink —
+  forced with `!important`, because `.vertext-mongolian` declares its own
+  `font-feature-settings` and wins on specificity otherwise):
+
+  | | joining off |
+  |---|---|
+  | vertical run | changes — a joining face is applied |
+  | horizontal line, before | **identical** — nothing was joining it |
+  | horizontal line, after | changes |
+
+  The fix marks each run on that path with `vertext-mongolian-inline`, a class
+  carrying the face and nothing else: reusing `.vertext-mongolian` would also
+  bring `writing-mode: vertical-lr` and stand the run upright inside a line of
+  English, trading a font defect for a layout one. U+202F stays inside the run
+  for the reason it stays inside `Slot::MongolianRun`. Code blocks keep their
+  monospace face deliberately.
+
+  `delivery-golden.py` now asserts on that path too — the marked runs must be
+  exactly the line's runs, in order — shown red by removing the marking: `want
+  ['ᠡᠨᠡ','ᠮᠢᠨᠦ','ᠡᠵᠢ'] got []`. Four unit tests cover the markup, the joint, the
+  escaping and the code exemption.
+
+  Found because #33 pinned the horizontal path's existence and #34 asked what it
+  looks like; the answer was a defect, not a test gap. **What is still missing is
+  the image evidence** — see Not sealed.
+
 - **The theme's vendored filter is byte-identical to its source, and CI says so**
   (#25). `extensions/vertext-theme/_extensions/vertext/` carries its own copy of
   the content extension because Quarto requires an extension that uses another
@@ -264,6 +297,13 @@ nothing in the core may foreclose it.
 
 ## Not sealed
 
+- **Layer 2's image evidence covers one layout path of two** (#34).
+  `browser-golden.py`'s cells are all bare runs, so every one of them is
+  vertical; the horizontal path has never been rendered by that gate. #35 fixed
+  the defect that was hiding there, and proved the fix with a hand-run probe —
+  but a probe in a scratch directory is not a gate, which is the whole argument
+  of this file. Until a horizontal cell is in the grid, the claim "a real browser
+  joins what we deliver" holds for vertical measures only.
 - **No one who reads the script has looked at a page yet** (#7, layer 3).
   Layers 1a, 1b and 2 are sealed above: the font joins, the engine delivers a
   whole word to it, and a real browser applies the joining. None of that is a

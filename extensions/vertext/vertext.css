@@ -238,6 +238,19 @@
   font-size: 15px;
   line-height: 1;
 }
+/* Bichig inside a HORIZONTAL block — a Latin-majority paragraph, where the run
+   stays in the horizontal flow and never becomes a slot. It needs the face and
+   nothing else: the rule above also turns the run upright, which is right for a
+   column and wrong inside a line of English.
+
+   Measured before it was written: without this, that bichig renders in whatever
+   face the browser falls back to, and switching `init`/`medi`/`fina` off leaves
+   it pixel-identical — nothing was joining it. Real glyphs in the right places
+   with the grammar severed is the one failure this project exists to stop, and
+   it was living on the path nothing rendered. */
+.vertext-mongolian-inline {
+  font-family: "Noto Sans Mongolian", "Mongolian Baiti", serif;
+}
 /* ── Horizontal blocks ───────────────────────────────────────────────────
    Latin-majority prose and program source are set horizontally: an
    orthogonal island in the vertical flow. `horizontal-tb` inside the strip's

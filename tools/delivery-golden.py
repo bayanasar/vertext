@@ -83,6 +83,9 @@ _sg = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_sg)
 
 SPAN = re.compile(r'<span class="vertext-mongolian">(.*?)</span>')
+# The horizontal path marks its runs with a class of its own, because the
+# vertical one also carries writing-mode and would stand them upright (#35).
+INLINE = re.compile(r'<span class="vertext-mongolian-inline">(.*?)</span>')
 
 
 def texts_from_golden(golden):
@@ -255,10 +258,23 @@ def main():
                          f"{path}\n     line {text[:70]!r}")
             continue
         if took == "horizontal":
-            # No spans by design. What still has to hold is that the run reaches
-            # the page in one piece: a mid-run tag would break the contiguity
-            # this looks for, and the font would see two fragments.
+            # This path carries no `vertext-mongolian` span -- the run is not a
+            # slot here, it stays in the line. It does carry
+            # `vertext-mongolian-inline`, which exists so the stylesheet can give
+            # it a face that joins: without it the bichig on this path rendered
+            # in a browser fallback and did not change at all when init/medi/fina
+            # were switched off (#35).
+            #
+            # So the same assertion as the vertical path, against that class: the
+            # marked runs must be exactly this line's runs, in order, byte for
+            # byte. A mid-run tag splits one into two and the font is handed two
+            # words where the author wrote one.
             horizontal += 1
+            inline = [htmllib.unescape(m) for m in INLINE.findall(html)]
+            if inline != want:
+                fails.append(f"{name}: horizontal, and the marked runs are not "
+                             f"this line's runs\n     want {want!r}\n"
+                             f"     got  {inline!r}")
             for run in want:
                 if run not in html:
                     fails.append(f"{name}: horizontal, and {run!r} does not "
@@ -297,7 +313,7 @@ def main():
           f"the golden recorded, and {in_context} more do so inside "
           f"{len(lines) - horizontal} whole lines, with their neighbours")
     print(f"      {horizontal} more line(s) lay out horizontally as pinned, "
-          f"where the runs carry no span and must survive whole anyway")
+          f"where the runs are marked inline so they keep a face that joins")
     print(f"      binary {binary.relative_to(ROOT) if binary.is_relative_to(ROOT) else binary}, "
           f"font {digest[:12]}")
     if joint:
