@@ -62,8 +62,14 @@ def main():
         print(f"missing context: sha={sha!r} server={server!r} repo={repo!r}")
         return 1
 
+    # Forgejo also keys every step WITHOUT an id by its position, so `steps`
+    # arrives holding "0", "1", "13" beside the named ones. `gate/13` on a
+    # commit tells a reviewer nothing it did not already know, and five of them
+    # bury the nine that do. An id is how a step says it is a gate.
+    named = {k: v for k, v in steps.items() if not k.isdigit()}
+
     failures, posted = [], 0
-    for name, step in sorted(steps.items()):
+    for name, step in sorted(named.items()):
         outcome = (step or {}).get("outcome")
         if not outcome:
             continue
@@ -92,7 +98,7 @@ def main():
         except OSError as error:
             print(f"  gate/{name}: POST failed, {error}")
 
-    if posted != sum(1 for s in steps.values() if (s or {}).get("outcome")):
+    if posted != sum(1 for s in named.values() if (s or {}).get("outcome")):
         # A reporter that cannot report is a defect worth a red of its own. It
         # cannot mask a gate failure: the gate's own step has already failed by
         # the time this runs.
