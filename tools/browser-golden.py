@@ -35,6 +35,17 @@ separator, a variation selector -- and none of those takes a positional form.
 Counting codepoints would file a one-letter run under "must change", and it
 would not change, and this gate would blame the browser for it.
 
+No --prove here, and that is deliberate
+---------------------------------------
+The other two gates carry one because they compare against RECORDED
+expectations: if the recording were wrong, or the comparison stopped happening,
+every run would still be green, so they re-establish on every build that they
+can still go red. This gate is a differential experiment — it compares two
+renders of the same page taken minutes apart — and its negative control runs
+every time: the single-letter runs that MUST NOT change are the proof that the
+rig discriminates. Adding a `--prove` would be adding a second copy of an
+assertion this gate already makes on every run. (urtu, reviewing #31.)
+
 What it does not prove
 ----------------------
 That the shapes are the right ones for a reader. This gate says the browser

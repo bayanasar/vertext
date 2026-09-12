@@ -87,6 +87,32 @@ nothing in the core may foreclose it.
   the binary — measured against 160 real words rather than the handful any test
   spells out.
 
+  **And the same question in context** (#29). Those 168 strings arrive with no
+  neighbours, so what they pin is that a LONE run is not cut — while #4 and #3
+  were both adjacency defects. Ten whole lines from kele at `409d212`, a reason
+  recorded per line, plus four built for shapes the lessons lack, now go through
+  the same binary: the spans it emits must be EXACTLY that line's runs, in
+  order, byte for byte, and each is shaped against the expectation the golden
+  already holds. 40 runs in context, no new expectations, because the corpus was
+  extracted from those same files.
+
+  Shown red by a cut that fires only next to a FULL-WIDTH bracket, the one kele
+  writes: `cargo test` 59 green, shaping 172 green, browser 168 green, the 168
+  bare runs green, **the lines red on 3**. The ASCII version of the same cut is
+  caught by `the_measure_counts_the_slots_the_layout_produces` on
+  `sayin(ᠰᠠᠶᠢᠨ) good`, which is the boundary: this adds the brackets no test
+  spells out, on real lines.
+
+  Two absences in kele, both of them edges, are covered by constructed lines
+  instead: not one line contains U+202F, and not one line STARTS with bichig.
+
+  **A layout path nothing had looked at.** A measure whose Latin outweighs its
+  vertical script lays out horizontally — #4's mechanism — and carries no
+  `vertext-mongolian` span at all. Each line now declares the path it must take,
+  so a flip is a red; the horizontal one asserts that the run still appears
+  whole, since a mid-run tag would hand the font two fragments. Undeclared, a
+  change that sent every line horizontal would leave the gate green and empty.
+
 - **And a real browser joins what we deliver** (#7, layer 2).
   `tools/browser-golden.py`: each of the 168 runs is rendered through the real
   binary and the real `vertext.css`, in headless Chrome 152, twice — once
@@ -244,16 +270,6 @@ nothing in the core may foreclose it.
   reader saying the page is writing rather than marks in the right places, and
   that is Bayanasar himself. `needs-native-reader` on that issue means him
   sitting down with a page, not a third party, so it blocks nothing else.
-- **The golden corpus is bare runs, out of context** (#29). `extract()` lifts
-  Mongolian codepoints with `RUN.finditer` and `.strip()`, so the 160 corpus
-  runs arrive with no neighbours, and `deliver()` feeds each one to the binary as
-  a whole document. What layers 1b and 2 therefore pin is that *a lone run is
-  not cut* — while the engine's error-prone place is adjacency: brackets, a
-  transliteration pair, a Latin word against bichig, which is all of #4 and #3.
-  A regression that splits a run only in the `ᠰᠠᠶᠢᠨ(sayin)` shape passes all 168.
-  The fix is cheap (a dozen whole lines from the lessons, asserting each run
-  inside still lands in one span) and the ticket's real requirement is the red:
-  that new layer must catch something the 168 cannot.
 - **The delivery chain starts at the binary; the filter half has no gate at all**
   (#30). Real documents go pandoc → `vertext.lua` → the PUA wire protocol →
   binary, and all three goldens begin after the filter. That is the half #25 just

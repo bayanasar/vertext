@@ -172,6 +172,78 @@
    "ᠬ",
    "ᠴ",
    "ᠵ"
+  ],
+  "lines": [
+   {
+    "file": "lessons/01.md",
+    "line": 7,
+    "path": "vertical",
+    "why": "table row: bichig hard against | and its transliteration",
+    "text": "| ᠰᠠᠶᠢᠨ | sayin | sain | 好 |"
+   },
+   {
+    "file": "lessons/01.md",
+    "line": 11,
+    "path": "vertical",
+    "why": "table row whose word carries U+180E",
+    "text": "| ᠨᠡᠷ᠎ᠡ | ner_e | ner | 名字 |"
+   },
+   {
+    "file": "lessons/01.md",
+    "line": 20,
+    "path": "vertical",
+    "why": "dialogue: U+1802, a sentence-final ?, italics after",
+    "text": "**B:** ᠰᠠᠶᠢᠨ᠂ ᠲᠠ ᠰᠠᠶᠢᠨ ᠪᠠᠶᠢᠨ᠎ᠠ ᠤᠤ? — *sayin, ta sayin bayin_a uu?* — 好，您好嗎？"
+   },
+   {
+    "file": "lessons/01.md",
+    "line": 28,
+    "path": "vertical",
+    "why": "uu（ᠤᠤ）-- a bracket on both sides, twice in one line",
+    "text": "2. **疑問助詞 uu**：放句尾把陳述變一般疑問，相當於「嗎」。陰陽和諧：陽性句 uu（ᠤᠤ），陰性句 UU（ᠦᠦ）。"
+   },
+   {
+    "file": "lessons/01.md",
+    "line": 57,
+    "path": "vertical",
+    "why": "a whole bichig sentence, then an em dash, then Latin",
+    "text": "答：ᠲᠠ ᠰᠠᠶᠢᠨ ᠪᠠᠶᠢᠨ᠎ᠠ ᠤᠤ? — ta sayin bayin_a uu? 句中元音是陽性（a、i），故取陽性形 uu。"
+   },
+   {
+    "file": "lessons/02.md",
+    "line": 32,
+    "path": "vertical",
+    "why": "U+1803 with Latin immediately after it",
+    "text": "**B:** ᠡᠨᠡ ᠨᠣᠮ᠃ — *ene nom.* — 這是書。"
+   },
+   {
+    "file": "lessons/03.md",
+    "line": 55,
+    "path": "vertical",
+    "why": "the other order: Latin first, bracketed bichig second",
+    "text": "答：Ugei, nada-du mori Ugei. （ᠦᠭᠡᠢ᠂ ᠨᠠᠳᠠ ᠳᠤ ᠮᠣᠷᠢ ᠦᠭᠡᠢ）— Ugei 的 U 大寫"
+   },
+   {
+    "file": "lessons/04.md",
+    "line": 39,
+    "path": "vertical",
+    "why": "both punctuation marks in one line",
+    "text": "**B:** ᠲᠡᠶᠢᠮᠦ᠂ ᠮᠢᠨᠦ ᠠᠪᠤ᠃ — *teyimU, minU abu.* — 是的，是我爸爸。"
+   },
+   {
+    "file": "lessons/04.md",
+    "line": 40,
+    "path": "vertical",
+    "why": "ᠬᠡᠨ ᠦ -- a suffix written as its own word, so two runs",
+    "text": "**A:** ᠡᠨᠡ ᠬᠡᠨ ᠦ ᠨᠣᠮ ᠪᠤᠢ? — *ene ken-U nom bui?* — 這是誰的書？"
+   },
+   {
+    "file": "lessons/04.md",
+    "line": 81,
+    "path": "vertical",
+    "why": "a bracketed clause with U+180E, then Han, then Latin",
+    "text": "答：minU egeci-dU qoyar keUked bayin_a. （ᠮᠢᠨᠦ ᠡᠭᠡᠴᠢ ᠳᠦ ᠬᠣᠶᠠᠷ ᠬᠡᠦᠬᠡᠳ ᠪᠠᠶᠢᠨ᠎ᠠ）— 「姐姐有」用與位格 egeci-dU"
+   }
   ]
  },
  "shaped": {

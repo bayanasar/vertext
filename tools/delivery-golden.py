@@ -32,6 +32,25 @@ The four `-space`/`spaced-` cases are excluded on purpose. They contain a plain
 U+0020, which is a word break, so they SHOULD arrive as several spans -- they
 are the shaping golden's negative controls, not runs.
 
+And what this pins IN CONTEXT
+-----------------------------
+Those 168 strings arrive with no neighbours: `extract()` lifts Mongolian
+codepoints out of the lessons and strips them, and this gate then feeds each one
+to the binary as a whole document. All of that together says only that a LONE
+run is not cut -- while the engine's error-prone place is the other one. Both #4
+and #3 were adjacency defects: a transliteration pair whose correct direction
+flipped with writing order, and two scripts hard against each other where the
+later one lost a slot. A regression that split a run only in the `ᠰᠠᠶᠢᠨ(sayin)`
+shape would pass all 168.
+
+So the second half of this gate takes whole lines -- ten picked by hand from the
+lessons with a reason each, three built for the shapes kele does not contain --
+and asserts that the Mongolian spans the binary emits are EXACTLY the runs in
+that line, in order, byte for byte. Nothing split, nothing merged, nothing
+dropped, nothing reordered. Then every run that carries letters is shaped and
+compared to the expectation the golden already holds for it, so the lines bring
+context and not one new answer for a human to eyeball.
+
 Usage
 -----
     cargo build --release -p vertext-cli
@@ -78,13 +97,52 @@ def texts_from_golden(golden):
     return out
 
 
-def deliver(binary, text):
-    """Run the real binary and return the Mongolian spans it emitted."""
+def lines_from_golden(golden):
+    """Whole lines -- kele's, frozen in the golden, plus the constructed ones.
+
+    Each carries the layout path it must take. That is pinned rather than
+    discovered because the strong assertion below only applies to one of them:
+    a measure whose Latin outweighs its vertical script lays out HORIZONTALLY
+    and emits no `vertext-mongolian` span at all, so a change that sent every
+    line down that path would leave this gate green while checking nothing.
+    """
+    out = {}
+    for entry in golden["corpus"].get("lines", []):
+        out[f"{entry['file']}:{entry['line']}"] = (entry["text"],
+                                                   entry.get("path", "vertical"))
+    for name, path, text in _sg.LINE_CASES:
+        out[f"line-case:{name}"] = (text, path)
+    return out
+
+
+def expectation(golden, run):
+    """What the shaping golden recorded for this run, wherever it recorded it.
+
+    A run lifted from a line is usually a corpus entry, because the corpus was
+    extracted from those same files. The constructed lines use runs the CASES
+    list holds instead -- `ᠮᠣᠩᠭᠣᠯ` is `stem-alone` there and in no corpus entry.
+    """
+    want = golden["shaped"].get(f"corpus:{run}")
+    if want is not None:
+        return want
+    for name, text in _sg.CASES:
+        if text == run:
+            return golden["shaped"].get(name)
+    return None
+
+
+def render(binary, text):
+    """Run the real binary and return its HTML."""
     done = subprocess.run([str(binary), "--progression", "lr"],
                           input=text, capture_output=True, text=True)
     if done.returncode != 0:
         raise SystemExit(f"binary failed on {text!r}: {done.stderr.strip()}")
-    return [htmllib.unescape(m) for m in SPAN.findall(done.stdout)]
+    return done.stdout
+
+
+def deliver(binary, text):
+    """Run the real binary and return the Mongolian spans it emitted."""
+    return [htmllib.unescape(m) for m in SPAN.findall(render(binary, text))]
 
 
 def main():
@@ -180,15 +238,66 @@ def main():
                          f"     want {' '.join(g['g'] for g in want)}\n"
                          f"     got  {' '.join(g['g'] for g in got)}")
 
+    # The same question asked where the answer is harder: in a line, with
+    # neighbours. The assertion is sequence equality -- the Mongolian spans the
+    # binary emitted, against the runs the line contains, in order and byte for
+    # byte. A split shows up as an extra span, a merge as a missing one, and a
+    # dropped separator as a run that does not match its own source text.
+    lines = lines_from_golden(golden)
+    in_context, horizontal = 0, 0
+    for name, (text, path) in sorted(lines.items()):
+        html = render(binary, text)
+        spans = [htmllib.unescape(m) for m in SPAN.findall(html)]
+        want = _sg.runs_in(text)
+        took = "horizontal" if "vertext-horizontal" in html else "vertical"
+        if took != path:
+            fails.append(f"{name}: laid out {took}, and this line is pinned "
+                         f"{path}\n     line {text[:70]!r}")
+            continue
+        if took == "horizontal":
+            # No spans by design. What still has to hold is that the run reaches
+            # the page in one piece: a mid-run tag would break the contiguity
+            # this looks for, and the font would see two fragments.
+            horizontal += 1
+            for run in want:
+                if run not in html:
+                    fails.append(f"{name}: horizontal, and {run!r} does not "
+                                 f"appear whole in the output")
+            continue
+        if spans != want:
+            fails.append(f"{name}: the spans are not the runs of this line\n"
+                         f"     line {text[:70]!r}\n"
+                         f"     want {want!r}\n"
+                         f"     got  {spans!r}")
+            continue
+        for span in spans:
+            if _sg.letters(span) == 0:
+                continue          # a lone punctuation mark takes no form
+            in_context += 1
+            exp = expectation(golden, span)
+            if exp is None:
+                fails.append(f"{name}: {span!r} came back in context, and the "
+                             f"shaping golden has no expectation for it")
+                continue
+            got = _sg.shape(font, hb, span)
+            if got != exp:
+                fails.append(f"{name}: in context, {span!r} shapes differently\n"
+                             f"     want {' '.join(g['g'] for g in exp)}\n"
+                             f"     got  {' '.join(g['g'] for g in got)}")
+
     if fails:
-        print(f"FAIL: {len(fails)} of {len(wanted)} runs\n")
+        print(f"FAIL: {len(fails)} findings over {len(wanted)} runs and "
+              f"{len(lines)} lines\n")
         for f in fails[:20]:
             print("  " + f)
         return 1
 
     joint = wanted.get("suffix-202f")
     print(f"PASS: {len(wanted)} runs reach the page in one span and shape as "
-          f"the golden recorded")
+          f"the golden recorded, and {in_context} more do so inside "
+          f"{len(lines) - horizontal} whole lines, with their neighbours")
+    print(f"      {horizontal} more line(s) lay out horizontally as pinned, "
+          f"where the runs carry no span and must survive whole anyway")
     print(f"      binary {binary.relative_to(ROOT) if binary.is_relative_to(ROOT) else binary}, "
           f"font {digest[:12]}")
     if joint:
