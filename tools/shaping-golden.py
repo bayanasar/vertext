@@ -68,6 +68,59 @@ CASES = [
     ("spaced-mori",      "ᠮ ᠣ ᠷ ᠢ"),
 ]
 
+# Whole source lines, chosen by hand, for the gates that ask what happens at a
+# run's EDGES rather than inside it. The corpus above is bare runs: `extract()`
+# lifts Mongolian codepoints and strips them, so every one of those 160 arrives
+# with no neighbours, and a gate built on them can only say that a LONE run is
+# not cut. The engine's error-prone place is the other one -- a bracket, a
+# transliteration pair, a Latin word hard against bichig, which is all of #4 and
+# #3 -- so these lines carry the neighbours with them.
+#
+# Chosen, not sampled, and the reason is recorded per line because #7 asks for
+# it. Between them they cover: both Mongolian punctuation marks, the vowel
+# separator, a bracket on each side, a transliteration pair in both orders, a
+# suffix written as its own word, and Han text on the same line.
+#
+# The line NUMBER is only provenance -- the text itself is frozen into the
+# golden, because CI checks out vertext alone and a golden that needs a sibling
+# checkout is a golden that does not run.
+LINES = [
+    ("lessons/01.md", 7,  "vertical", "table row: bichig hard against | and its transliteration"),
+    ("lessons/01.md", 11, "vertical", "table row whose word carries U+180E"),
+    ("lessons/01.md", 20, "vertical", "dialogue: U+1802, a sentence-final ?, italics after"),
+    ("lessons/01.md", 28, "vertical", "uu（ᠤᠤ）-- a bracket on both sides, twice in one line"),
+    ("lessons/01.md", 57, "vertical", "a whole bichig sentence, then an em dash, then Latin"),
+    ("lessons/02.md", 32, "vertical", "U+1803 with Latin immediately after it"),
+    ("lessons/03.md", 55, "vertical", "the other order: Latin first, bracketed bichig second"),
+    ("lessons/04.md", 39, "vertical", "both punctuation marks in one line"),
+    ("lessons/04.md", 40, "vertical", "ᠬᠡᠨ ᠦ -- a suffix written as its own word, so two runs"),
+    ("lessons/04.md", 81, "vertical", "a bracketed clause with U+180E, then Han, then Latin"),
+]
+
+# The shapes kele cannot supply. Two of them are absences worth stating:
+# NOT ONE line in the lessons contains U+202F -- the same hole that made CASES
+# necessary above -- and not one line STARTS with bichig, because every line
+# starts with a table pipe, a bold speaker or a Han label. Both edges are the
+# interesting ones, so they are built here. Every run used is one the golden
+# already has an expectation for, so these add context and no new answers.
+LINE_CASES = [
+    ("202f-in-a-sentence", "vertical",
+     "ᠮᠣᠩᠭᠣᠯ ᠤᠨ (mongɣol-un) ᠨᠣᠮ᠃"),
+    ("202f-in-brackets", "vertical",
+     "(ᠮᠣᠩᠭᠣᠯ ᠤᠨ)"),
+    ("line-opens-in-bichig", "vertical",
+     "ᠨᠣᠮ (nom) 是書。"),
+    # The one that is SUPPOSED to come back with no spans at all. A measure
+    # whose Latin outweighs its vertical script lays out horizontally -- that is
+    # #4's mechanism, and this is the first gate in the repository to look at
+    # that path: the bichig then rides in a plain <div> with no
+    # `vertext-mongolian` span anywhere. Nothing was checking that the run
+    # survives whole there. It is declared horizontal here so the day it stops
+    # being horizontal is a red, not a silent loss of the check above.
+    ("latin-heavy-goes-horizontal", "horizontal",
+     "ene minU eji (ᠡᠨᠡ ᠮᠢᠨᠦ ᠡᠵᠢ) is my mother."),
+]
+
 RUN = re.compile(r"[᠀-᢯ ‍]+")
 
 # MONGOLIAN LETTER A .. MONGOLIAN LETTER CHI -- the codepoints that take a
@@ -110,17 +163,43 @@ def shape(font, hb, text, features=None):
     ]
 
 
+def runs_in(text):
+    """The Mongolian runs in this text, in order, exactly as written.
+
+    Unfiltered on purpose: a lone U+1803 is a run the engine emits as its own
+    span, so a caller comparing this list against the spans that came back
+    compares like with like. `extract()` is the one that wants letters.
+    """
+    return [r for r in (m.group(0).strip() for m in RUN.finditer(text)) if r]
+
+
 def extract(corpus_root):
     """Every distinct Mongolian run in the kele lessons, in first-seen order."""
     root = pathlib.Path(corpus_root)
     files = sorted((root / "lessons").glob("*.md")) + [root / "index.md"]
     runs = {}
     for f in files:
-        for m in RUN.finditer(f.read_text(encoding="utf-8")):
-            r = m.group(0).strip()
+        for r in runs_in(f.read_text(encoding="utf-8")):
             if any(0x1820 <= ord(c) <= 0x18AF for c in r):
                 runs.setdefault(r, f.name)
     return runs
+
+
+def extract_lines(corpus_root):
+    """The hand-picked lines, read from the checkout, with their provenance."""
+    root = pathlib.Path(corpus_root)
+    out = []
+    for name, number, path, why in LINES:
+        body = (root / name).read_text(encoding="utf-8").splitlines()
+        if number > len(body):
+            sys.exit(f"{name} has no line {number} -- the checkout has moved")
+        text = body[number - 1].strip()
+        if not runs_in(text):
+            sys.exit(f"{name}:{number} carries no bichig any more: {text[:60]!r}\n"
+                     f"the line numbers are provenance, not a search -- re-pick it")
+        out.append({"file": name, "line": number, "path": path, "why": why,
+                    "text": text})
+    return out
 
 
 def main():
@@ -149,7 +228,8 @@ def main():
         # about which lessons these 160 runs were taken from.
         head = subprocess.run(["git", "-C", args.corpus, "rev-parse", "--short", "HEAD"],
                               capture_output=True, text=True).stdout.strip() or "unknown"
-        corpus = {"source": "kele", "commit": head, "runs": list(runs)}
+        corpus = {"source": "kele", "commit": head, "runs": list(runs),
+                  "lines": extract_lines(args.corpus)}
     else:
         corpus = old.get("corpus", {"source": None, "runs": []})
 
@@ -169,7 +249,8 @@ def main():
         GOLDEN.write_text(json.dumps(fresh, ensure_ascii=False, indent=1) + "\n",
                           encoding="utf-8")
         print(f"wrote {GOLDEN.relative_to(ROOT)}: {len(entries)} runs "
-              f"({len(CASES)} constructed + {len(corpus['runs'])} corpus)")
+              f"({len(CASES)} constructed + {len(corpus['runs'])} corpus), "
+              f"{len(corpus.get('lines', []))} whole lines")
         return 0
 
     if not old:
