@@ -483,7 +483,12 @@ fn split_latin_word(word: &str, limit: usize) -> Vec<String> {
     }
 }
 
-fn is_mongolian(ch: char) -> bool { matches!(ch as u32, 0x1800..=0x18AF | 0x11660..=0x1167F) }
+/// Whether this character belongs to the Mongolian script.
+///
+/// Public because the renderer needs the same answer: a horizontal block does
+/// not go through slot layout, so it has to find its own Mongolian runs to mark
+/// them for the stylesheet. One definition of "this is bichig", not two.
+pub fn is_mongolian(ch: char) -> bool { matches!(ch as u32, 0x1800..=0x18AF | 0x11660..=0x1167F) }
 
 /// U+202F NARROW NO-BREAK SPACE — in bichig, the suffix separator.
 ///

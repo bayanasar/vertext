@@ -83,6 +83,9 @@ _sg = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_sg)
 
 SPAN = re.compile(r'<span class="vertext-mongolian">(.*?)</span>')
+# The horizontal path marks its runs with a class of its own, because the
+# vertical one also carries writing-mode and would stand them upright (#35).
+INLINE = re.compile(r'<span class="vertext-mongolian-inline">(.*?)</span>')
 
 
 def texts_from_golden(golden):
@@ -204,9 +207,41 @@ def main():
                   f"golden: {blind[:5]}")
             print("      the gate cannot see the failure it exists for")
             return 1
+        # The line layer needs its own proof, and did not have one: everything
+        # above shapes runs, and `--prove` used to return before the lines were
+        # reached at all. So the run layer re-established on every build that it
+        # could go red, while the line layer rested on one manual experiment.
+        #
+        # Its assertion is sequence equality against `runs_in(text)`, so what has
+        # to be shown is that the sequence would reject a split. No binary and no
+        # font needed: mutilate the expectation the way an engine would and
+        # require the comparison to notice.
+        lines, blind_lines, proved = lines_from_golden(golden), [], 0
+        for name, (text, _) in sorted(lines.items()):
+            want = _sg.runs_in(text)
+            if not want:
+                blind_lines.append(f"{name}: no runs at all, so its assertion "
+                                   f"is vacuous")
+                continue
+            index = next((i for i, r in enumerate(want) if len(r) >= 2), None)
+            if index is None:
+                continue          # nothing in it a split could even apply to
+            split = want[:index] + [want[index][:1], want[index][1:]] + want[index + 1:]
+            proved += 1
+            if split == want:
+                blind_lines.append(f"{name}: a run split in two compares equal "
+                                   f"to the line's own runs")
+        if blind_lines:
+            print("FAIL: the line layer cannot see the failure it exists for")
+            for line in blind_lines[:10]:
+                print("  " + line)
+            return 1
+
         sample = "ᠨᠣᠮ"
         print(f"PROVEN: shaped one character at a time, all {checked} multi-letter "
-              f"runs diff from the golden.")
+              f"runs diff from the golden;")
+        print(f"        and across {proved} of {len(lines)} lines, a run split in "
+              f"two is rejected by the sequence comparison.")
         print(f"        split:  "
               f"{' '.join(g['g'] for ch in sample for g in _sg.shape(font, hb, ch))}")
         print(f"        golden: "
@@ -255,10 +290,23 @@ def main():
                          f"{path}\n     line {text[:70]!r}")
             continue
         if took == "horizontal":
-            # No spans by design. What still has to hold is that the run reaches
-            # the page in one piece: a mid-run tag would break the contiguity
-            # this looks for, and the font would see two fragments.
+            # This path carries no `vertext-mongolian` span -- the run is not a
+            # slot here, it stays in the line. It does carry
+            # `vertext-mongolian-inline`, which exists so the stylesheet can give
+            # it a face that joins: without it the bichig on this path rendered
+            # in a browser fallback and did not change at all when init/medi/fina
+            # were switched off (#35).
+            #
+            # So the same assertion as the vertical path, against that class: the
+            # marked runs must be exactly this line's runs, in order, byte for
+            # byte. A mid-run tag splits one into two and the font is handed two
+            # words where the author wrote one.
             horizontal += 1
+            inline = [htmllib.unescape(m) for m in INLINE.findall(html)]
+            if inline != want:
+                fails.append(f"{name}: horizontal, and the marked runs are not "
+                             f"this line's runs\n     want {want!r}\n"
+                             f"     got  {inline!r}")
             for run in want:
                 if run not in html:
                     fails.append(f"{name}: horizontal, and {run!r} does not "
@@ -272,7 +320,20 @@ def main():
             continue
         for span in spans:
             if _sg.letters(span) == 0:
-                continue          # a lone punctuation mark takes no form
+                # A lone punctuation mark takes no positional form, so there is
+                # nothing to shape and nothing to compare -- that one is a real
+                # skip, and lines do contain them. A run of Todo or Sibe letters
+                # would land here too and be skipped just as quietly, which is
+                # not the same thing at all: tools/browser-golden.py already
+                # fails loudly on that, and two tools giving one situation two
+                # treatments is a trap with someone's afternoon in it.
+                if _sg.letters_beyond_our_range(span):
+                    fails.append(
+                        f"{name}: {span!r} carries letters this gate does not "
+                        f"count, so it would go through unexamined\n"
+                        f"     widen tools/shaping-golden.py's LETTERS, or drop "
+                        f"the line")
+                continue
             in_context += 1
             exp = expectation(golden, span)
             if exp is None:
@@ -297,7 +358,7 @@ def main():
           f"the golden recorded, and {in_context} more do so inside "
           f"{len(lines) - horizontal} whole lines, with their neighbours")
     print(f"      {horizontal} more line(s) lay out horizontally as pinned, "
-          f"where the runs carry no span and must survive whole anyway")
+          f"where the runs are marked inline so they keep a face that joins")
     print(f"      binary {binary.relative_to(ROOT) if binary.is_relative_to(ROOT) else binary}, "
           f"font {digest[:12]}")
     if joint:

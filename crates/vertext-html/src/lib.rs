@@ -6,7 +6,8 @@
 //! strings out.
 
 use vertext_core::{
-    layout_text, prefers_horizontal, HorizontalKind, Layout, LayoutConfig, Progression, Slot,
+    is_mongolian, layout_text, prefers_horizontal, HorizontalKind, Layout, LayoutConfig,
+    Progression, Slot,
 };
 
 /// Reserved private-use markers that the Quarto filter inserts around a
@@ -340,6 +341,64 @@ pub fn render_document(input: &str, options: RenderOptions) -> String {
 /// The wrap measure is published as a custom property rather than baked into
 /// the stylesheet, for the same reason the Latin caps are — one source, no
 /// drift. Line breaking is left to the browser, which has the font metrics.
+/// Wrap each Mongolian run in a span the stylesheet can reach, escaping as it
+/// goes.
+///
+/// A horizontal block does not go through slot layout — its text is passed
+/// through whole — so the runs inside it carry no class, and the stylesheet's
+/// Mongolian `font-family` lives on `.vertext-mongolian`, which only the
+/// vertical path emits. The result was measured in a real browser: bichig in a
+/// Latin-majority line renders in whatever face the browser falls back to, and
+/// with `init`/`medi`/`fina` switched off it does not change at all — nothing
+/// was joining it.
+///
+/// The class is a *different* one on purpose. `.vertext-mongolian` also
+/// declares `display: inline-block` and `writing-mode: vertical-lr`; reusing it
+/// here would stand the run upright inside a horizontal line, trading a font
+/// defect for a layout one. This one carries the face and nothing else.
+///
+/// U+202F is taken into the run when Mongolian holds it on both sides, for the
+/// same reason the layout keeps it inside `Slot::MongolianRun`: it is the joint
+/// of a suffix, and a font that receives it split receives two words.
+fn mark_mongolian_runs(text: &str) -> String {
+    let chars: Vec<char> = text.chars().collect();
+    let in_run = |index: usize| -> bool {
+        let ch = chars[index];
+        if is_mongolian(ch) {
+            return true;
+        }
+        if ch != '\u{202F}' {
+            return false;
+        }
+        let before = index.checked_sub(1).map(|i| is_mongolian(chars[i])).unwrap_or(false);
+        let after = chars.get(index + 1).copied().map(is_mongolian).unwrap_or(false);
+        before && after
+    };
+
+    let mut html = String::with_capacity(text.len());
+    let mut index = 0;
+    while index < chars.len() {
+        if in_run(index) {
+            let start = index;
+            while index < chars.len() && in_run(index) {
+                index += 1;
+            }
+            let run: String = chars[start..index].iter().collect();
+            html.push_str("<span class=\"vertext-mongolian-inline\">");
+            html.push_str(&escape(&run));
+            html.push_str("</span>");
+        } else {
+            let start = index;
+            while index < chars.len() && !in_run(index) {
+                index += 1;
+            }
+            let plain: String = chars[start..index].iter().collect();
+            html.push_str(&escape(&plain));
+        }
+    }
+    html
+}
+
 fn render_horizontal(html: &mut String, text: &str, kind: HorizontalKind, mode: Mode) {
     let (kind_class, wrap) = match kind {
         HorizontalKind::Prose => ("vertext-horizontal-prose", kind.default_wrap()),
@@ -354,10 +413,18 @@ fn render_horizontal(html: &mut String, text: &str, kind: HorizontalKind, mode: 
         _ => String::new(),
     };
     let tag = if matches!(kind, HorizontalKind::Code) { "pre" } else { "div" };
+    // Prose only. Code keeps its monospace face deliberately, and a span that
+    // changed the family mid-line would break the column alignment that is the
+    // whole point of setting code in monospace. Bichig inside a code block is
+    // therefore still unstyled; it is rare, and trading one visible defect for
+    // another silently is how this one got here.
+    let body = match kind {
+        HorizontalKind::Prose => mark_mongolian_runs(text),
+        HorizontalKind::Code => escape(text),
+    };
     html.push_str(&format!(
         "<div class=\"vertext-horizontal {kind_class}{heading_class}\" \
-         style=\"--vertext-wrap:{wrap}ch\"><{tag}>{}</{tag}></div>",
-        escape(text)
+         style=\"--vertext-wrap:{wrap}ch\"><{tag}>{body}</{tag}></div>"
     ));
 }
 
@@ -614,6 +681,65 @@ mod tests {
         let html = render_document(&input, RenderOptions::default());
         assert!(html.contains("bayarlal_a_bayartai_teyimu"));
         assert!(!html.contains('‐'));
+    }
+
+    #[test]
+    fn bichig_in_a_horizontal_line_carries_a_face_it_can_join_with() {
+        // The defect this pins was measured in a browser before it was fixed:
+        // on the horizontal path the runs carried no class, the stylesheet's
+        // Mongolian family lives on one, and with init/medi/fina switched off
+        // the render did not change by a single pixel -- nothing was joining
+        // it. Real glyphs, wrong font, grammar severed.
+        let html = render_document(
+            "ene minU eji (ᠡᠨᠡ ᠮᠢᠨᠦ ᠡᠵᠢ) is my mother.",
+            RenderOptions::default(),
+        );
+        assert!(html.contains("vertext-horizontal-prose"), "this line is horizontal");
+        assert!(
+            html.contains("<span class=\"vertext-mongolian-inline\">ᠡᠨᠡ</span>"),
+            "each run is marked so the stylesheet can reach it: {html}"
+        );
+        // Not the vertical class: that one also declares writing-mode, which
+        // would stand the run upright inside a line of English.
+        assert!(!html.contains("\"vertext-mongolian\""));
+        // The Latin around it is untouched, and still escaped.
+        assert!(html.contains("ene minU eji ("));
+    }
+
+    #[test]
+    fn a_suffix_joint_stays_inside_one_inline_run() {
+        // Same reason the layout keeps U+202F inside Slot::MongolianRun: split
+        // across two spans, the font sees two words and the genitive breaks.
+        let html = render_document(
+            "the genitive ᠮᠣᠩᠭᠣᠯ\u{202F}ᠤᠨ is one word in this sentence",
+            RenderOptions::default(),
+        );
+        assert!(html.contains("vertext-horizontal-prose"));
+        assert!(
+            html.contains("<span class=\"vertext-mongolian-inline\">ᠮᠣᠩᠭᠣᠯ\u{202F}ᠤᠨ</span>"),
+            "the joint is inside the run: {html}"
+        );
+    }
+
+    #[test]
+    fn marking_runs_does_not_stop_escaping_the_rest() {
+        let html = render_document(
+            "a & b <tag> and ᠨᠣᠮ in a mostly Latin line of prose here",
+            RenderOptions::default(),
+        );
+        assert!(html.contains("vertext-horizontal-prose"));
+        assert!(html.contains("a &amp; b &lt;tag&gt;"), "{html}");
+        assert!(html.contains("<span class=\"vertext-mongolian-inline\">ᠨᠣᠮ</span>"));
+    }
+
+    #[test]
+    fn code_keeps_its_monospace_face() {
+        // Deliberate: a family change mid-line breaks the column alignment that
+        // is the whole point of setting code in monospace.
+        let input = format!("{MODE_CODE}let x = \"ᠨᠣᠮ\";{MODE_PROSE}");
+        let html = render_document(&input, RenderOptions::default());
+        assert!(html.contains("vertext-horizontal-code"));
+        assert!(!html.contains("vertext-mongolian-inline"), "{html}");
     }
 
     #[test]

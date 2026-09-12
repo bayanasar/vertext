@@ -133,6 +133,25 @@ nothing in the core may foreclose it.
   It does not say the shapes are the RIGHT ones — that is the shaping golden's
   job, and this gate deliberately reads pixels it cannot interpret.
 
+  **Both layout paths, not one** (#34). Every cell above is a bare run, so every
+  one of them is vertical; the horizontal path — where a Latin-majority measure
+  keeps the run in the line instead of making it a slot — had never been
+  rendered by this gate, and that is where #35's defect was living. Two
+  horizontal lines are now in the grid, in their own wider cells (the 72px
+  column clipped a sentence of English down to white, and compared white to
+  white: the blank check exists for exactly that). Both must change when joining
+  is switched off.
+
+  The lever names both classes and carries `!important`, because
+  `.vertext-mongolian` declares its own `font-feature-settings` and beats a `*`
+  rule on specificity — the first measurement of the horizontal path reported
+  "nothing joins anywhere" and was measuring that mistake.
+
+  Shown red twice, and the two reds are distinguishable, which is what #34 asked
+  for: drop the face from `.vertext-mongolian-inline` and only the 2 horizontal
+  lines report identical, pointing at the stylesheet; drop it from
+  `.vertext-mongolian` and the 155 vertical runs report identical instead.
+
   **And it runs in CI** (#28), which it did not when it was written.
   `azura-ci:latest` has no browser and no `npx`, so the step brings its own:
   chrome-for-testing at a pinned version, cached by that version, plus the 14
@@ -175,6 +194,39 @@ nothing in the core may foreclose it.
   carries the same vertical advance in every positional form, so across all 168
   runs the joined advance sum equals the per-character isolated sum, and the
   only advances in the golden are 0 and 1000. Geometry cannot see joining here.
+
+- **The bichig on the HORIZONTAL path now gets a face that joins** (#35). A
+  measure whose Latin outweighs its vertical script lays out horizontally — #4's
+  mechanism — and that path emits no `vertext-mongolian` span, which is the class
+  the stylesheet hangs the Mongolian `font-family` on. So bichig inside an
+  English sentence was rendering in whatever face the browser fell back to.
+
+  Measured before it was written and again after, with the lever
+  `browser-golden.py` already uses (`init`/`medi`/`fina` off, compare ink —
+  forced with `!important`, because `.vertext-mongolian` declares its own
+  `font-feature-settings` and wins on specificity otherwise):
+
+  | | joining off |
+  |---|---|
+  | vertical run | changes — a joining face is applied |
+  | horizontal line, before | **identical** — nothing was joining it |
+  | horizontal line, after | changes |
+
+  The fix marks each run on that path with `vertext-mongolian-inline`, a class
+  carrying the face and nothing else: reusing `.vertext-mongolian` would also
+  bring `writing-mode: vertical-lr` and stand the run upright inside a line of
+  English, trading a font defect for a layout one. U+202F stays inside the run
+  for the reason it stays inside `Slot::MongolianRun`. Code blocks keep their
+  monospace face deliberately.
+
+  `delivery-golden.py` now asserts on that path too — the marked runs must be
+  exactly the line's runs, in order — shown red by removing the marking: `want
+  ['ᠡᠨᠡ','ᠮᠢᠨᠦ','ᠡᠵᠢ'] got []`. Four unit tests cover the markup, the joint, the
+  escaping and the code exemption.
+
+  Found because #33 pinned the horizontal path's existence and #34 asked what it
+  looks like; the answer was a defect, not a test gap. **What is still missing is
+  the image evidence** — see Not sealed.
 
 - **The theme's vendored filter is byte-identical to its source, and CI says so**
   (#25). `extensions/vertext-theme/_extensions/vertext/` carries its own copy of
