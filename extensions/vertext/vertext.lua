@@ -82,7 +82,7 @@ end
 -- ci.yml`), the same way the two copies of this file are kept equal, because
 -- this repository has already paid for one constant that drifted from its own
 -- comment (#17) and one file that drifted from its own source (#25).
-local WIRE_VERSION = "0.1"
+local WIRE_VERSION = "0.2"
 
 -- nil until the binary has been asked; then true or false for the rest of the
 -- render. Asked once per document, not once per block.

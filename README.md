@@ -276,8 +276,8 @@ stops at the renderer and `test-extension.sh` greps markup. It covers the
 opt-in rule, persistence, and the way back — and it explicitly does **not**
 cover hit-testing or layout. A control that renders in the right place and is
 unclickable has shipped from here before, with every check green the whole
-way; only a real browser driving a real mouse event catches that, and the
-`kele` repo's `tools/check-nav-toggle.py` is that test.
+way; only a real browser driving a real mouse event catches that, and a
+consuming site's `tools/check-nav-toggle.py` is that test.
 
 ### Getting a browser and a pandoc without installing Quarto
 
