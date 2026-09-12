@@ -73,9 +73,49 @@ end
 -- worked. Raising here instead would surface as `string expected, got
 -- PandocError` from deep inside pandoc's walk, which names neither the real
 -- problem nor its fix.
+-- The wire version this filter speaks: MAJOR.MINOR of the pair, not the patch.
+-- The protocol is what has to match, and a patch release does not move it.
+--
+-- Three places declare a version -- this one, `Cargo.toml`'s workspace version,
+-- and `_extension.yml` -- and until now they were equal by coincidence, all
+-- three typed by hand. A CI step keeps them equal (see `.forgejo/workflows/
+-- ci.yml`), the same way the two copies of this file are kept equal, because
+-- this repository has already paid for one constant that drifted from its own
+-- comment (#17) and one file that drifted from its own source (#25).
+local WIRE_VERSION = "0.1"
+
+-- nil until the binary has been asked; then true or false for the rest of the
+-- render. Asked once per document, not once per block.
+local wire_agrees = nil
+
+local function binary_speaks_our_wire()
+  if wire_agrees ~= nil then return wire_agrees end
+  local ok, reported = pcall(pandoc.pipe, "vertext", { "--version" }, "")
+  local theirs = ok and reported and reported:match("^vertext%s+(%d+%.%d+)")
+  -- A binary too old to know `--version` does not fail here: it reads the empty
+  -- stdin and prints an empty render, which is why the pattern is anchored to
+  -- the word `vertext` instead of hunting for digits anywhere in the output.
+  -- That binary is exactly the mismatched pair this check is for.
+  wire_agrees = theirs == WIRE_VERSION
+  if not wire_agrees then
+    quarto.log.warning(
+      "vertext: the filter speaks wire version " .. WIRE_VERSION ..
+      " and the binary on PATH " ..
+      (theirs and ("speaks " .. theirs) or "does not report one") ..
+      ". A mismatched pair renders the page wrong with every check green, so " ..
+      "this document is left horizontal. Install the filter and the binary " ..
+      "from the same release.")
+  end
+  return wire_agrees
+end
+
 local binary_missing = false
 local function render(text, extra_args)
   if binary_missing then return nil end
+  -- Degrade, never raise: the same path as a missing binary, for the same
+  -- reason. Horizontal text is visibly not vertical text, so nothing pretends
+  -- to have worked, and a site build does not fall over.
+  if not binary_speaks_our_wire() then return nil end
   local args = { "html", "--progression", progression }
   for _, argument in ipairs(extra_args or {}) do
     table.insert(args, argument)

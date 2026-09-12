@@ -50,6 +50,13 @@ What it pins
      shows up here as structure that stopped arriving.
   4. What came back shapes as the shaping golden recorded, so this gate cannot
      drift from the other two.
+  5. The filter refuses a binary that does not speak its wire version, and
+     degrades horizontal instead of rendering a mismatched pair (#9, step 3).
+     Nothing else checks that the two halves came from the same release, and a
+     mismatched pair renders wrong with every other gate green.
+  6. The three hand-typed version declarations -- Cargo.toml, _extension.yml and
+     the filter's WIRE_VERSION -- are one version. A handshake resting on a
+     constant that can drift would refuse correct pairs.
 
 Usage
 -----
@@ -148,6 +155,72 @@ def render(pandoc, document, path_extra=None):
 
 def spans_of(html):
     return [htmllib.unescape(m) for m in SPAN.findall(html)]
+
+
+def with_stub(pandoc, script):
+    """Render with a fake `vertext` first on PATH. Returns (html, stderr).
+
+    The handshake's whole job is to refuse a binary that does not speak this
+    filter's wire version, and the only honest way to test a refusal is to
+    present something to refuse.
+    """
+    directory = pathlib.Path(tempfile.mkdtemp(prefix="vertext-stub-"))
+    try:
+        stub = directory / "vertext"
+        stub.write_text(script)
+        stub.chmod(0o755)
+        return render(pandoc, STRUCTURE,
+                      path_extra=f"{directory}{os.pathsep}{os.environ['PATH']}")
+    finally:
+        shutil.rmtree(directory, ignore_errors=True)
+
+
+# Two binaries the filter must refuse. The first speaks a wire version that is
+# not ours; the second is old enough not to know `--version` at all, so it reads
+# the empty stdin and prints an empty render -- which is why the filter anchors
+# its pattern to the word `vertext` rather than hunting for digits.
+STUBS = [
+    ("a binary from another release",
+     '#!/bin/sh\n[ "$1" = "--version" ] && { echo "vertext 9.9.0"; exit 0; }\n'
+     'cat >/dev/null; echo "<p>not ours</p>"\n'),
+    ("a binary too old to know --version",
+     '#!/bin/sh\ncat >/dev/null; echo "<div class=\\"vertext\\"></div>"\n'),
+]
+
+
+def versions_agree():
+    """The three hand-typed version declarations must be one version.
+
+    `Cargo.toml`'s workspace version is what the binary prints; `_extension.yml`
+    is what Quarto installs by; `WIRE_VERSION` in the filter is what the
+    handshake compares. They were equal by coincidence -- three constants, three
+    files, nobody checking -- which is the shape of #17 (`RESERVED_END` one off
+    from its own comment) and of #25 (a file one commit off from its source).
+    A handshake built on a constant that can drift from the version it claims to
+    speak would be worse than none: it would refuse correct pairs.
+    """
+    fails = []
+    cargo = re.search(r'(?m)^version = "([^"]+)"',
+                      (ROOT / "Cargo.toml").read_text(encoding="utf-8"))
+    manifest = re.search(r"(?m)^version:\s*(\S+)",
+                         (ROOT / "extensions" / "vertext" / "_extension.yml")
+                         .read_text(encoding="utf-8"))
+    wire = re.search(r'(?m)^local WIRE_VERSION = "([^"]+)"',
+                     (ROOT / "extensions" / "vertext" / "vertext.lua")
+                     .read_text(encoding="utf-8"))
+    if not (cargo and manifest and wire):
+        return [f"versions: a declaration has moved -- Cargo.toml {bool(cargo)}, "
+                f"_extension.yml {bool(manifest)}, WIRE_VERSION {bool(wire)}"]
+    if cargo.group(1) != manifest.group(1):
+        fails.append(f"versions: Cargo.toml says {cargo.group(1)} and "
+                     f"_extension.yml says {manifest.group(1)}")
+    wanted = ".".join(cargo.group(1).split(".")[:2])
+    if wire.group(1) != wanted:
+        fails.append(f"versions: the crates are {cargo.group(1)}, so the "
+                     f"filter's WIRE_VERSION should be {wanted}, not "
+                     f"{wire.group(1)} -- the handshake would refuse the very "
+                     f"binary it ships with")
+    return fails
 
 
 def check(html, stderr, runs, golden, font, hb, label):
@@ -259,6 +332,22 @@ def main():
             fails.append(f"structure: no `{wanted}` in the output -- {why} is "
                          f"no longer true, so a wire marker did not arrive")
 
+    fails += versions_agree()
+
+    # The handshake (#9, step 3). Nothing else in this repository checks that
+    # the filter and the binary came from the same release, and a mismatched
+    # pair renders the page wrong with every other gate green.
+    for why, script in STUBS:
+        html, stderr = with_stub(args.pandoc, script)
+        if "wire version" not in stderr:
+            fails.append(f"handshake: {why} was accepted -- the filter said "
+                         f"nothing about the version\n     stderr: "
+                         f"{stderr.strip()[:160]!r}")
+        if spans_of(html):
+            fails.append(f"handshake: {why} was accepted -- the document "
+                         f"rendered {len(spans_of(html))} spans through a "
+                         f"binary that does not speak our wire")
+
     if fails:
         print(f"FAIL: {len(fails)} findings\n")
         for f in fails[:20]:
@@ -272,6 +361,9 @@ def main():
           f"span each and shape as the golden recorded.")
     print(f"      every block kind survives the wire: heading, table, bullet "
           f"list, ordered list, code.")
+    print(f"      and the handshake refuses {len(STUBS)} binaries that do not "
+          f"speak this filter's wire version, degrading horizontal rather than "
+          f"rendering a mismatched pair.")
     print(f"      {version}, the real extensions/vertext/vertext.lua through "
           f"tools/quarto-shim.lua, binary {binary.name}")
     return 0

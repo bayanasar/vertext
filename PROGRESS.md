@@ -399,10 +399,29 @@ nothing in the core may foreclose it.
   the measure of a page is data and not an engine constant. Changing it moves
   every page already rendered, kele's pixel seal included, so the decision is
   Bayanasar's and the rebuild is `frontend-kele`'s.
-- **Nothing checks that the filter and the binary came from the same source.**
-  No `--version`, no comparison, and the two `0.1.0` constants are hand-typed,
-  equal by coincidence. A mismatched pair renders wrong with every check green —
-  see Open.
+- **A mismatched pair is now refused, not rendered** (#9, step 3). `vertext
+  --version` prints `vertext 0.1.0`, and the filter asks for it once per
+  document before it sends anything: if the binary does not speak the filter's
+  `WIRE_VERSION` — MAJOR.MINOR, because the protocol is what has to match and a
+  patch does not move it — the document is left horizontal with a warning
+  naming both versions. Degrade, never raise: the same path a missing binary
+  already took, for the same reason.
+
+  `tools/filter-golden.py` presents two binaries it must refuse — one reporting
+  another release, one too old to know `--version` at all, which reads the empty
+  stdin and prints an empty render, and is why the filter's pattern is anchored
+  to the word `vertext` rather than hunting for digits. Both are refused, with
+  no spans emitted.
+
+  The three version declarations — `Cargo.toml`, `_extension.yml`, the filter's
+  `WIRE_VERSION` — were equal by coincidence, all three hand-typed. The same
+  gate now asserts they are one version: shown red by setting `WIRE_VERSION` to
+  `0.2`, where the handshake refuses the very binary it ships with.
+
+  What this does NOT do is make the mismatch impossible, which is what #9 is
+  actually for: two consumers still install the two halves separately, so there
+  is still a pair to mismatch. This is the second line of defence the issue
+  asks for, built before the first.
 - **crates.io is still 0.1.0** (2026-08-08). Nothing in the org installs from it.
 
 ## Decisions
