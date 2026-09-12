@@ -170,13 +170,13 @@ def read_png(path):
     return width, height, rows, channels
 
 
-def cell_ink(rows, channels, column, row, width):
+def cell_ink(rows, channels, column, row, width, cell_w=CELL_W, cell_h=CELL_H):
     """The bytes of one grid cell, as a single blob to compare."""
-    x0, y0 = column * CELL_W, row * CELL_H
+    x0, y0 = column * cell_w, row * cell_h
     out = []
-    for y in range(y0, min(y0 + CELL_H, len(rows))):
+    for y in range(y0, min(y0 + cell_h, len(rows))):
         line = rows[y]
-        out.append(line[x0 * channels:min((x0 + CELL_W), width) * channels])
+        out.append(line[x0 * channels:min((x0 + cell_w), width) * channels])
     return b"".join(out)
 
 
@@ -198,6 +198,37 @@ body {{ display: grid; grid-template-columns: repeat({COLUMNS}, {CELL_W}px); }}
    shift every cell after it and report the whole grid as changed. */
 .cell {{ width: {CELL_W}px; height: {CELL_H}px; overflow: hidden; }}
 .cell .vertext {{ font-size: {FONT_PX}px; }}
+{extra_css}
+</style>
+{body}
+"""
+
+
+# A horizontal line is a line, not a column: it needs a cell wide enough to hold
+# a sentence of English. Reusing the 72px grid above clipped everything but the
+# first two characters and compared white to white -- which is exactly the trap
+# the blank check exists for, and it is worth saying that the first run of this
+# probe fell into it.
+LINE_W, LINE_H = 1200, 140
+
+# Applied with !important and naming both classes on purpose. `.vertext-mongolian`
+# declares its own `font-feature-settings`, so a `*` rule loses on specificity and
+# the lever silently does nothing -- the first measurement of the horizontal path
+# reported "nothing joins anywhere", and it was measuring that mistake.
+LEVER = ('*, .vertext-mongolian, .vertext-mongolian-inline '
+         '{ font-feature-settings: "init" 0, "medi" 0, "fina" 0 !important; }')
+
+
+def build_line_page(cells, extra_css):
+    stylesheet = STYLESHEET.read_text(encoding="utf-8")
+    font = (ROOT / "goldens" / "fonts" / "NotoSansMongolian-Regular.ttf").as_uri()
+    body = "".join(f'<div class="line">{html}</div>' for _, html in cells)
+    return f"""<meta charset="utf-8">
+<style>
+@font-face {{ font-family: "Noto Sans Mongolian"; src: url("{font}"); }}
+{stylesheet}
+html, body {{ margin: 0; padding: 0; background: #fff; }}
+.line {{ width: {LINE_W}px; height: {LINE_H}px; overflow: hidden; font-size: 28px; }}
 {extra_css}
 </style>
 {body}
@@ -315,11 +346,65 @@ def main():
                   "entries from the corpus")
             return 1
 
+        # The other layout path (#34). Every cell above is a bare run, so every
+        # one of them is VERTICAL: until this, layer 2's claim held for half the
+        # engine. A measure whose Latin outweighs its vertical script lays out
+        # horizontally and the run stays in the line rather than becoming a
+        # slot, which is a different structure handed to the font -- and it was
+        # hiding a real defect until #35 (the face never arrived there).
+        lines = [(f"line:{name}", text)
+                 for name, path, text in _sg.LINE_CASES if path == "horizontal"]
+        lines += [(f"line:{e['file']}:{e['line']}", e["text"])
+                  for e in golden["corpus"].get("lines", [])
+                  if e.get("path") == "horizontal"]
+        line_cells = []
+        for name, text in lines:
+            done = subprocess.run([str(binary), "--progression", "lr"],
+                                  input=text, capture_output=True, text=True)
+            if done.returncode != 0:
+                sys.exit(f"binary failed on {name}: {done.stderr.strip()}")
+            if "vertext-horizontal" not in done.stdout:
+                sys.exit(f"{name} is pinned horizontal and did not lay out that "
+                         f"way; tools/delivery-golden.py owns that assertion")
+            line_cells.append((name, done.stdout))
+
+        line_shots = {}
+        for label, extra in (("joined", ""), ("isolated", LEVER)):
+            page = work / f"lines-{label}.html"
+            page.write_text(build_line_page(line_cells, extra), encoding="utf-8")
+            png = work / f"lines-{label}.png"
+            shoot(chrome, page, png, LINE_W, LINE_H * len(line_cells))
+            line_shots[label] = read_png(png)
+
+        (lw1, lh1, lr1, lc1), (lw2, lh2, lr2, lc2) = (line_shots["joined"],
+                                                       line_shots["isolated"])
+        line_blank, line_blind = [], []
+        for index, (name, _) in enumerate(line_cells):
+            a = cell_ink(lr1, lc1, 0, index, lw1, LINE_W, LINE_H)
+            b = cell_ink(lr2, lc2, 0, index, lw2, LINE_W, LINE_H)
+            if a == bytes([0xFF]) * len(a):
+                line_blank.append(name)
+            elif a == b:
+                line_blind.append(name)
+
+        if line_blank:
+            print(f"FAIL: {len(line_blank)} horizontal lines rendered nothing: "
+                  f"{line_blank}")
+            return 1
+        if line_blind:
+            print(f"FAIL: joining disabled, yet these horizontal lines render "
+                  f"identically: {line_blind}")
+            print("      on that path the bichig is not getting a face that "
+                  "joins -- see #35, and check the stylesheet before the browser")
+            return 1
+
         multi = sum(1 for n in names if _sg.letters(texts[n]) >= 2)
         single = len(names) - multi
         print(f"PASS: chrome draws joined forms. {multi} multi-letter runs all "
               f"change when init/medi/fina are off, and all {single} "
               f"single-letter runs do not.")
+        print(f"      and {len(line_cells)} horizontal lines change too, where "
+              f"the run stays in the line instead of becoming a slot.")
         print(f"      {version(chrome)}, {w1}x{h1} at {FONT_PX}px, "
               f"font {golden['font']['sha256'][:12]}")
         return 0

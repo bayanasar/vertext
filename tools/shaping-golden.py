@@ -119,6 +119,12 @@ LINE_CASES = [
     # being horizontal is a red, not a silent loss of the check above.
     ("latin-heavy-goes-horizontal", "horizontal",
      "ene minU eji (ᠡᠨᠡ ᠮᠢᠨᠦ ᠡᠵᠢ) is my mother."),
+    # The joint on that path. U+202F is what makes a stem and its suffix one
+    # word, and the horizontal path is the one where the run is not a slot --
+    # if anything were going to drop the joint or split around it, here is
+    # where it would happen unwatched.
+    ("202f-goes-horizontal", "horizontal",
+     "the genitive ᠮᠣᠩᠭᠣᠯ ᠤᠨ is a single word in this English sentence"),
 ]
 
 RUN = re.compile(r"[᠀-᢯ ‍]+")

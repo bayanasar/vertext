@@ -133,6 +133,25 @@ nothing in the core may foreclose it.
   It does not say the shapes are the RIGHT ones — that is the shaping golden's
   job, and this gate deliberately reads pixels it cannot interpret.
 
+  **Both layout paths, not one** (#34). Every cell above is a bare run, so every
+  one of them is vertical; the horizontal path — where a Latin-majority measure
+  keeps the run in the line instead of making it a slot — had never been
+  rendered by this gate, and that is where #35's defect was living. Two
+  horizontal lines are now in the grid, in their own wider cells (the 72px
+  column clipped a sentence of English down to white, and compared white to
+  white: the blank check exists for exactly that). Both must change when joining
+  is switched off.
+
+  The lever names both classes and carries `!important`, because
+  `.vertext-mongolian` declares its own `font-feature-settings` and beats a `*`
+  rule on specificity — the first measurement of the horizontal path reported
+  "nothing joins anywhere" and was measuring that mistake.
+
+  Shown red twice, and the two reds are distinguishable, which is what #34 asked
+  for: drop the face from `.vertext-mongolian-inline` and only the 2 horizontal
+  lines report identical, pointing at the stylesheet; drop it from
+  `.vertext-mongolian` and the 155 vertical runs report identical instead.
+
   **And it runs in CI** (#28), which it did not when it was written.
   `azura-ci:latest` has no browser and no `npx`, so the step brings its own:
   chrome-for-testing at a pinned version, cached by that version, plus the 14
@@ -297,13 +316,6 @@ nothing in the core may foreclose it.
 
 ## Not sealed
 
-- **Layer 2's image evidence covers one layout path of two** (#34).
-  `browser-golden.py`'s cells are all bare runs, so every one of them is
-  vertical; the horizontal path has never been rendered by that gate. #35 fixed
-  the defect that was hiding there, and proved the fix with a hand-run probe —
-  but a probe in a scratch directory is not a gate, which is the whole argument
-  of this file. Until a horizontal cell is in the grid, the claim "a real browser
-  joins what we deliver" holds for vertical measures only.
 - **No one who reads the script has looked at a page yet** (#7, layer 3).
   Layers 1a, 1b and 2 are sealed above: the font joins, the engine delivers a
   whole word to it, and a real browser applies the joining. None of that is a
