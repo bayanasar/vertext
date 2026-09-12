@@ -1035,5 +1035,3 @@ return {
   { Div = Div },
   { Pandoc = Pandoc },
 }
-
--- DELIBERATE BREAK: the theme copy drifts by one line

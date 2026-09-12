@@ -446,12 +446,36 @@ nothing in the core may foreclose it.
 
 ## Open
 
-- **CI logs cannot be read back.** `actions/runs`, `actions/jobs` and
-  `actions/workflows` all return 404 on this instance; only `actions/tasks`
-  answers, and it carries status without log text. A reviewer can see that a
-  run was green and not what ran inside it — which is how the red run above
-  came to be asked for a second time after it had already been performed. The
-  gap is in the review path, not in the gate.
+- **CI logs still cannot be read back, but a red now names its gate** (#32).
+  `actions/runs`, `actions/jobs` and `actions/workflows` all return 404 on this
+  instance — Forgejo 11.0.16 — and only `actions/tasks` answers, with status and
+  no log text. That is unchanged and is not ours to fix.
+
+  What changed is the question a reviewer can get answered. Every gate step in
+  `ci.yml` now carries an `id`, and a last step running under `if: always()`
+  writes one commit status per gate through the API that does answer:
+
+      GET /api/v1/repos/alcuka/frontend-vertext/commits/<sha>/statuses
+        failure  gate/filter-copies    failure in this run
+        warning  gate/delivery-golden  skipped in this run
+        success  gate/engine           success in this run
+
+  That is a real run — run **31** on `19ec07a`, red on purpose by appending one
+  line to the theme's vendored filter, the exact drift #25 was filed for. Run
+  **30** on `33e2519` is the green it followed, and the revert is green again.
+  Forgejo hands the job a usable `secrets.GITHUB_TOKEN`; no repository secret
+  had to be created, which was the one thing this might have needed a decision
+  for. The gate list has no second copy: it is the ids, so a gate added later
+  reports itself.
+
+  Two things this does not do. It does not recover the log text, so *why* a gate
+  failed is still reproduced locally. And a reporter that cannot report exits
+  non-zero rather than passing quietly — it cannot mask a gate failure, since
+  the gate's own step has already failed by then.
+
+  CI also runs on **every branch** now, not only `main` and pull requests. Under
+  C14 a work branch carries a milestone's commits for days before any MR exists,
+  and until this it ran no gate until the MR opened.
 - **`alcuka/docs` runs a mismatched pair today.** Its vendored `vertext.lua` is
   blob `9938d18b` (`1ac79f0`, 2026-08-16) while `install-vertext.sh` pins
   `VERTEXT_REF=ebd004c` (2026-08-07) — nine days apart across a commit that
