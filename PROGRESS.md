@@ -227,6 +227,36 @@ nothing in the core may foreclose it.
   Found because #33 pinned the horizontal path's existence and #34 asked what it
   looks like; the answer was a defect, not a test gap. **What is still missing is
   the image evidence** — see Not sealed.
+- **The filter half of the chain runs, and CI says so** (#30). Every gate above
+  starts at the binary — they hand it text on stdin. A real document goes
+  pandoc → `vertext.lua` → the PUA wire protocol → the binary, and that first
+  half had never been executed by anything that can fail. It is also the half
+  that moves: #25 found the theme's copy a whole commit behind, and the
+  assertion that would have caught it needed `quarto render`.
+
+  `tools/filter-golden.py` runs the real filter under plain pandoc.
+  `tools/quarto-shim.lua` supplies the three `quarto.*` functions the filter
+  calls — `doc.add_html_dependency`, `doc.is_format`, `log.warning` — and
+  nothing else, then `dofile`s the filter unmodified. That is the route urtu
+  took by hand for the U+202F crossing recorded above; this makes it a gate
+  rather than a memory. 160 corpus runs cross the whole chain as one span each
+  and shape as the golden recorded, every block kind the wire encodes comes back
+  as itself (heading at its level, table with cells, both list kinds, code), and
+  **stderr must be empty**: the filter's own fallback warns and then ships plain
+  horizontal text, which looks like a clean render to everything else.
+
+  Shown red twice. `--prove` takes the binary off PATH — the accident this gate
+  exists for — and the chain falls back to plain text with 0 spans, which the
+  gate reports. And an off-by-one in the filter's `MODE_HEADING_BASE`, the same
+  class as #17's `RESERVED_END`: `cargo test` 59 green, shaping 172 green,
+  delivery 168 green, browser 168 green, **this gate red**, because headings
+  stopped arriving as headings.
+
+  pandoc is Debian's 2.17 rather than Quarto's 3.x. Both were run against these
+  fixtures and the HTML came back byte-identical, so the ~5s apt package is
+  bought instead of a 33MiB tarball; pin a 3.x the way the browser is pinned if
+  they ever diverge. The theme's vendored copy is not run separately — the step
+  above proves the two are byte-identical, so running one runs both.
 
 - **The theme's vendored filter is byte-identical to its source, and CI says so**
   (#25). `extensions/vertext-theme/_extensions/vertext/` carries its own copy of
@@ -322,15 +352,6 @@ nothing in the core may foreclose it.
   reader saying the page is writing rather than marks in the right places, and
   that is Bayanasar himself. `needs-native-reader` on that issue means him
   sitting down with a page, not a third party, so it blocks nothing else.
-- **The delivery chain starts at the binary; the filter half has no gate at all**
-  (#30). Real documents go pandoc → `vertext.lua` → the PUA wire protocol →
-  binary, and all three goldens begin after the filter. That is the half #25 just
-  proved drifts. The one thing in the repository that runs the filter is
-  `examples/test-extension.sh`, which needs `quarto render` and therefore never
-  executes. Feasibility is already on record: the U+202F crossing above was run
-  with pandoc 3.9 and the real filter with four `quarto.*` calls shimmed, and
-  unlike a browser, pandoc is in Debian's archive — so this is not blocked on the
-  image the way #28 is.
 - **`examples/render.sh` has been read, not run.** #15 asked for proof that it
   regenerates everything now removed. Half of that is proven by inspection —
   `examples/_extensions/` is a `cp -R` from `extensions/vertext`, which is the
@@ -378,10 +399,48 @@ nothing in the core may foreclose it.
   the measure of a page is data and not an engine constant. Changing it moves
   every page already rendered, kele's pixel seal included, so the decision is
   Bayanasar's and the rebuild is `frontend-kele`'s.
-- **Nothing checks that the filter and the binary came from the same source.**
-  No `--version`, no comparison, and the two `0.1.0` constants are hand-typed,
-  equal by coincidence. A mismatched pair renders wrong with every check green —
-  see Open.
+- **A mismatched pair is now refused, not rendered** (#9, step 3). `vertext
+  --version` prints `vertext 0.1.0`, and the filter asks for it once per
+  document before it sends anything: if the binary does not speak the filter's
+  `WIRE_VERSION` — MAJOR.MINOR, because the protocol is what has to match and a
+  patch does not move it — the document is left horizontal with a warning
+  naming both versions. Degrade, never raise: the same path a missing binary
+  already took, for the same reason.
+
+  `tools/filter-golden.py` presents two binaries it must refuse — one reporting
+  another release, one too old to know `--version` at all, which reads the empty
+  stdin and prints an empty render, and is why the filter's pattern is anchored
+  to the word `vertext` rather than hunting for digits. Both are refused, with
+  no spans emitted.
+
+  The three version declarations — `Cargo.toml`, `_extension.yml`, the filter's
+  `WIRE_VERSION` — were equal by coincidence, all three hand-typed. The same
+  gate now asserts they are one version: shown red by setting `WIRE_VERSION` to
+  `0.2`, where the handshake refuses the very binary it ships with.
+
+  **It guards ONE direction, and the wording matters.** A 0.2 filter refuses a
+  binary that is not 0.2. A 0.1 filter has no handshake in it at all and will
+  drive a 0.2 binary straight into misplaced text, exactly as before — the old
+  half cannot be taught. So "the two refuse each other" is false, and saying it
+  would leave the next person believing both directions are held. The direction
+  that is not held closes only by release discipline: both halves installed from
+  one artifact, which is #9's steps 1 and 2.
+
+  The binary this really guards against is 0.1, which has no `--version` branch
+  and reads stdin instead — so asking it for a version could have meant asking
+  it to WAIT, and a hung site build is harder to attribute than wrong text,
+  because wrong text at least appears. It does not hang, and that is measured,
+  not assumed: a real 0.1 binary built from `4f6ea5b`, first on PATH, through
+  the real filter under pandoc — **exit 0 in under a second, no spans, and the
+  refusal on stderr**. `pandoc.pipe` closes the child's stdin, so the read
+  returns at once. The gate keeps that shape under a stub with a 60s timeout, so
+  a host whose pipe stops closing stdin shows up as a red test rather than a
+  build that hangs for as long as someone will wait.
+
+  What this does NOT do is make the mismatch impossible, which is what #9 is
+  actually for: two consumers still install the two halves separately, so there
+  is still a pair to mismatch. This is the second line of defence the issue
+  asks for, built before the first.
 - **crates.io is still 0.1.0** (2026-08-08). Nothing in the org installs from it.
 
 ## Decisions
@@ -425,12 +484,36 @@ nothing in the core may foreclose it.
 
 ## Open
 
-- **CI logs cannot be read back.** `actions/runs`, `actions/jobs` and
-  `actions/workflows` all return 404 on this instance; only `actions/tasks`
-  answers, and it carries status without log text. A reviewer can see that a
-  run was green and not what ran inside it — which is how the red run above
-  came to be asked for a second time after it had already been performed. The
-  gap is in the review path, not in the gate.
+- **CI logs still cannot be read back, but a red now names its gate** (#32).
+  `actions/runs`, `actions/jobs` and `actions/workflows` all return 404 on this
+  instance — Forgejo 11.0.16 — and only `actions/tasks` answers, with status and
+  no log text. That is unchanged and is not ours to fix.
+
+  What changed is the question a reviewer can get answered. Every gate step in
+  `ci.yml` now carries an `id`, and a last step running under `if: always()`
+  writes one commit status per gate through the API that does answer:
+
+      GET /api/v1/repos/alcuka/frontend-vertext/commits/<sha>/statuses
+        failure  gate/filter-copies    failure in this run
+        warning  gate/delivery-golden  skipped in this run
+        success  gate/engine           success in this run
+
+  That is a real run — run **31** on `19ec07a`, red on purpose by appending one
+  line to the theme's vendored filter, the exact drift #25 was filed for. Run
+  **30** on `33e2519` is the green it followed, and the revert is green again.
+  Forgejo hands the job a usable `secrets.GITHUB_TOKEN`; no repository secret
+  had to be created, which was the one thing this might have needed a decision
+  for. The gate list has no second copy: it is the ids, so a gate added later
+  reports itself.
+
+  Two things this does not do. It does not recover the log text, so *why* a gate
+  failed is still reproduced locally. And a reporter that cannot report exits
+  non-zero rather than passing quietly — it cannot mask a gate failure, since
+  the gate's own step has already failed by then.
+
+  CI also runs on **every branch** now, not only `main` and pull requests. Under
+  C14 a work branch carries a milestone's commits for days before any MR exists,
+  and until this it ran no gate until the MR opened.
 - **`alcuka/docs` runs a mismatched pair today.** Its vendored `vertext.lua` is
   blob `9938d18b` (`1ac79f0`, 2026-08-16) while `install-vertext.sh` pins
   `VERTEXT_REF=ebd004c` (2026-08-07) — nine days apart across a commit that

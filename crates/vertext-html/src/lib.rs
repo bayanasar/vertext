@@ -309,7 +309,7 @@ pub fn render_document(input: &str, options: RenderOptions) -> String {
                 // Except at the end of the input, where the last newline is the
                 // file's terminator and not a break the author typed. Every
                 // document ends with one, so counting it put a blank column at
-                // the foot of every strip -- six of them in kele's lesson 01,
+                // the foot of every strip -- six of them on one real page,
                 // each holding open a column's width of nothing. A blank line
                 // deliberately left at the end still reads as a break: it is
                 // the SECOND trailing newline that carries the intent.
@@ -852,7 +852,7 @@ mod tests {
     // trailing newlines trimmed?". Every file ends with a newline, so that
     // question was answered yes for every document ever rendered, and each one
     // carried a blank column at its foot holding open a column's width of
-    // nothing -- six in kele's lesson 01. What the blank column is FOR is a
+    // nothing -- six on one real page. What the blank column is FOR is a
     // break the author typed, which is why the toggle case above still keeps
     // one and why a deliberate blank line at the end still counts.
 

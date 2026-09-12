@@ -15,6 +15,15 @@ use vertext_html::{render_document, RenderOptions};
 fn main() {
     let arguments: Vec<String> = std::env::args().collect();
     let has = |name: &str| arguments.iter().any(|argument| argument == name);
+    // The filter asks for this before it sends anything, because the two halves
+    // share a wire protocol and nothing else checks that they came from the
+    // same release. Printed before stdin is read: the filter passes no input.
+    // The shape `vertext <major>.<minor>.<patch>` is what vertext.lua parses —
+    // changing it is changing the handshake.
+    if has("--version") || has("-V") {
+        println!("vertext {}", env!("CARGO_PKG_VERSION"));
+        return;
+    }
     // `lr` is traditional Mongolian, `rl` is CJK. An unrecognised value falls
     // back to the CJK default rather than failing the whole render — a typo in
     // one document's metadata should not take down a site build, and the

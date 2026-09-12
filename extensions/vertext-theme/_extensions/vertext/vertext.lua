@@ -73,9 +73,71 @@ end
 -- worked. Raising here instead would surface as `string expected, got
 -- PandocError` from deep inside pandoc's walk, which names neither the real
 -- problem nor its fix.
+-- The wire version this filter speaks: MAJOR.MINOR of the pair, not the patch.
+--
+-- That comparison is a POLICY, not a convenience, and it is stated here because
+-- until now it lived only in the behaviour of one `match`: **a patch release
+-- must not change the wire protocol.** 0.2.1's binary is accepted by 0.2.0's
+-- filter, so anything that moves a reserved codepoint, a separator or a mode
+-- marker is a MINOR bump at least. If that ever stops being true, this
+-- comparison is the thing that has to change first.
+--
+-- Three places declare a version -- this one, `Cargo.toml`'s workspace version,
+-- and `_extension.yml` -- and until now they were equal by coincidence, all
+-- three typed by hand. A CI step keeps them equal (see `.forgejo/workflows/
+-- ci.yml`), the same way the two copies of this file are kept equal, because
+-- this repository has already paid for one constant that drifted from its own
+-- comment (#17) and one file that drifted from its own source (#25).
+local WIRE_VERSION = "0.2"
+
+-- nil until the binary has been asked; then true or false for the rest of the
+-- render. Asked once per document, not once per block.
+local wire_agrees = nil
+
+local function binary_speaks_our_wire()
+  if wire_agrees ~= nil then return wire_agrees end
+  -- The binary this is really guarding against -- 0.1, the one in the wild --
+  -- has no `--version` branch at all: it reads stdin and renders whatever it
+  -- gets. Asking it for a version could therefore have meant asking it to WAIT,
+  -- and a site build that hangs is worse to diagnose than one that lays text out
+  -- wrong, because wrong text at least appears.
+  --
+  -- It does not hang, and that was measured rather than assumed: a real 0.1
+  -- binary built from `4f6ea5b`, on PATH ahead of everything, through this
+  -- filter under pandoc -- exit 0 in under a second, no spans, and the refusal
+  -- below. `pandoc.pipe` writes the given input (here, nothing) to the child and
+  -- CLOSES its stdin, so that read returns at once. The empty render it prints
+  -- then fails the anchored match, which is the refusal.
+  --
+  -- `tools/filter-golden.py` keeps that shape under a stub, with a timeout, so
+  -- if a host's pipe ever stops closing stdin it surfaces as a red test instead
+  -- of a hung build.
+  local ok, reported = pcall(pandoc.pipe, "vertext", { "--version" }, "")
+  local theirs = ok and reported and reported:match("^vertext%s+(%d+%.%d+)")
+  -- A binary too old to know `--version` does not fail here: it reads the empty
+  -- stdin and prints an empty render, which is why the pattern is anchored to
+  -- the word `vertext` instead of hunting for digits anywhere in the output.
+  -- That binary is exactly the mismatched pair this check is for.
+  wire_agrees = theirs == WIRE_VERSION
+  if not wire_agrees then
+    quarto.log.warning(
+      "vertext: the filter speaks wire version " .. WIRE_VERSION ..
+      " and the binary on PATH " ..
+      (theirs and ("speaks " .. theirs) or "does not report one") ..
+      ". A mismatched pair renders the page wrong with every check green, so " ..
+      "this document is left horizontal. Install the filter and the binary " ..
+      "from the same release.")
+  end
+  return wire_agrees
+end
+
 local binary_missing = false
 local function render(text, extra_args)
   if binary_missing then return nil end
+  -- Degrade, never raise: the same path as a missing binary, for the same
+  -- reason. Horizontal text is visibly not vertical text, so nothing pretends
+  -- to have worked, and a site build does not fall over.
+  if not binary_speaks_our_wire() then return nil end
   local args = { "html", "--progression", progression }
   for _, argument in ipairs(extra_args or {}) do
     table.insert(args, argument)
