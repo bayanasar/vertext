@@ -93,7 +93,7 @@ nothing in the core may foreclose it.
   recorded per line, plus four built for shapes the lessons lack, now go through
   the same binary: the spans it emits must be EXACTLY that line's runs, in
   order, byte for byte, and each is shaped against the expectation the golden
-  already holds. 40 runs in context, no new expectations, because the corpus was
+  already holds. 38 runs in context, no new expectations, because the corpus was
   extracted from those same files.
 
   Shown red by a cut that fires only next to a FULL-WIDTH bracket, the one kele
@@ -105,6 +105,15 @@ nothing in the core may foreclose it.
 
   Two absences in kele, both of them edges, are covered by constructed lines
   instead: not one line contains U+202F, and not one line STARTS with bichig.
+
+  The U+202F half of that was false until #39. Two of the three constructed
+  lines named for the joint held U+0020 from the day they were written, so what
+  they checked was an ordinary word break, and the count was 40 because each
+  counted the stem and the suffix as two runs. The joints are `\u202f` escapes
+  now, since the two characters cannot be told apart by eye, and a case named
+  for the joint that does not contain one stops the tools at import. Shown red
+  by making the renderer's scan stop joining U+202F: with the old cases the gate
+  is red on 1 line, with the fixed ones on 3.
 
   **A layout path nothing had looked at.** A measure whose Latin outweighs its
   vertical script lays out horizontally — #4's mechanism — and carries no

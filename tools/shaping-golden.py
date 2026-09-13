@@ -111,9 +111,9 @@ LINES = [
 # already has an expectation for, so these add context and no new answers.
 LINE_CASES = [
     ("202f-in-a-sentence", "vertical",
-     "ᠮᠣᠩᠭᠣᠯ ᠤᠨ (mongɣol-un) ᠨᠣᠮ᠃"),
+     "ᠮᠣᠩᠭᠣᠯ\u202fᠤᠨ (mongɣol-un) ᠨᠣᠮ᠃"),
     ("202f-in-brackets", "vertical",
-     "(ᠮᠣᠩᠭᠣᠯ ᠤᠨ)"),
+     "(ᠮᠣᠩᠭᠣᠯ\u202fᠤᠨ)"),
     ("line-opens-in-bichig", "vertical",
      "ᠨᠣᠮ (nom) 是書。"),
     # The one that is SUPPOSED to come back with no spans at all. A measure
@@ -130,10 +130,20 @@ LINE_CASES = [
     # if anything were going to drop the joint or split around it, here is
     # where it would happen unwatched.
     ("202f-goes-horizontal", "horizontal",
-     "the genitive ᠮᠣᠩᠭᠣᠯ ᠤᠨ is a single word in this English sentence"),
+     "the genitive ᠮᠣᠩᠭᠣᠯ\u202fᠤᠨ is a single word in this English sentence"),
 ]
 
-RUN = re.compile(r"[᠀-᢯ ‍]+")
+# U+202F looks exactly like the space beside it, and an editor or a paste can
+# turn one into the other without a visible diff. Two of the cases above held
+# U+0020 from the day they were written, so the joint they are named for was
+# never in the line and the check passed by testing a word break instead. The
+# joints are escapes now, and a case named for one has to contain one.
+for _name, _path, _text in LINE_CASES:
+    if ("202f" in _name) != ("\u202f" in _text):
+        raise SystemExit(f"LINE_CASES {_name!r}: the name and the text disagree "
+                         f"about U+202F")
+
+RUN = re.compile(r"[\u1800-\u18af\u202f\u200d]+")
 
 # MONGOLIAN LETTER A .. MONGOLIAN LETTER CHI -- the codepoints that take a
 # positional form. Deliberately narrower than RUN above, which spans the whole
