@@ -32,6 +32,8 @@ const FILTERS = [
 ];
 
 let failures = 0;
+const chars = new Set();
+const cells = new Set();
 const check = (name, ok, detail) => {
   if (ok) { console.log(`ok   ${name}`); }
   else { console.error(`FAIL ${name}${detail ? ` -- ${detail}` : ''}`); failures++; }
@@ -73,8 +75,46 @@ for (const [copy, file] of FILTERS) {
   // `.vertext` would not have it.
   const onBody = new RegExp(`body\\s*\\{[^{}]*--vertext-column-height`).test(css);
   check(`${mode} mode declares it on body`, onBody);
+
+  // Issue #26 settled what the budget IS: a declared number of characters,
+  // capped by the space the theme reports. Both halves have to be in the one
+  // declaration -- the count without the cap runs under the chrome on a short
+  // window, and the cap without the count is the window-following measure the
+  // issue replaced.
+  const counted = /min\(\s*calc\(\s*var\(\s*--vertext-column-chars\s*,\s*(\d+)\s*\)\s*\*\s*(\d+)px\s*\)\s*,\s*var\(\s*--vertext-column-theme-height/.exec(value);
+  check(`${mode} mode budgets a declared character count, capped by the theme hook`, !!counted, value);
+  if (counted) {
+    chars.add(counted[1]);
+    cells.add(counted[2]);
+  }
  }
 }
 
+// One default and one cell size across both modes and both copies, and the
+// cell has to be the size an upright glyph is actually set at: the budget
+// multiplies characters by it, so a stylesheet that changed the glyph size and
+// not the multiplier would quietly give every column a different count.
+check('one default character count everywhere', chars.size === 1, [...chars].join(', '));
+check('one cell size everywhere', cells.size === 1, [...cells].join(', '));
+const stylesheet = fs.readFileSync(
+  path.join(__dirname, '..', 'extensions', 'vertext', 'vertext.css'), 'utf8')
+  .replace(/\/\*[\s\S]*?\*\//g, '');
+const upright = /\.vertext-upright,\s*\.vertext-neutral\s*\{\s*font-size:\s*(\d+)px;/.exec(stylesheet);
+check('the cell is the upright glyph size', upright && cells.has(upright[1]),
+      `upright ${upright && upright[1]}px, budget ${[...cells].join(', ')}px`);
+// Every fallback in the stylesheet spends the same measure, so a strip on a
+// page with no mode stylesheet still gets the declared count.
+const fallbacks = stylesheet.match(/var\(--vertext-column-height,\s*[^;]*;/g) || [];
+check('every stylesheet fallback reads the declared count',
+      fallbacks.length > 0 && fallbacks.every(f => /var\(--vertext-column-chars,\s*\d+\)\s*\*\s*\d+px/.test(f)),
+      fallbacks.filter(f => !/--vertext-column-chars/.test(f)).join(' | '));
+// And the YAML key has to reach the property.
+for (const [copy, file] of FILTERS) {
+  const lua = fs.readFileSync(file, 'utf8');
+  check(`${copy} filter reads vertext-column-chars`, /meta\['vertext-column-chars'\]/.test(lua));
+  check(`${copy} filter emits --vertext-column-chars on body`,
+        /body \{ --vertext-column-chars: /.test(lua));
+}
+
 if (failures) { console.error(`\nFAIL: ${failures} check(s)`); process.exit(1); }
-console.log('\nPASS: both modes declare the column budget and route it through the theme hook');
+console.log('\nPASS: both modes budget a declared character count, capped through the theme hook');

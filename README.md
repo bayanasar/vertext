@@ -102,6 +102,29 @@ It is declared rather than detected because it cannot be inferred: a Chinese
 document teaching Mongolian and a Mongolian document teaching Chinese contain
 the same scripts and want opposite answers. Default is right-to-left.
 
+### Column length
+
+In vertical text the length of a column is the length of a line: it decides at
+which character a sentence turns into the next column, and so how often the
+reader's eye moves across. It is declared as a number of characters.
+
+```yaml
+vertext-column-chars: 34   # the default
+```
+
+A column is that many 18px upright cells long, unless the space on the page is
+shorter, in which case it is the space. The space is whatever a theme reports
+through `--vertext-column-theme-height`; without a theme it is the window
+height less the mode's own margins. So a document keeps one measure on every
+screen with room for it, and a short window wraps sooner instead of cutting
+text under the chrome.
+
+It is declared rather than taken from the window because a window-following
+length is not a measure. Measured on one lesson page, a column that tracks the
+window runs from 30 to 96 characters across ordinary screen sizes, which makes
+the same document a different page on each of them. Anything other than a whole
+number from 1 to 400 is ignored with a warning.
+
 ### Whole-document mode
 
 ```yaml

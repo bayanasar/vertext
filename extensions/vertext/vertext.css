@@ -46,7 +46,7 @@
   text-orientation: upright;
   flex: 0 0 auto;
   block-size: auto;
-  height: var(--vertext-column-height, 34em);
+  height: var(--vertext-column-height, calc(var(--vertext-column-chars, 34) * 18px));
   line-height: 1.05;
 }
 .vertext[data-column-advance="right"] .vertext-column { writing-mode: vertical-lr; }
@@ -65,7 +65,7 @@
      gets its natural single line and does not break "蒙古文" into three
      one-character columns reading backwards -- and only bites on the long
      cell, which then wraps inside its own cell instead of leaving the page. */
-  max-height: var(--vertext-cell-cap, var(--vertext-column-height, 34em));
+  max-height: var(--vertext-cell-cap, var(--vertext-column-height, calc(var(--vertext-column-chars, 34) * 18px)));
 }
 /* Upright glyphs need no box at all: the column's `text-orientation: upright`
    already stands them up, and leaving them as bare inline text is what keeps
@@ -302,7 +302,7 @@
 .vertext-hstack,
 .vertext > .vertext-horizontal,
 .vertext > .vertext-table {
-  max-height: var(--vertext-column-height, 34em);
+  max-height: var(--vertext-column-height, calc(var(--vertext-column-chars, 34) * 18px));
   overflow-y: auto;
   overscroll-behavior: contain;
   /* Reachable is not the same as knowing it is reachable. Chrome's overlay
@@ -365,7 +365,7 @@
   vertical-align: top;
   inline-size: max-content;
   max-inline-size: var(--vertext-wrap, 80ch);
-  max-height: var(--vertext-column-height, 34em);
+  max-height: var(--vertext-column-height, calc(var(--vertext-column-chars, 34) * 18px));
   overflow: auto;
   overscroll-behavior: contain;
   margin-inline: .75rem;

@@ -909,9 +909,11 @@ body:has(.chapter-title):not(:has(#quarto-margin-sidebar a)) #quarto-content {
 }
 
 /* ── How far a column runs before it wraps ───────────────────────────────
-   The content filter sizes its columns from `--vertext-column-height`, whose
-   own default is `calc(100vh - 12rem)` -- a guess about how much chrome a page
-   carries, made before this theme put a strip on two edges. It was wrong by
+   The content filter sizes its columns from `--vertext-column-height`: a
+   declared number of characters (#26), capped by the space this variable
+   reports, or by `calc(100vh - 12rem)` when no theme reports one -- a guess
+   about how much chrome a page carries, made before this theme put a strip on
+   two edges. It was wrong by
    the depth of the bottom strip, which is exactly what it looked like: columns
    measured 466px inside a 347px region, so every column's last ~120px ran
    UNDER the page TOC and the text was cut mid-glyph. The region was never the

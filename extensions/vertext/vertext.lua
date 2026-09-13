@@ -47,6 +47,9 @@ local progression = 'rl'
 -- Set when an explicit `.vertext-page` div rendered, so its page style can be
 -- injected from the Pandoc pass rather than up front.
 local page_div_rendered = false
+-- Characters per column, from `vertext-column-chars:`; nil means the
+-- stylesheet's default of 34.
+local column_chars = nil
 
 -- The stylesheet must travel with the filter, not with the format.
 --
@@ -187,9 +190,20 @@ local function document_style()
      plain `body { --vertext-column-height: ... }` in a linked theme sheet
      loses and the columns keep the guess. Measured before this existed: a
      466px column in a 347px region, so the last ~120px of every column ran
-     under the bottom strip and the text was cut mid-glyph. */
+     under the bottom strip and the text was cut mid-glyph.
+
+     The budget is a number of characters, capped by that space (issue #26).
+     `--vertext-column-chars` is the measure an author declares with
+     `vertext-column-chars:`; it is multiplied by 18px because that is the
+     upright cell, `.vertext-upright { font-size: 18px }` in vertext.css, and
+     a length in px resolves the same on every element that spends the budget
+     (a column, a stack, a raw block), where an `em` would follow each one's
+     own font size. The cap keeps a declared measure from running under the
+     chrome on a short window. So the page keeps its measure on every screen
+     that has room for it, and only a window too short for it wraps sooner. */
   body {
-    --vertext-column-height: var(--vertext-column-theme-height, calc(100vh - 12rem));
+    --vertext-column-height: min(calc(var(--vertext-column-chars, 34) * 18px),
+                                 var(--vertext-column-theme-height, calc(100vh - 12rem)));
   }
   /* The content region becomes the vertical surface.
      `writing-mode: vertical-rl` is doing real work here, not decoration: a
@@ -518,6 +532,15 @@ local NAV_TOGGLE = [[
 </script>
 ]]
 
+-- The author's measure, as the one custom property both mode stylesheets and
+-- vertext.css read. Empty when the document declares none, so the default in
+-- the stylesheets is the only number in play.
+local function column_chars_style()
+  if not column_chars then return '' end
+  return '<style id="vertext-column-chars">body { --vertext-column-chars: '
+    .. column_chars .. '; }</style>\n'
+end
+
 local function page_style(mode)
   local writing_mode = (mode == 'lr') and 'vertical-lr' or 'vertical-rl'
   return ([[
@@ -549,13 +572,15 @@ local function page_style(mode)
        consulted and vertext.css fell through to its own `34em` -- silently,
        which is why this survived two people hitting it.
 
-       The fallback is that same `34em` ON PURPOSE, so this declaration moves
-       no pixel on any page that does not set the hook. Whether page mode
-       SHOULD budget against the viewport the way document mode does is a
-       separate question and a larger one: it changes every rendered page, and
-       the answer has to be measured in a browser rather than reasoned out
-       here. It is written down in PROGRESS as its own item. */
-    --vertext-column-height: var(--vertext-column-theme-height, 34em);
+       Page and document mode now budget the same way (issue #26): a declared
+       number of characters, capped by the space there is. Before, page mode
+       held a fixed 34em and document mode followed the window, so one source
+       got two measures depending on a line of YAML. 34 characters of the 18px
+       cell is exactly the old 34em, so a page that declares nothing keeps its
+       measure; what changes is that a window too short for it now wraps inside
+       the body's own padding instead of running past the bottom edge. */
+    --vertext-column-height: min(calc(var(--vertext-column-chars, 34) * 18px),
+                                 var(--vertext-column-theme-height, calc(100vh - 3rem)));
   }
   /* Quarto's grid chrome assumes a horizontal axis. Collapse it to plain block
      flow so the page's writing mode, not a grid template, decides placement.
@@ -689,6 +714,7 @@ function Meta(meta)
   page_div_rendered = false
   progression = 'rl'
   stylesheet_added = false
+  column_chars = nil
   -- Progression is read whether or not the document is in page mode, because
   -- a strip embedded in an ordinary horizontal page still advances one way.
   local declared = meta['vertext-progression']
@@ -696,6 +722,22 @@ function Meta(meta)
     declared = pandoc.utils.stringify(declared):lower()
     if declared == 'lr' or declared == 'vertical-lr' or declared == 'mongolian' then
       progression = 'lr'
+    end
+  end
+  -- The vertical measure, declared like progression rather than taken from
+  -- the window: the same document should turn its columns at the same
+  -- character on every screen that has room (issue #26). Anything that is not
+  -- a whole number from 1 to 400 is ignored with a warning and the default
+  -- stands -- a typo in one page's YAML should not take down a site build.
+  local chars = meta['vertext-column-chars']
+  if chars ~= nil then
+    local text = pandoc.utils.stringify(chars)
+    local n = tonumber(text)
+    if n and n == math.floor(n) and n >= 1 and n <= 400 then
+      column_chars = math.floor(n)
+    else
+      quarto.log.warning("vertext: vertext-column-chars must be a whole number "
+        .. "from 1 to 400, got '" .. text .. "'; using the default of 34.")
     end
   end
   -- `vertext: true` lays the whole document out vertically while leaving the
@@ -860,7 +902,22 @@ function Pandoc(doc)
         includes = pandoc.MetaList({ includes })
       end
       includes[#includes + 1] = pandoc.MetaBlocks({
-        pandoc.RawBlock('html', page_style(progression) .. SCROLL_SCRIPT .. NAV_TOGGLE) })
+        pandoc.RawBlock('html', column_chars_style() .. page_style(progression)
+          .. SCROLL_SCRIPT .. NAV_TOGGLE) })
+      doc.meta['header-includes'] = includes
+      doc.meta['vertext-rendered'] = true
+      return doc
+    end
+    -- Explicit `::: {.vertext}` strips on an ordinary page get no mode
+    -- stylesheet, but vertext.css still reads the measure, so a declared one
+    -- has to reach them too.
+    if stylesheet_added and column_chars then
+      local includes = doc.meta['header-includes'] or pandoc.MetaList({})
+      if includes.t ~= 'MetaList' then
+        includes = pandoc.MetaList({ includes })
+      end
+      includes[#includes + 1] = pandoc.MetaBlocks({
+        pandoc.RawBlock('html', column_chars_style()) })
       doc.meta['header-includes'] = includes
       doc.meta['vertext-rendered'] = true
       return doc
@@ -1081,7 +1138,7 @@ function Pandoc(doc)
     local style = (page_mode or page_div_rendered)
       and page_style(progression) or document_style()
     includes[#includes + 1] = pandoc.MetaBlocks({
-      pandoc.RawBlock('html', style .. SCROLL_SCRIPT .. NAV_TOGGLE) })
+      pandoc.RawBlock('html', column_chars_style() .. style .. SCROLL_SCRIPT .. NAV_TOGGLE) })
     doc.meta['header-includes'] = includes
   end
 

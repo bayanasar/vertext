@@ -26,6 +26,12 @@ Usage
     python3 tools/measure-column-budget.py --viewport 1280x800
 
 Needs a Chrome; searches ~/.cache/puppeteer, or pass --chrome.
+
+Needs a CJK font, too, and refuses to report without one. The first two
+measurements for #26 were taken on a machine with none: Chrome drew tofu, a
+tofu box advances 21px where the 18px upright cell does, and "34em holds 29
+characters" went into the record. It holds 34. Pass --cjk-font with any font
+that has the probe character (Noto Sans SC works) when the system has none.
 """
 
 import argparse
@@ -96,6 +102,7 @@ def mode_style(mode):
 # and group them by their position on the block axis -- in vertical writing a
 # wrap moves the glyph sideways, so a change in `x` IS the turn.
 MEASURE = """
+document.fonts.ready.then(() => {
 function visualLines(el) {
   const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
   const groups = [];
@@ -132,14 +139,26 @@ const out = {
   visualLines: perColumn.reduce((n, g) => n + g.length, 0),
 };
 document.body.setAttribute('data-measured', JSON.stringify(out));
+});
 """
 
 
-def measure(chrome, mode, html, width, height, work, tag="sample"):
+# The upright cell, `.vertext-upright { font-size: 18px }`. A probe character
+# that advances by anything else is not being drawn by a CJK font.
+CELL_PX = 18
+
+
+def measure(chrome, mode, html, width, height, work, tag="sample", cjk_font=None):
     page = work / f"{mode}-{tag}-{width}x{height}.html"
+    face = ""
+    if cjk_font:
+        face = (f'@font-face {{ font-family: "vertext-measure-cjk"; '
+                f'src: url("{pathlib.Path(cjk_font).resolve().as_uri()}"); }}\n'
+                f'.vertext-upright {{ font-family: "vertext-measure-cjk"; }}')
     page.write_text(f"""<meta charset="utf-8">
 <style>
 {STYLESHEET.read_text(encoding="utf-8")}
+{face}
 </style>
 <style>
 {mode_style(mode)}
@@ -150,6 +169,10 @@ def measure(chrome, mode, html, width, height, work, tag="sample"):
     done = subprocess.run(
         [str(chrome), "--headless", "--disable-gpu", "--no-sandbox",
          "--force-device-scale-factor=1", "--hide-scrollbars",
+         # A page and a font both on file:// are different origins to Chrome,
+         # and the font is refused without this; the time budget lets the
+         # measurement wait for `document.fonts.ready` before the DOM is dumped.
+         "--allow-file-access-from-files", "--virtual-time-budget=10000",
          f"--window-size={width},{height}", "--dump-dom", page.as_uri()],
         capture_output=True, text=True, timeout=180)
     found = re.search(r'data-measured="([^"]*)"', done.stdout)
@@ -164,6 +187,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--chrome")
     ap.add_argument("--binary", default=str(BINARY))
+    ap.add_argument("--cjk-font",
+                    help="a font with the probe character, for a system with none")
     ap.add_argument("--viewport", action="append",
                     help="WIDTHxHEIGHT, repeatable; replaces the default set")
     args = ap.parse_args()
@@ -195,14 +220,21 @@ def main():
     rows = []
     for width, height in viewports:
         for mode in ("document", "page"):
-            m = measure(chrome, mode, rendered[mode], width, height, work)
+            m = measure(chrome, mode, rendered[mode], width, height, work,
+                        cjk_font=args.cjk_font)
             p = measure(chrome, mode, probes[mode], width, height, work,
-                        tag="probe")
+                        tag="probe", cjk_font=args.cjk_font)
+            probe_px = max(p["heights"]) if p["heights"] else 0
+            if p["longestLine"] and abs(probe_px / p["longestLine"] - CELL_PX) > 1:
+                sys.exit(f"the probe advances {probe_px / p['longestLine']:.1f}px a "
+                         f"character, not the {CELL_PX}px upright cell: no CJK font "
+                         f"is drawing it, so every count would be wrong. "
+                         f"Pass --cjk-font.")
             longest = max(m["heights"]) if m["heights"] else 0
             fits = p["longestLine"]
             rows.append((width, height, mode, longest, fits))
             print(f"{width}x{height:<5}  {m['viewport'][1]:>7}  {mode:<9} "
-                  f"{m['declared'][:31]:<32} {longest:>9} "
+                  f"{' '.join(m['declared'].split())[:31]:<32} {longest:>9} "
                   f"{fits:>10} {round(longest / fits, 1) if fits else 0:>8}")
 
     doc = {(w, h): px for w, h, mode, px, _ in rows if mode == "document"}
@@ -210,8 +242,9 @@ def main():
     print()
     print(f"document mode spans {min(doc.values())}px to {max(doc.values())}px "
           f"across these {len(doc)} windows.")
-    print(f"page mode is {'constant at %spx' % next(iter(set(page.values()))) if len(set(page.values())) == 1 else 'NOT constant: %s' % sorted(set(page.values()))}"
-          f" — it owns the whole viewport and ignores it.")
+    print(f"page mode spans {min(page.values())}px to {max(page.values())}px.")
+    print(f"Both budget a declared count of the {CELL_PX}px cell, capped by the space "
+          f"there is (#26), so a window with room shows the same length in both.")
     print(f"      pages left in {work}")
     return 0
 

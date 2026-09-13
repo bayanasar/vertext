@@ -431,6 +431,38 @@ nothing in the core may foreclose it.
   the name chooses the unpacker, so a tarball there fails; and `_extensions/`
   at the archive root is used as is.
 
+- **A column is a declared number of characters, capped by the space there
+  is** (#26). Both mode stylesheets budget
+  `min(calc(var(--vertext-column-chars, 34) * 18px), <space>)`, the space being
+  the theme hook or the mode's own fallback, and `vertext-column-chars:` in the
+  YAML sets the count. Rendered with Quarto 1.10.18 and measured in headless
+  Chrome, against the same documents on `main`:
+
+  | document | window | `main` | now |
+  |---|---|---|---|
+  | page mode, nothing declared | 1280×2000 | 612px | 612px |
+  | page mode, nothing declared | 1280×500 | 612px, bottom at 638 | 449px |
+  | document mode, nothing declared | 1280×2000 | 1796px | 612px |
+  | document mode, nothing declared | 1280×500 | 296px | 296px |
+  | page mode, `vertext-column-chars: 20` | both | — | 360px |
+  | a fenced strip on an ordinary page, 20 | both | — | 360px |
+  | page mode, `vertext-column-chars: abc` | both | — | default, with a warning |
+
+  `tools/measure-column-budget.py --cjk-font …` reports 612px and 34
+  characters, 18.0px each, in both modes wherever the window has room.
+  `examples/test-column-budget.js` now also requires the count, the cap, one
+  default and one cell size across both modes and both filter copies, and that
+  the cell is the upright glyph size; shown red by restoring the old
+  document-mode declaration, and by setting the upright size to 20px.
+
+  **A correction to what was recorded before.** The first measurement for this
+  issue said `34em` holds 29 characters because a cell is ~21.2px. That was the
+  measuring machine, not the page: it has no CJK font, and Chrome's tofu box
+  advances 21px where the 18px cell does. With a CJK font loaded the same column
+  holds 34. Every character count recorded for #26 before this was low by about
+  a sixth, and the measuring tool now refuses to report when its probe does not
+  advance by the cell.
+
 ## Not sealed
 
 - **`examples/render.sh` has been read, not run.** #15 asked for proof that it
@@ -441,45 +473,13 @@ nothing in the core may foreclose it.
   demo output under `examples/` was untracked on the strength of the script's
   text rather than a run. Whoever has Quarto should run `./examples/render.sh`
   from a clean checkout and confirm both paths come back.
-- **The two modes have been measured, and what the length SHOULD be is still
-  undecided** (#26). `tools/measure-column-budget.py`, headless Chrome 152, the
-  same source through the real binary in both modes at four window sizes, with
-  a 400-character upright probe to count what fits:
-
-  | window | mode | column | chars/column |
-  |---|---|---|---|
-  | 1280×800 | document | 521px | 24 |
-  | 1280×800 | page | 612px | 29 |
-  | 1920×1080 | document | 801px | 38 |
-  | 1920×1080 | page | 612px | 29 |
-  | 1280×2000 | document | 1721px | 81 |
-  | 1280×2000 | page | 612px | 29 |
-  | 768×1024 | document | 745px | 35 |
-  | 768×1024 | page | 612px | 29 |
-
-  Document mode runs 24 to 81 characters a column across ordinary windows — a
-  3.4× swing in the length of a line, which in vertical setting is the rhythm
-  the eye moves in. Page mode is 29, always, whatever the window.
-
-  That half-inverts the issue's own premise, which reads as though the hardcoded
-  side were the problem: neither number has a provenance, but the swinging one is
-  the one to change first, because a fixed value at least gives the same page
-  twice while a window-derived one does not give the same page on two machines.
-  Recorded on the issue rather than left in the commit.
-
-  Two things the measurement settled that guessing had wrong. **`34em` is not
-  34 characters**: it resolves to 612px and holds 29, because a character cell
-  is ~21.2px at this size and not 1em. And the first metric tried was wrong
-  too — counting characters per `.vertext-column` measures how the SOURCE was
-  chunked, not how the page reads, and grouping them by position fragments on
-  every rotated punctuation mark. Hence the boring probe.
-
-  What is NOT decided is step 2 of the issue: what the length should be a
-  function of — the window, the window minus `--vertext-nav-depth`, or a
-  declared value — and that belongs in the README beside progression, because
-  the measure of a page is data and not an engine constant. Changing it moves
-  every page already rendered, kele's pixel seal included, so the decision is
-  Bayanasar's and the rebuild is `frontend-kele`'s.
+- **The lesson site built on this engine has not moved to the declared
+  measure** (#26). It sets `--vertext-column-height: calc(100% - 2rem)`
+  directly, which overrides the engine's budget, so its pages still follow the
+  window: 30 to 96 characters a column on one lesson across the windows
+  measured. Moving it means declaring only the space
+  (`--vertext-column-theme-height`) and rebuilding and re-sealing its pages,
+  which is a change in that repository.
 - **A mismatched pair is now refused, not rendered** (#9, step 3). `vertext
   --version` prints `vertext 0.2.0`, and the filter asks for it once per
   document before it sends anything: if the binary does not speak the filter's
@@ -538,6 +538,15 @@ nothing in the core may foreclose it.
   while an archive built from the source at release time cannot drift. The
   version is in the file name so the filter and the binary are visibly one
   release.
+
+- 2026-09-12 **Column length is a declared number of characters, capped by the
+  space on the page, default 34** (#26) — because a length that follows the
+  window is not a measure: on one lesson page it ran 30 to 96 characters across
+  ordinary windows, so one document was a different page on each screen. A
+  fixed length without the cap runs under the chrome on a short window. Chosen
+  over following the window and over filling the space after all three were
+  built as real pages and read. 34 because 34 cells of 18px is the 612px the
+  old `34em` gave, so a page that declares nothing keeps its measure.
 
 - 2026-08-29 **The U+202F fix was merged knowing it left one shape worse than it
   found it**: `ᠢᠢ<U+202F>is written` measured right on `1ac79f0` and wrong on
