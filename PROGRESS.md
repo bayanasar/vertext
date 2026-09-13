@@ -21,7 +21,7 @@ nothing in the core may foreclose it.
   real `vertext.lua` (4 `quarto.*` calls shimmed) → the real binary emits
   `ᠮᠣᠩᠭᠤᠯ ᠤᠨ` as ONE `vertext-mongolian` span; the old engine emitted two with a
   `vertext-space` between. Run by urtu on review. That is the crossing, not the
-  pipeline — `quarto render` has never been run here.
+  pipeline — the first real `quarto render` is the release-archive check below.
 - **The collapse control is clickable.** `kele/tools/check-nav-toggle.py`,
   headless Chrome 152, real `Input.dispatchMouseEvent` — theme-shaped page
   (strip 201→59, columns 549→691) and kele's own lesson (96→34, 486→548), both
@@ -392,6 +392,45 @@ nothing in the core may foreclose it.
   a browser applies the joining. This is the one that says the result is
   writing, and it found a defect none of the three could see.
 
+- **0.2.0 is on crates.io** (#9, step 1). `cargo publish --workspace` from
+  `a10ff22`, tagged `v0.2.0`; crates.io lists all three crates at 0.2.0,
+  uploaded 2026-09-13 02:26 UTC, each package 6 files. `cargo install
+  vertext-cli --version 0.2.0 --locked` from crates.io into an empty root prints
+  `vertext 0.2.0`, which the filter's `^vertext%s+(%d+%.%d+)` reads as `0.2`, its
+  `WIRE_VERSION`.
+
+  The first real publish failed verification with `E0603: function
+  is_mongolian is private`, although the tree was right. A dry-run from before
+  the horizontal-path MR (#36) made that function public had left a
+  `vertext-core 0.2.0` build in `target/debug`, and cargo keys a
+  registry crate's build by name and version, not by content, so it checked the
+  new `vertext-html` against the old core. Deleting that unit fixed it. Before
+  publishing a version that was dry-run on an older tree, remove
+  `target/package` and the `vertext-core-*` units it built, or `cargo clean`.
+
+- **`quarto add` installs the filter from a release zip, and real Quarto
+  renders with it** (#9). `tools/quarto-archive.py` builds
+  `vertext-quarto-0.2.0.zip` (`_extensions/vertext/`, three files, sha256
+  `877e7e26…`, byte-identical across builds) from `extensions/vertext`, and CI
+  builds it on every run. Quarto 1.10.18's Linux release, unpacked outside the
+  tree: `quarto add http://127.0.0.1:…/vertext-quarto-0.2.0.zip --no-prompt`
+  installs three files byte-identical to the source; `quarto render` of a page
+  with Han and `ᠮᠣᠩᠭᠣᠯ<U+202F>ᠤᠨ ᠨᠣᠮ᠃`, with the binary from `cargo install
+  vertext-cli --version 0.2.0` first on PATH, gives 8 upright slots and 2
+  Mongolian spans, the joint inside the first, and no warning. The same render
+  with a stub answering `vertext 0.1.0` prints the refusal and emits no spans.
+
+  The public `v0.2.0` release now carries the zip (sha256 as above, release
+  tag at `a10ff22`), and the README's command was run as written:
+  `quarto add https://github.com/bayanasar/vertext/releases/download/v0.2.0/vertext-quarto-0.2.0.zip`
+  installs three files identical to `v0.2.0:extensions/vertext`, and the render
+  above repeats with the joint in one span.
+
+  The format follows Quarto's installer source, not a guess: a URL that is not
+  a GitHub repository or archive is saved as `extension.zip` whatever it is, and
+  the name chooses the unpacker, so a tarball there fails; and `_extensions/`
+  at the archive root is used as is.
+
 ## Not sealed
 
 - **`examples/render.sh` has been read, not run.** #15 asked for proof that it
@@ -442,7 +481,7 @@ nothing in the core may foreclose it.
   every page already rendered, kele's pixel seal included, so the decision is
   Bayanasar's and the rebuild is `frontend-kele`'s.
 - **A mismatched pair is now refused, not rendered** (#9, step 3). `vertext
-  --version` prints `vertext 0.1.0`, and the filter asks for it once per
+  --version` prints `vertext 0.2.0`, and the filter asks for it once per
   document before it sends anything: if the binary does not speak the filter's
   `WIRE_VERSION` — MAJOR.MINOR, because the protocol is what has to match and a
   patch does not move it — the document is left horizontal with a warning
@@ -483,9 +522,22 @@ nothing in the core may foreclose it.
   actually for: two consumers still install the two halves separately, so there
   is still a pair to mismatch. This is the second line of defence the issue
   asks for, built before the first.
-- **crates.io is still 0.1.0** (2026-08-08). Nothing in the org installs from it.
+- **The consumers are moving to 0.2.0, not moved yet** (#9, step 2). The lesson
+  site builds from the release on its own merge request: the binary from
+  crates.io and the filter from the zip, its 13 pages byte-identical to the
+  build from the 0.2.0 source, a tampered zip and a 0.1 binary both refused. The
+  docs site still vendors the filter and pins the binary separately; its switch
+  is #43, which belongs to that site's owner.
 
 ## Decisions
+
+- 2026-09-12 **The filter ships to `quarto add` as a zip attached to the tagged
+  release, not as an `_extensions/` copy at the repository root** — because the
+  tree already holds the source and the copy the theme must vendor, and those
+  two have drifted once (#25); a third copy is a third thing to keep equal,
+  while an archive built from the source at release time cannot drift. The
+  version is in the file name so the filter and the binary are visibly one
+  release.
 
 - 2026-08-29 **The U+202F fix was merged knowing it left one shape worse than it
   found it**: `ᠢᠢ<U+202F>is written` measured right on `1ac79f0` and wrong on

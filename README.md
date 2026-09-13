@@ -32,9 +32,22 @@ rather than editing it — `examples/test-extension.sh` asserts the two are
 byte-identical, and CI's `examples/test-column-budget.js` reads both copies so
 a fix applied to one of them fails there.
 
-Use it in a Quarto document after copying the extension to
-`_extensions/vertext` (or installing it with `quarto add` once this repository
-is published):
+### Install
+
+The filter and the binary are two halves of one release and must come from
+the same one: the filter refuses a binary whose MAJOR.MINOR differs and leaves
+the document horizontal with a warning.
+
+```sh
+cargo install vertext-cli --version 0.2.0
+quarto add https://github.com/bayanasar/vertext/releases/download/v0.2.0/vertext-quarto-0.2.0.zip
+```
+
+The zip holds `_extensions/vertext/` and nothing else. It is built from
+`extensions/vertext` by `python3 tools/quarto-archive.py`, so there is no copy
+of the filter at the repository root for `quarto add <org>/<repo>` to find.
+
+Then use it in a Quarto document:
 
 ```markdown
 ---
