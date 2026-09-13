@@ -517,9 +517,29 @@ fn is_cjk(ch: char) -> bool { matches!(ch as u32,
     0x3400..=0x4DBF | 0x4E00..=0x9FFF | 0xF900..=0xFAFF |
     0x3040..=0x30FF | 0x31F0..=0x31FF | 0xAC00..=0xD7AF
 ) }
-fn is_latin(ch: char) -> bool { matches!(ch as u32,
-    0x0041..=0x005A | 0x0061..=0x007A | 0x00C0..=0x024F | 0x1E00..=0x1EFF
-) }
+/// A letter of a script that is set as a sideways word inside a vertical line.
+///
+/// Latin, but not Latin alone. Mongolian romanization writes `ɣ` (IPA) or `γ`
+/// (Greek) inside an otherwise Latin word — `mongɣol`, `čaγan` — and the modern
+/// language is written in Cyrillic. With only the Latin blocks here, `mongɣol`
+/// became two Latin slots with the `ɣ` standing upright between them, and
+/// `Монгол` was laid out one upright letter per slot. A reader saw the
+/// romanization of `ᠮᠣᠩᠭᠣᠯ ᠤᠨ` come apart in the middle of a line.
+///
+/// Outside the Latin blocks only letters count, so the punctuation that shares
+/// the Greek and Cyrillic blocks stays punctuation. Scripts not listed keep the
+/// grapheme-by-grapheme neutral treatment.
+fn is_latin(ch: char) -> bool {
+    matches!(ch as u32,
+        0x0041..=0x005A | 0x0061..=0x007A | 0x00C0..=0x024F | 0x1E00..=0x1EFF
+    ) || (ch.is_alphabetic() && matches!(ch as u32,
+        0x0250..=0x02AF |                   // IPA Extensions
+        0x0370..=0x03FF | 0x1F00..=0x1FFF | // Greek and Coptic, Greek Extended
+        0x0400..=0x052F |                   // Cyrillic, Cyrillic Supplement
+        0x1D00..=0x1DBF |                   // Phonetic Extensions
+        0x2C60..=0x2C7F | 0xA720..=0xA7FF | 0xAB30..=0xAB6F // Latin Extended-C, -D, -E
+    ))
+}
 fn is_word_char(ch: char) -> bool { is_latin(ch) || ch.is_ascii_digit() || ch == '_' }
 
 /// Punctuation that behaves as a letter when it sits inside a word.
@@ -731,6 +751,32 @@ mod tests {
             Slot::Upright("葛\u{FE00}".into()),
             Slot::Upright("城".into()),
         ]);
+    }
+    #[test]
+    fn romanization_with_a_gamma_is_one_word() {
+        // The line a reader found broken: `(mongɣol-un)` came out as `(mong`,
+        // an upright `ɣ`, and `ol-un` with its bracket turned. IPA `ɣ` and Greek
+        // `γ` are both in use for the same letter.
+        let layout = layout_text("(mongɣol-un) čaγan", &LayoutConfig::default());
+        assert_eq!(layout.columns[0].slots, vec![
+            Slot::LatinWord("(mongɣol-un)".into()),
+            Slot::Space(" ".into()),
+            Slot::LatinWord("čaγan".into()),
+        ]);
+    }
+    #[test]
+    fn a_cyrillic_word_is_one_sideways_slot() {
+        let layout = layout_text("Монгол хэл", &LayoutConfig::default());
+        assert_eq!(layout.columns[0].slots, vec![
+            Slot::LatinWord("Монгол".into()),
+            Slot::Space(" ".into()),
+            Slot::LatinWord("хэл".into()),
+        ]);
+        // Punctuation from the same blocks is not a letter: the Greek question
+        // mark U+037E does not continue the word.
+        let layout = layout_text("хэл\u{037E}", &LayoutConfig::default());
+        assert_eq!(layout.columns[0].slots[0], Slot::LatinWord("хэл".into()));
+        assert_eq!(layout.columns[0].slots.len(), 2);
     }
     #[test]
     fn combining_marks_stay_with_their_base() {
@@ -1169,6 +1215,9 @@ mod tests {
             // Hyphenation: one word, two slots, one vote.
             "use-after-free",
             "internationalization",
+            // Romanization letters outside Latin, and a Cyrillic word.
+            "ᠮᠣᠩᠭᠣᠯ\u{202F}ᠤᠨ (mongɣol-un) ᠨᠣᠮ",
+            "čaγan 好 Монгол хэл",
             // Plain cases in both systems.
             "hello world",
             "山川异域，风月同天",

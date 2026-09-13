@@ -367,6 +367,16 @@ nothing in the core may foreclose it.
   the one command anyone would run to test the rule reported it working. An
   ignore rule added after the fact needs `git rm --cached` in the same commit.
 
+- **Romanization with `ɣ`/`γ`, and Cyrillic, stay whole words** (#42). Found by
+  a reader, not a gate: `(mongɣol-un)` in a vertical line came out as `(mong`,
+  an upright `ɣ` and `ol-un`, because the Latin-word class stopped at U+024F and
+  IPA `ɣ` is U+0263. The same rule laid `Монгол` out one upright letter per
+  slot. The class now also takes letters (not punctuation) from IPA, Greek,
+  Cyrillic, the phonetic and the later Latin extensions. `cargo test --workspace`
+  65 green; the two new tests fail on the old rule; delivery, browser and
+  column-budget gates green. The lessons romanize with `G`, which is why no
+  gate ever saw it.
+
 ## Not sealed
 
 - **No one who reads the script has looked at a page yet** (#7, layer 3).
