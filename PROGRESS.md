@@ -1,7 +1,7 @@
 # PROGRESS — vertext
 
 <!-- progress -->
-updated: 2026-09-11
+updated: 2026-09-12
 owner: tata
 stage: Quarto path works end to end; Mongolian joining proven in the font, proven to reach the page in one piece, and proven by CI to be applied by a real browser — no reader has looked at a page yet
 <!-- /progress -->
@@ -112,6 +112,20 @@ nothing in the core may foreclose it.
   so a flip is a red; the horizontal one asserts that the run still appears
   whole, since a mid-run tag would hand the font two fragments. Undeclared, a
   change that sent every line horizontal would leave the gate green and empty.
+
+  **And every vertical line is asked the horizontal question too** (#38). Where
+  a run starts and ends is defined twice — `Slot::MongolianRun` in the core,
+  `mark_mongolian_runs` in the renderer — and the edges that could split them
+  (U+1802/U+1803 after a word, U+180E) were only in the vertical lines. Each of
+  the 13 now also goes through with enough Latin words appended to flip it, and
+  the gate checks that it did flip; the inline-marked runs must equal the same
+  `runs_in()` list: 2
+  horizontal lines checked became 15. Shown red by a cut in the renderer's scan
+  alone, ending a run at U+180E: `cargo test` 63 green, the gate as it was on
+  `main` green, **the pushed lines red on 4** (`ᠪᠠᠶᠢᠨ<U+180E>ᠠ` came back as two
+  runs), every vertical assertion still green. The red lands only on the side
+  that split. Merging the two definitions into one was left for the day they
+  actually disagree, as the issue asks.
 
 - **And a real browser joins what we deliver** (#7, layer 2).
   `tools/browser-golden.py`: each of the 168 runs is rendered through the real

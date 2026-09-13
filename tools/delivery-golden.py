@@ -148,6 +148,53 @@ def deliver(binary, text):
     return [htmllib.unescape(m) for m in SPAN.findall(render(binary, text))]
 
 
+def pushed_horizontal(text):
+    """This line with enough Latin words after it to lay out horizontally.
+
+    Where a run starts and ends is defined twice: by `Slot::MongolianRun` in the
+    core on the vertical path, and by `mark_mongolian_runs` in the renderer on
+    the horizontal one (#38). The edges that decide whether the two agree --
+    U+1802/U+1803 hard after a word, U+180E, the variation selectors, a U+202F
+    joint -- occur in the vertical lines and in neither horizontal one, so
+    every vertical line is asked the horizontal question too.
+
+    The words go at the END, after a space, so nothing touches a run: the
+    runs of the result are the runs of the line. One more word than the line
+    has non-space characters is always enough, because every vertical slot
+    uses at least one of those characters and every word here is one
+    horizontal slot. The caller still checks that it flipped -- an engine that
+    stopped flipping would otherwise turn this into the vertical check again.
+    """
+    return text + " word" * (sum(not c.isspace() for c in text) + 1)
+
+
+def horizontal_findings(name, html, want):
+    """What is wrong with the runs a horizontal render marked, if anything.
+
+    This path carries no `vertext-mongolian` span -- the run is not a slot
+    here, it stays in the line. It does carry `vertext-mongolian-inline`,
+    which exists so the stylesheet can give it a face that joins: without it
+    the bichig on this path rendered in a browser fallback and did not change
+    at all when init/medi/fina were switched off (#35).
+
+    So the same assertion as the vertical path, against that class: the marked
+    runs must be exactly this line's runs, in order, byte for byte. A mid-run
+    tag splits one into two and the font is handed two words where the author
+    wrote one.
+    """
+    fails = []
+    inline = [htmllib.unescape(m) for m in INLINE.findall(html)]
+    if inline != want:
+        fails.append(f"{name}: horizontal, and the marked runs are not "
+                     f"this line's runs\n     want {want!r}\n"
+                     f"     got  {inline!r}")
+    for run in want:
+        if run not in html:
+            fails.append(f"{name}: horizontal, and {run!r} does not "
+                         f"appear whole in the output")
+    return fails
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--binary", default=str(BINARY))
@@ -279,6 +326,7 @@ def main():
     # byte. A split shows up as an extra span, a merge as a missing one, and a
     # dropped separator as a run that does not match its own source text.
     lines = lines_from_golden(golden)
+    pinned_horizontal = sum(path == "horizontal" for _, path in lines.values())
     in_context, horizontal = 0, 0
     for name, (text, path) in sorted(lines.items()):
         html = render(binary, text)
@@ -290,28 +338,18 @@ def main():
                          f"{path}\n     line {text[:70]!r}")
             continue
         if took == "horizontal":
-            # This path carries no `vertext-mongolian` span -- the run is not a
-            # slot here, it stays in the line. It does carry
-            # `vertext-mongolian-inline`, which exists so the stylesheet can give
-            # it a face that joins: without it the bichig on this path rendered
-            # in a browser fallback and did not change at all when init/medi/fina
-            # were switched off (#35).
-            #
-            # So the same assertion as the vertical path, against that class: the
-            # marked runs must be exactly this line's runs, in order, byte for
-            # byte. A mid-run tag splits one into two and the font is handed two
-            # words where the author wrote one.
             horizontal += 1
-            inline = [htmllib.unescape(m) for m in INLINE.findall(html)]
-            if inline != want:
-                fails.append(f"{name}: horizontal, and the marked runs are not "
-                             f"this line's runs\n     want {want!r}\n"
-                             f"     got  {inline!r}")
-            for run in want:
-                if run not in html:
-                    fails.append(f"{name}: horizontal, and {run!r} does not "
-                                 f"appear whole in the output")
+            fails.extend(horizontal_findings(name, html, want))
             continue
+        pushed = render(binary, pushed_horizontal(text))
+        if "vertext-horizontal" not in pushed:
+            fails.append(f"{name}: still vertical with Latin words appended, so "
+                         f"the horizontal path was not checked on it\n"
+                         f"     line {text[:70]!r}")
+        else:
+            horizontal += 1
+            fails.extend(horizontal_findings(f"{name} (pushed horizontal)",
+                                             pushed, want))
         if spans != want:
             fails.append(f"{name}: the spans are not the runs of this line\n"
                          f"     line {text[:70]!r}\n"
@@ -356,9 +394,10 @@ def main():
     joint = wanted.get("suffix-202f")
     print(f"PASS: {len(wanted)} runs reach the page in one span and shape as "
           f"the golden recorded, and {in_context} more do so inside "
-          f"{len(lines) - horizontal} whole lines, with their neighbours")
-    print(f"      {horizontal} more line(s) lay out horizontally as pinned, "
-          f"where the runs are marked inline so they keep a face that joins")
+          f"{len(lines) - pinned_horizontal} whole lines, with their neighbours")
+    print(f"      and on the horizontal path the renderer marks exactly the same "
+          f"runs in {horizontal} lines: {pinned_horizontal} pinned there, "
+          f"{horizontal - pinned_horizontal} vertical lines pushed there")
     print(f"      binary {binary.relative_to(ROOT) if binary.is_relative_to(ROOT) else binary}, "
           f"font {digest[:12]}")
     if joint:
