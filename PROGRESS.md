@@ -377,14 +377,23 @@ nothing in the core may foreclose it.
   column-budget gates green. The lessons romanize with `G`, which is why no
   gate ever saw it.
 
+- **A reader of the script has read the pages** (#7, layer 3), 2026-09-12, the
+  reader the issue names, in a browser over the network rather than a
+  screenshot. Read: lesson 6 of the lessons (built with vertext 0.2.0 and the
+  golden's pinned font, U+180E in 26 places) — "looks good"; and the U+202F
+  constructed lines — the bare run, the joint in brackets and the joint on the
+  horizontal path read as written. The fourth, the joint in a sentence, was
+  reported wrong, and the fault was beside the bichig rather than in it: the
+  romanization `(mongɣol-un)` split around its `ɣ`, which is #42. The comparison
+  columns with init/medi/fina switched off read as isolated letters, which is
+  what they are for.
+
+  Layers 1a, 1b and 2 said the font joins, the engine hands it whole words and
+  a browser applies the joining. This is the one that says the result is
+  writing, and it found a defect none of the three could see.
+
 ## Not sealed
 
-- **No one who reads the script has looked at a page yet** (#7, layer 3).
-  Layers 1a, 1b and 2 are sealed above: the font joins, the engine delivers a
-  whole word to it, and a real browser applies the joining. None of that is a
-  reader saying the page is writing rather than marks in the right places, and
-  that is Bayanasar himself. `needs-native-reader` on that issue means him
-  sitting down with a page, not a third party, so it blocks nothing else.
 - **`examples/render.sh` has been read, not run.** #15 asked for proof that it
   regenerates everything now removed. Half of that is proven by inspection —
   `examples/_extensions/` is a `cp -R` from `extensions/vertext`, which is the
