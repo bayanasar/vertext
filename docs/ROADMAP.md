@@ -17,17 +17,16 @@ The designs are real work and are kept in full. Only their shelf changed.
 |---|---|---|
 | [Quarto theme](roadmap/quarto-theme.md) | Partly real: `extensions/vertext-theme/` ships the SCSS and the nav collapse. The document describes more than exists. | — |
 | [chaji 侘寂 (Flutter)](roadmap/chaji.md) | Design only | — |
-| [Browser extension](roadmap/browser-extension.md) | Design only | `vertext-wasm` |
-| [Notes](roadmap/notes.md) | Design only | `vertext-wasm`, slot geometry |
+| [Browser extension](roadmap/browser-extension.md) | Design only | — |
+| [Notes](roadmap/notes.md) | Design only | — |
 | [Neovim plugin](roadmap/nvim.md) | Design only | — |
-| [Web IDE](roadmap/web-ide.md) | Design only | `vertext-wasm`, slot geometry |
-| [Browser](roadmap/browser.md) | Design only, last in the queue | `vertext-wasm`, slot geometry |
+| [Web IDE](roadmap/web-ide.md) | Design only | — |
+| [Browser](roadmap/browser.md) | Design only, last in the queue | — |
 
 The one shipped host is the Markdown/Quarto extension in
 [`extensions/vertext`](../extensions/vertext), which is in production.
 
-One piece of engine work stands between the design documents and any of the
-browser-side hosts: `vertext-wasm`, which wraps `vertext-core` and
-`vertext-html` so those hosts render byte-identically to the CLI. **Slot
-geometry** — slot positions and the two-way map to source offsets that every
-product placing a caret waits on — is in `vertext-core` as `source_map`.
+The engine work the browser-side hosts waited on is done: `vertext-wasm`
+renders byte-identically to the CLI, and **slot geometry** — slot positions and
+the two-way map to source offsets — is in `vertext-core` as `source_map`.
+`examples/wasm/caret.html` uses both.

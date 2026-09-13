@@ -236,6 +236,26 @@ jobs:
         run: |
           python3 tools/browser-golden.py --chrome /opt/chrome/chrome-linux64/chrome
 
+      # vertext-core stays free of I/O and DOM so a second host can share it
+      # unchanged, and vertext-wasm is that host. Its claim is exact: for the
+      # same input and flags the browser build returns the CLI's bytes. The
+      # target is added here rather than assumed, because the image is not
+      # built from this repository.
+      - name: The browser build renders what the CLI renders
+        id: wasm-parity
+        run: |
+          rustup target add wasm32-unknown-unknown
+          cargo build --release -p vertext-cli
+          cargo build --release -p vertext-wasm --target wasm32-unknown-unknown
+          node tools/wasm-parity.mjs
+
+      # The source map is only worth its API if a caret uses it. The caret page
+      # clicks every grapheme through the browser's own hit test and moves the
+      # textarea caret onto every slot.
+      - name: A caret moves between the source and the vertical strip
+        id: wasm-caret
+        run: python3 tools/wasm-caret.py --chrome /opt/chrome/chrome-linux64/chrome
+
       # A red run on this instance says "red" and nothing else: `actions/runs`,
       # `actions/jobs` and `actions/workflows` all 404 on Forgejo 11.0.16, and
       # `actions/tasks` carries status without log text. So locating a failure

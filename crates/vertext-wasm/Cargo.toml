@@ -1,0 +1,18 @@
+[package]
+name = "vertext-wasm"
+description = "The vertext renderer for the browser: the CLI's HTML, byte for byte, and the source map for carets"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+readme.workspace = true
+keywords.workspace = true
+categories.workspace = true
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+vertext-core.workspace = true
+vertext-html.workspace = true

@@ -30,9 +30,9 @@ markdown  ──► vertext.lua ──► vertext (binary) ──► vertext-htm
 | Transport | `crates/vertext-cli` | 37 lines of stdin to stdout, so the filter can shell out |
 | Page shape | `extensions/vertext-theme/` | SCSS that sizes the page around the columns |
 
-The core is pure so that a future `vertext-wasm` host — browser extension, web
-IDE — shares it byte for byte rather than growing a second, subtly different
-layout engine. Anything in the core that cannot cross `wasm32` is a design
+The core is pure so that the `vertext-wasm` host — and through it a browser
+extension or a web IDE — shares it byte for byte rather than growing a second,
+subtly different layout engine; `tools/wasm-parity.mjs` checks the bytes. Anything in the core that cannot cross `wasm32` is a design
 smell to be quarantined in an adapter.
 
 ## The unit of layout is a grapheme cluster

@@ -171,6 +171,11 @@ impl SourceMap {
         &self.slots
     }
 
+    /// How many columns the layout has, including columns with no slots.
+    pub fn columns(&self) -> usize {
+        self.columns.len()
+    }
+
     /// The source of slot `index` in `column`.
     pub fn slot(&self, column: usize, index: usize) -> Option<&SlotSource> {
         let (_, first) = self.columns.get(column)?;

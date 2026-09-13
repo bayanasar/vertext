@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>vertext caret</title>
+<link rel="stylesheet" href="vertext.css">
+<style>
+  body { font-family: system-ui, sans-serif; margin: 1rem; display: grid; gap: 1rem;
+         grid-template-columns: minmax(12rem, 22rem) 1fr; align-items: start; }
+  textarea { width: 100%; height: 22rem; font: 16px/1.5 system-ui, sans-serif; box-sizing: border-box; }
+  #strip .vertext { min-block-size: 22rem; }
+  #strip span.here { outline: 2px solid #c33; outline-offset: 1px; }
+  #status { grid-column: 1 / -1; font: 13px ui-monospace, monospace; color: #555; }
+  @media (max-width: 40rem) { body { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<textarea id="source" spellcheck="false">ᠮᠣᠩᠭᠣᠯ&#x202F;ᠤᠨ ᠪᠢᠴᠢᠭ
+山川异域，风月同天。
+寄诸佛子，共结来缘。</textarea>
+<div id="strip"></div>
+<div id="status"></div>
+<script type="module">
+// A caret host for vertext: the textarea is the document, the strip is its
+// vertical rendering, and the caret moves between them in both directions
+// through the source map the wasm module exports.
+//
+// Click a glyph in the strip and the textarea caret lands on that character.
+// Move the textarea caret and the slot it stands in is outlined. A Mongolian
+// run is one slot, and the click still lands between the letters clicked.
+import { load, utf16ToByte, byteToUtf16 } from './vertext.mjs';
+
+const vertext = await load(await (await fetch('vertext_wasm.wasm')).arrayBuffer());
+const source = document.getElementById('source');
+const strip = document.getElementById('strip');
+const status = document.getElementById('status');
+const graphemes = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
+let map = null;
+
+function slotElement(column, index) {
+  return strip.querySelectorAll('.vertext-column')[column]?.children[index] ?? null;
+}
+
+function render() {
+  strip.innerHTML = vertext.render(source.value);
+  map = vertext.map(source.value);
+  status.textContent = map ? '' : 'no single vertical layout to map (markers, or horizontal prose)';
+  follow();
+}
+
+// Strip -> source: which slot was hit, and which grapheme inside it.
+function caretAtPoint(x, y) {
+  const range = document.caretRangeFromPoint?.(x, y);
+  const span = range?.startContainer.parentElement?.closest('#strip span');
+  if (!map || !span) return null;
+  const columnEl = span.parentElement;
+  const column = [...strip.querySelectorAll('.vertext-column')].indexOf(columnEl);
+  const index = [...columnEl.children].indexOf(span);
+  const slot = map.columns[column]?.[index];
+  if (!slot) return null;
+  // The code units before the hit, counted as graphemes; an inserted hyphen
+  // has no source position, so the count stops at the slot's own graphemes.
+  const before = span.textContent.slice(0, range.startOffset);
+  const grapheme = Math.min([...graphemes.segment(before)].length, slot.graphemes);
+  return { column, index, grapheme };
+}
+
+strip.addEventListener('click', event => {
+  const caret = caretAtPoint(event.clientX, event.clientY);
+  if (!caret) return;
+  const byte = vertext.offset(caret);
+  if (byte === null) return;
+  const at = byteToUtf16(source.value, byte);
+  source.focus();
+  source.setSelectionRange(at, at);
+  follow();
+});
+
+// Source -> strip: outline the slot the caret stands in.
+function follow() {
+  strip.querySelectorAll('span.here').forEach(s => s.classList.remove('here'));
+  if (!map) return;
+  const caret = vertext.caret(utf16ToByte(source.value, source.selectionStart));
+  if (!caret) return;
+  slotElement(caret.column, caret.index)?.classList.add('here');
+  status.textContent = `byte ${utf16ToByte(source.value, source.selectionStart)} -> column ${caret.column}, slot ${caret.index}, grapheme ${caret.grapheme}`;
+}
+
+source.addEventListener('input', render);
+document.addEventListener('selectionchange', () => { if (document.activeElement === source) follow(); });
+render();
+
+// ?selftest: click every grapheme of every slot through the real browser hit
+// test, and move the textarea caret to every slot, then report what came back.
+if (new URLSearchParams(location.search).has('selftest')) {
+  await document.fonts.ready;
+  await new Promise(r => setTimeout(r, 100));
+  const text = source.value, fails = [];
+  let clicks = 0, follows = 0;
+  map.columns.forEach((column, c) => column.forEach((slot, i) => {
+    const span = slotElement(c, i);
+    const node = span.firstChild;
+    let unit = 0;
+    for (const { segment } of graphemes.segment(node.data)) {
+      if (clicks >= 2000) break;
+      const g = [...graphemes.segment(node.data.slice(0, unit))].length;
+      const r = document.createRange();
+      r.setStart(node, unit); r.setEnd(node, unit + segment.length);
+      const box = r.getBoundingClientRect();
+      unit += segment.length;
+      if (g >= slot.graphemes || !box.width || !box.height) continue;
+      // Aim at the leading edge of the glyph, where the browser puts the
+      // caret before it rather than after.
+      const vertical = span.closest('.vertext-column') && getComputedStyle(span).writingMode !== 'horizontal-tb';
+      const x = box.left + box.width * (vertical ? 0.5 : 0.2);
+      const y = box.top + box.height * (vertical ? 0.2 : 0.5);
+      strip.dispatchEvent(new MouseEvent('click', { clientX: x, clientY: y, bubbles: true }));
+      const expected = byteToUtf16(text, vertext.offset({ column: c, index: i, grapheme: g }));
+      clicks++;
+      if (source.selectionStart !== expected) {
+        fails.push(`click on ${c}/${i}/${g} (${JSON.stringify(segment)}) put the caret at ${source.selectionStart}, not ${expected}`);
+      }
+    }
+    source.focus();
+    const start = byteToUtf16(text, slot.start);
+    source.setSelectionRange(start, start);
+    follow();
+    follows++;
+    if (!span.classList.contains('here')) fails.push(`caret at ${start} did not outline slot ${c}/${i}`);
+  }));
+  const pre = document.createElement('pre');
+  pre.id = 'selftest';
+  pre.textContent = JSON.stringify({ clicks, follows, fails: fails.slice(0, 20), failed: fails.length });
+  document.body.appendChild(pre);
+}
+</script>
+</body>

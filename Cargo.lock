@@ -29,3 +29,11 @@ version = "0.2.0"
 dependencies = [
  "vertext-core",
 ]
+
+[[package]]
+name = "vertext-wasm"
+version = "0.2.0"
+dependencies = [
+ "vertext-core",
+ "vertext-html",
+]

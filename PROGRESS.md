@@ -10,8 +10,8 @@ stage: Quarto path works end to end; Mongolian joining proven in the font, prove
 
 A vertical-text layout engine (`vertext-core`), a renderer (`vertext-html`), and
 a 37-line stdin→stdout binary (`vertext-cli`) that a Quarto Lua filter shells
-out to. The core is pure layout so a future `vertext-wasm` host can share it
-byte for byte. CJK ships first; Mongolian `vertical-lr` is the destination, and
+out to, and `vertext-wasm`, the same renderer for a browser. The core is pure
+layout so that the two hosts share it byte for byte. CJK ships first; Mongolian `vertical-lr` is the destination, and
 nothing in the core may foreclose it.
 
 ## Sealed
@@ -479,13 +479,24 @@ nothing in the core may foreclose it.
   is refused. `cargo build -p vertext-core --target wasm32-unknown-unknown`
   builds.
 
+- **The browser build renders the CLI's bytes, and a caret uses the source
+  map** (#13, #12). `vertext-wasm` exports `render_document` and the source map
+  through a C ABI with no imports (129KB release). `node tools/wasm-parity.mjs`:
+  895 renders — the 160 corpus runs, the 13 lines, and wire-protocol, CRLF, code
+  and escaping inputs, under 5 flag sets — equal to `target/release/vertext`
+  byte for byte, and on the 353 mapped strips one span per slot with 3239 carets
+  converting to offsets and back. Red when the glue sends the page flag as the
+  wrong bit, and when the wasm ignores it. `python3 tools/wasm-caret.py`: in
+  headless Chrome, `examples/wasm/caret.html` clicks each of 35 graphemes
+  through `caretRangeFromPoint` and the textarea caret lands on that character,
+  including each letter inside a 9-grapheme Mongolian run; 23 caret moves outline
+  their slot. Red when the grapheme index is fixed at 0: every click inside the
+  run lands at its start. Both run in CI.
+
 ## Not sealed
 
 
 
-- **No host consumes the source map yet** (#12). It is tested, not used; the
-  first consumer is meant to be the wasm host (#13), which puts a caret in a
-  browser. Until one does, the API shape is a guess at its callers.
 - **`examples/render.sh` has been read, not run.** #15 asked for proof that it
   regenerates everything now removed. Half of that is proven by inspection —
   `examples/_extensions/` is a `cp -R` from `extensions/vertext`, which is the

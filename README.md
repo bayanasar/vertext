@@ -289,6 +289,7 @@ it is the narrow space its name describes and keeps its own slot.
 | `vertext-core` | Pure layout engine. Text in, positioned slots out. No I/O, no DOM — it must cross `wasm32` unchanged. |
 | `vertext-html` | Shared `Layout` → HTML renderer and the mode protocol. Every HTML host goes through it, so the slot-to-class mapping exists once. |
 | `vertext-cli` | Thin stdin-to-stdout shell over `vertext-html`. |
+| `vertext-wasm` | The same renderer for the browser, through a plain C ABI with no imports: byte-identical HTML to the CLI, and the source map for carets. Glue and a caret demo in `examples/wasm/`. |
 
 **One host ships.** The Markdown/Quarto extension in `extensions/vertext` is
 in production. Every other adapter is a design document and no code — they are
@@ -299,8 +300,8 @@ indexed in [`docs/ROADMAP.md`](docs/ROADMAP.md), with what each is waiting on:
 | Markdown / Quarto extension (`extensions/vertext`) | **Done** — shipping in production |
 | [Quarto theme](docs/roadmap/quarto-theme.md) | Partly real — `extensions/vertext-theme/` ships the SCSS and the nav collapse; the design describes more |
 | [chaji 侘寂 (Flutter)](docs/roadmap/chaji.md) | Design only — layout theme over `vertext-core`, sibling to the wabisabi widget kit |
-| [Browser extension](docs/roadmap/browser-extension.md) | Design only — blocked on `vertext-wasm` |
-| [Notes](docs/roadmap/notes.md) | Design only — blocked on `vertext-wasm` and slot geometry |
+| [Browser extension](docs/roadmap/browser-extension.md) | Design only — `vertext-wasm` now exists |
+| [Notes](docs/roadmap/notes.md) | Design only — `vertext-wasm` and slot geometry now exist |
 | [Neovim plugin](docs/roadmap/nvim.md) | Design only — an honest lossy projection onto the terminal grid |
 | [Web IDE](docs/roadmap/web-ide.md) | Design only |
 | [Browser](docs/roadmap/browser.md) | Design only, last in the queue |
@@ -311,11 +312,11 @@ so other Pandoc-based generators are a small port; non-Pandoc generators
 (Hugo's goldmark, remark, python-markdown) each need their own adapter over
 the same wire protocol.
 
-One crate is still ahead: `vertext-wasm` wraps `vertext-core` and
-`vertext-html` so the browser targets render byte-identically to the CLI, and
-unblocks three products. **Slot geometry** — slot positions and the two-way map
-to source offsets that every product placing a caret needs — is in
-`vertext-core` now, and has no host consuming it yet.
+The two pieces of engine work the browser-side products waited on are in:
+`vertext-wasm` renders byte-identically to the CLI, and **slot geometry** — slot
+positions and the two-way map to source offsets — is in `vertext-core`.
+`examples/wasm/caret.html` is the first host to use both: a textarea and its
+vertical rendering, with the caret moving between them.
 
 ## Tests
 

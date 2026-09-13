@@ -12,6 +12,7 @@ crates/vertext-core     pure layout: text + style in, positioned slots out
         │               no I/O, no DOM, nothing that cannot cross wasm32
 crates/vertext-html     slots ──► HTML columns and CSS
 crates/vertext-cli      37 lines: stdin ──► stdout, installed as `vertext`
+crates/vertext-wasm     the same HTML in a browser, plus the caret source map
         │
 extensions/vertext/vertext.lua      Quarto filter; shells out to the binary
 extensions/vertext-theme/           SCSS; sizes the page around the columns
@@ -44,7 +45,8 @@ What holds across commits:
 
 - **Quarto is the only shipped host.** Seven more adapters have been designed
   and none written; the designs are indexed in [`ROADMAP.md`](ROADMAP.md).
-  `vertext-wasm` does not exist yet; the core is kept pure so that it can.
+  `vertext-wasm` is the second consumer of the core, and renders the CLI's
+  bytes; `examples/wasm/caret.html` is a demo, not a shipped host.
 - **`kele` cannot drift from the engine; `alcuka/docs` can.** The binding table
   above is the reason, and it is structural rather than a passing state: two
   independent pins have already drifted apart once.

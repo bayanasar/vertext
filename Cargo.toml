@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/vertext-core", "crates/vertext-html", "crates/vertext-cli"]
+members = ["crates/vertext-core", "crates/vertext-html", "crates/vertext-cli", "crates/vertext-wasm"]
 resolver = "2"
 
 # Shared metadata lives here so the three crates cannot drift apart. They are
