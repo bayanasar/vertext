@@ -26,8 +26,8 @@ The designs are real work and are kept in full. Only their shelf changed.
 The one shipped host is the Markdown/Quarto extension in
 [`extensions/vertext`](../extensions/vertext), which is in production.
 
-Two pieces of engine work stand between the design documents and any of the
-browser-side hosts. `vertext-wasm` wraps `vertext-core` and `vertext-html` so
-those hosts render byte-identically to the CLI. **Slot geometry** — retaining
-slot positions and the map back to a source offset — is what every product
-that lets a reader place a caret is waiting on.
+One piece of engine work stands between the design documents and any of the
+browser-side hosts: `vertext-wasm`, which wraps `vertext-core` and
+`vertext-html` so those hosts render byte-identically to the CLI. **Slot
+geometry** — slot positions and the two-way map to source offsets that every
+product placing a caret waits on — is in `vertext-core` as `source_map`.

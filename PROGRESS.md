@@ -463,8 +463,29 @@ nothing in the core may foreclose it.
   a sixth, and the measuring tool now refuses to report when its probe does not
   advance by the cell.
 
+- **Every slot maps back to its source, and a caret moves both ways** (#12).
+  `vertext_core::source_map` walks a layout over the text it came from and
+  records each slot's column, position, byte range and grapheme boundaries;
+  `SourceMap::caret` and `SourceMap::offset` convert between a source offset
+  and `(column, slot, grapheme)`. `cargo test -p vertext-core`: on 20 texts
+  covering CRLF and blank lines, U+202F joints and trailing separators, U+180E,
+  a variation selector, ZWJ emoji, combining marks, buffered connectors, split
+  long words and IPA/Cyrillic words, every slot's range holds exactly its text,
+  the uncovered bytes are exactly the line breaks, and every grapheme boundary
+  goes to a distinct caret and back. A Mongolian run of 9 graphemes is one slot
+  with 9 caret positions inside it. The only character layout adds, the hyphen
+  that splits a long word, is flagged and has no bytes. A layout that changes a
+  tab into a space fails both property tests, and a layout of a different text
+  is refused. `cargo build -p vertext-core --target wasm32-unknown-unknown`
+  builds.
+
 ## Not sealed
 
+
+
+- **No host consumes the source map yet** (#12). It is tested, not used; the
+  first consumer is meant to be the wasm host (#13), which puts a caret in a
+  browser. Until one does, the API shape is a guess at its callers.
 - **`examples/render.sh` has been read, not run.** #15 asked for proof that it
   regenerates everything now removed. Half of that is proven by inspection —
   `examples/_extensions/` is a `cp -R` from `extensions/vertext`, which is the

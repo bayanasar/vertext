@@ -230,6 +230,18 @@ because progression is a property of the script, not a property of the engine.
 The renderer stamps it on the root as `data-column-advance` and the stylesheet
 follows.
 
+### Source offsets and carets
+
+A slot carries what it shows, not where that text came from, so
+`vertext_core::source_map(input, &layout)` (or `layout_with_source_map`)
+returns the other half: every slot's column, position and source byte range,
+and a caret that moves both ways between a source offset and a
+`(column, slot, grapheme)` position. A Mongolian run is one slot but many
+caret positions, because a writer edits letters. The hyphen the layout adds to
+split a long word is flagged and has no source bytes. The geometry is relative:
+visual lines inside a column and positions on the page belong to the host,
+which breaks the lines.
+
 ### What the engine does not decide
 
 **Line breaking, and with it the kinsoku rules, belong to the host.** The core
@@ -299,12 +311,11 @@ so other Pandoc-based generators are a small port; non-Pandoc generators
 (Hugo's goldmark, remark, python-markdown) each need their own adapter over
 the same wire protocol.
 
-Two crates are still ahead. `vertext-wasm` wraps `vertext-core` and
+One crate is still ahead: `vertext-wasm` wraps `vertext-core` and
 `vertext-html` so the browser targets render byte-identically to the CLI, and
-unblocks three products. **Slot geometry** — retaining slot positions and the
-map back to a source offset — is the other, and every product that lets a
-reader place a caret is blocked on it: Notes, the Web IDE, the Neovim cursor
-mapping, and editable text in chaji.
+unblocks three products. **Slot geometry** — slot positions and the two-way map
+to source offsets that every product placing a caret needs — is in
+`vertext-core` now, and has no host consuming it yet.
 
 ## Tests
 

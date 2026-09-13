@@ -11,6 +11,9 @@
 
 use unicode_segmentation::UnicodeSegmentation;
 
+mod geometry;
+pub use geometry::{layout_with_source_map, source_map, Caret, SlotSource, SourceMap, SourceMapError};
+
 /// Which way successive columns advance. This is a property of the *script*,
 /// not of "vertical text": CJK columns advance right-to-left, traditional
 /// Mongolian advances left-to-right. Hosts must read it from the [`Layout`]
