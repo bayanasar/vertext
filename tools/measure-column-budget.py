@@ -2,7 +2,7 @@
 """Measure what column length each mode actually gives, in a real browser.
 
 Not a gate. Issue #26 asks for a measurement before anyone changes the number,
-because changing it moves every page already rendered — kele's pixel seal
+because changing it moves every page already rendered — the lesson site's pixel seal
 included — and the current `34em` has no provenance: it was written down and
 never touched, not measured and not taken from a standard.
 

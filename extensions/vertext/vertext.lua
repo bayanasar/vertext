@@ -416,7 +416,7 @@ local SCROLL_SCRIPT = [[
 -- of who actually knows which element the depth sizes:
 --
 --   1. `[data-vertext-edge="nav"]` -- a host that emits its own chrome and can
---      mark it. kele does.
+--      mark it. The lesson site does.
 --   2. `--vertext-nav-target`, a selector published beside the depth by a theme
 --      that sizes Quarto's TEMPLATE output, which a filter cannot reach to give
 --      an attribute to. Same block, same contract, so a theme that moves its

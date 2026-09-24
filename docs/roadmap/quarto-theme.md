@@ -98,7 +98,7 @@ Quarto-specific presentation on top.
   edit, the theme has failed its one requirement.
 - **Degrade like the filter does.** No binary means no vertical layout, and a
   rotated chrome around horizontal text is worse than doing nothing — the exact
-  failure that reached jishe.org. The theme's chrome rotation must be gated on
+  failure that reached a live site. The theme's chrome rotation must be gated on
   a real render, the same way both page styles now are.
 - **Progression is data.** Read it; never hardcode right-to-left. A theme that
   fixes the direction decides permanently which literatures it can carry.

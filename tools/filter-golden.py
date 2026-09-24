@@ -25,7 +25,7 @@ How this runs the filter without Quarto
 `extensions/vertext/vertext.lua` is a Quarto extension: it calls `quarto.*` for
 three things, so plain pandoc cannot load it. `tools/quarto-shim.lua` supplies
 those three -- and nothing else -- then `dofile`s the real filter, unmodified.
-That is the same route urtu took by hand when the U+202F crossing was recorded
+That is the same route a reviewer took by hand when the U+202F crossing was recorded
 in PROGRESS; this makes it a gate instead of a memory.
 
 pandoc itself: Debian's `pandoc` (2.17 on the CI image) is used, not Quarto's

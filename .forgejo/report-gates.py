@@ -8,7 +8,7 @@ On this instance a failed run is legible as "failed" and nothing else. The
 on Forgejo 11.0.16, and `actions/tasks` -- the one that answers -- carries a
 status with no log text. Locating a failure has therefore cost, twice, work that
 should not have been necessary: once a manual re-run of the entire job inside
-`azura-ci:latest` to discover it was the fifth step (`6e416d3`), and once an
+the CI image to discover it was the fifth step (`6e416d3`), and once an
 argument from step timings to place a deliberate red (#28). Every future red
 would bill the same again, to the reviewer rather than to whoever broke it.
 

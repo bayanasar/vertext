@@ -44,7 +44,7 @@ later one lost a slot. A regression that split a run only in the `ᠰᠠᠶᠢ�
 shape would pass all 168.
 
 So the second half of this gate takes whole lines -- ten picked by hand from the
-lessons with a reason each, three built for the shapes kele does not contain --
+lessons with a reason each, three built for the shapes the lessons do not contain --
 and asserts that the Mongolian spans the binary emits are EXACTLY the runs in
 that line, in order, byte for byte. Nothing split, nothing merged, nothing
 dropped, nothing reordered. Then every run that carries letters is shaped and
@@ -101,7 +101,7 @@ def texts_from_golden(golden):
 
 
 def lines_from_golden(golden):
-    """Whole lines -- kele's, frozen in the golden, plus the constructed ones.
+    """Whole lines -- the lessons', frozen in the golden, plus the constructed ones.
 
     Each carries the layout path it must take. That is pinned rather than
     discovered because the strong assertion below only applies to one of them:

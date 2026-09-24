@@ -20,7 +20,7 @@ What it pins
             expectation here is void, which is why the checksum is a hard gate
             rather than a note. OFL 1.1, so it ships with the tests; a golden
             nobody else can run is not a seal.
-  corpus    Every distinct Mongolian run in the kele lessons, frozen into
+  corpus    Every distinct Mongolian run in the lesson corpus, frozen into
             goldens/shaping.json at the commit named there. Frozen, not read
             live: CI checks out vertext alone, and a golden that needs a
             sibling checkout is a golden that does not run.
@@ -32,7 +32,7 @@ Usage
 -----
     python3 tools/shaping-golden.py            # check, exit 1 on any diff
     python3 tools/shaping-golden.py --update    # rewrite the golden
-    python3 tools/shaping-golden.py --update --corpus ../kele   # re-extract too
+    python3 tools/shaping-golden.py --update --corpus ../lessons   # re-extract too
 
 Needs uharfbuzz. CI installs it into a venv; see .forgejo/workflows/ci.yml.
 """
@@ -87,7 +87,7 @@ CASES = [
 # READ THIS BEFORE EDITING THE TABLE. It is provenance and rationale only: the
 # values the gates actually run on -- the line's text AND its pinned path -- are
 # frozen into `goldens/shaping.json` and read from there. Changing a `path` or a
-# line number here changes nothing until `--update --corpus <a kele checkout>`
+# line number here changes nothing until `--update --corpus <a lessons checkout>`
 # re-extracts, and until then the gate follows the JSON while this table says
 # something else. That is the shape of every drift this repository has paid for.
 LINES = [
@@ -103,7 +103,7 @@ LINES = [
     ("lessons/04.md", 81, "vertical", "a bracketed clause with U+180E, then Han, then Latin"),
 ]
 
-# The shapes kele cannot supply. Two of them are absences worth stating:
+# The shapes the lessons cannot supply. Two of them are absences worth stating:
 # NOT ONE line in the lessons contains U+202F -- the same hole that made CASES
 # necessary above -- and not one line STARTS with bichig, because every line
 # starts with a table pipe, a bold speaker or a Han label. Both edges are the
@@ -207,7 +207,7 @@ def runs_in(text):
 
 
 def extract(corpus_root):
-    """Every distinct Mongolian run in the kele lessons, in first-seen order."""
+    """Every distinct Mongolian run in the lesson corpus, in first-seen order."""
     root = pathlib.Path(corpus_root)
     files = sorted((root / "lessons").glob("*.md")) + [root / "index.md"]
     runs = {}
@@ -238,7 +238,7 @@ def extract_lines(corpus_root):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--update", action="store_true")
-    ap.add_argument("--corpus", help="path to a kele checkout, to re-extract")
+    ap.add_argument("--corpus", help="path to a lessons checkout, to re-extract")
     ap.add_argument("--prove", action="store_true",
                     help="show the golden can go red: shape with joining OFF")
     args = ap.parse_args()
@@ -257,11 +257,11 @@ def main():
 
     if args.corpus:
         runs = extract(args.corpus)
-        # Name the commit, not the path: "../kele" says nothing a year from now
+        # Name the commit, not the path: "../lessons" says nothing a year from now
         # about which lessons these 160 runs were taken from.
         head = subprocess.run(["git", "-C", args.corpus, "rev-parse", "--short", "HEAD"],
                               capture_output=True, text=True).stdout.strip() or "unknown"
-        corpus = {"source": "kele", "commit": head, "runs": list(runs),
+        corpus = {"source": "lessons", "commit": head, "runs": list(runs),
                   "lines": extract_lines(args.corpus)}
     else:
         corpus = old.get("corpus", {"source": None, "runs": []})
@@ -287,7 +287,7 @@ def main():
         return 0
 
     if not old:
-        sys.exit("no golden yet -- run with --update --corpus ../kele")
+        sys.exit("no golden yet -- run with --update --corpus ../lessons")
 
     if args.prove:
         # A gate that has never gone red is a gate whose every green is

@@ -1,14 +1,13 @@
 # Continuous integration on the Forgejo instance.
 #
-# `runs-on: anton` is the runner registered on that machine, and it is NOT
-# host mode: its label is `anton:docker://azura-ci:latest`, so a job runs
-# inside that image and sees the image's toolchain, not the machine's. This
+# The runner named in `runs-on` is NOT host mode: its label maps to a docker
+# image, so a job runs inside that image and sees the image's toolchain, not the machine's. This
 # header said the opposite until 2026-09-03, and the first step written to its
 # word went red — the image carries cargo 1.98, node 18 and python3.11, but
 # not python3-venv, which Debian splits out of python3 along with pip.
 #
 # The rule the old header stated is still the right one and now has teeth: a
-# step must bring whatever it needs. `azura-ci:latest` is not built from
+# step must bring whatever it needs. The CI image is not built from
 # anything in this repo, so nothing here may assume its contents — and a step
 # that installs what it is missing keeps working if the label ever does go
 # back to host mode.
@@ -152,8 +151,8 @@ jobs:
       #
       # Quarto is not needed to run the filter. It calls `quarto.*` in exactly
       # three places, and tools/quarto-shim.lua supplies those three and nothing
-      # else, then loads the real filter unmodified -- the same route urtu took
-      # by hand when the U+202F crossing went into PROGRESS.
+      # else, then loads the real filter unmodified -- the same route a reviewer
+      # took by hand when the U+202F crossing went into PROGRESS.
       #
       # Debian's pandoc, not a pinned 3.x: both were run against these fixtures
       # and the HTML came back byte-identical, so the apt one (~5s) is bought
@@ -173,7 +172,7 @@ jobs:
       # Everything above this line proves things about text. The gate below is
       # the first one that asks a browser, which is what readers use -- and it
       # is the step this repository spent the longest not having, because
-      # `azura-ci:latest` carries no browser and no npx. It brings its own.
+      # the CI image carries no browser and no npx. It brings its own.
       #
       # Three things were measured inside that image before this was written,
       # each of which would otherwise cost an afternoon:
@@ -259,7 +258,7 @@ jobs:
       # A red run on this instance says "red" and nothing else: `actions/runs`,
       # `actions/jobs` and `actions/workflows` all 404 on Forgejo 11.0.16, and
       # `actions/tasks` carries status without log text. So locating a failure
-      # has cost a manual re-run of the whole job inside azura-ci:latest once
+      # has cost a manual re-run of the whole job inside the CI image once
       # (6e416d3, where it turned out to be step 5), and an argument from step
       # timings once (#28's deliberate red) — a bill payable again on every
       # future red, by whoever is reviewing rather than by whoever broke it.

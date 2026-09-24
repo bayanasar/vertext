@@ -2,7 +2,7 @@
 
 <!-- progress -->
 updated: 2026-09-12
-owner: tata
+owner: maintainer
 stage: Quarto path works end to end; Mongolian joining proven in the font, proven to reach the page in one piece, and proven by CI to be applied by a real browser — no reader has looked at a page yet
 <!-- /progress -->
 
@@ -20,15 +20,15 @@ nothing in the core may foreclose it.
 - **U+202F crosses the pandoc → filter → binary boundary.** pandoc 3.9 → the
   real `vertext.lua` (4 `quarto.*` calls shimmed) → the real binary emits
   `ᠮᠣᠩᠭᠤᠯ ᠤᠨ` as ONE `vertext-mongolian` span; the old engine emitted two with a
-  `vertext-space` between. Run by urtu on review. That is the crossing, not the
+  `vertext-space` between. Run by a reviewer. That is the crossing, not the
   pipeline — the first real `quarto render` is the release-archive check below.
-- **The collapse control is clickable.** `kele/tools/check-nav-toggle.py`,
+- **The collapse control is clickable.** the lesson site's `tools/check-nav-toggle.py`,
   headless Chrome 152, real `Input.dispatchMouseEvent` — theme-shaped page
-  (strip 201→59, columns 549→691) and kele's own lesson (96→34, 486→548), both
+  (strip 201→59, columns 549→691) and one of its own lessons (96→34, 486→548), both
   PASS. Same rig on `bedecdb`: `FAIL: strip did not shrink (757 → 757)`. A rig
   that cannot reproduce the failure is not evidence that it is gone.
 - **CI runs on every pull request, and the gate has been shown to fail.** The
-  `anton` runner (a container, not the host — see below),
+  runner (a container, not the host — see below),
   `.forgejo/workflows/ci.yml`: run **3** green on `673692f9`, run **4** red on
   `8067c09e` with `MODE_CODE`'s assertion deliberately changed to
   `'\u{E0FF}'`, run **5** green again on `67afac27` after the revert. Both
@@ -49,8 +49,8 @@ nothing in the core may foreclose it.
 - `npx sass@1.77.8` — theme compiles clean, `--vertext-nav-target` published.
 
 - **The bichig joins, and a gate says so.** `tools/shaping-golden.py`,
-  172 runs — 160 distinct Mongolian runs lifted from the kele lessons at
-  `kele@409d212`, plus 12 constructed cases for the two in-word separators.
+  172 runs — 160 distinct Mongolian runs lifted from the lesson corpus at
+  `409d212`, plus 12 constructed cases for the two in-word separators.
   `PASS`. The golden records the positional form the shaper picks for each
   letter (`uni1828.N.init uni1823.O.medi uni182E.M.fina` for `ᠨᠣᠮ`), not a
   picture, so nobody has to read bichig to run it. Shown red three ways:
@@ -65,7 +65,7 @@ nothing in the core may foreclose it.
   which is issue #7's layer 1b.
 
 - **And the engine delivers the whole word to it** (#7, layer 1b).
-  `tools/delivery-golden.py`, run by CI: 168 single-run strings — the 160 kele
+  `tools/delivery-golden.py`, run by CI: 168 single-run strings — the 160 corpus
   corpus runs plus the 8 constructed cases that contain no plain space — go
   through the release binary, and the text is taken back OUT of the emitted
   `vertext-mongolian` span before it is shaped. Exactly one span per run,
@@ -89,21 +89,21 @@ nothing in the core may foreclose it.
 
   **And the same question in context** (#29). Those 168 strings arrive with no
   neighbours, so what they pin is that a LONE run is not cut — while #4 and #3
-  were both adjacency defects. Ten whole lines from kele at `409d212`, a reason
+  were both adjacency defects. Ten whole lines from the lessons at `409d212`, a reason
   recorded per line, plus four built for shapes the lessons lack, now go through
   the same binary: the spans it emits must be EXACTLY that line's runs, in
   order, byte for byte, and each is shaped against the expectation the golden
   already holds. 38 runs in context, no new expectations, because the corpus was
   extracted from those same files.
 
-  Shown red by a cut that fires only next to a FULL-WIDTH bracket, the one kele
+  Shown red by a cut that fires only next to a FULL-WIDTH bracket, the one the lessons
   writes: `cargo test` 59 green, shaping 172 green, browser 168 green, the 168
   bare runs green, **the lines red on 3**. The ASCII version of the same cut is
   caught by `the_measure_counts_the_slots_the_layout_produces` on
   `sayin(ᠰᠠᠶᠢᠨ) good`, which is the boundary: this adds the brackets no test
   spells out, on real lines.
 
-  Two absences in kele, both of them edges, are covered by constructed lines
+  Two absences in the lessons, both of them edges, are covered by constructed lines
   instead: not one line contains U+202F, and not one line STARTS with bichig.
 
   The U+202F half of that was false until #39. Two of the three constructed
@@ -176,7 +176,7 @@ nothing in the core may foreclose it.
   `.vertext-mongolian` and the 155 vertical runs report identical instead.
 
   **And it runs in CI** (#28), which it did not when it was written.
-  `azura-ci:latest` has no browser and no `npx`, so the step brings its own:
+  The CI image has no browser and no `npx`, so the step brings its own:
   chrome-for-testing at a pinned version, cached by that version, plus the 14
   apt packages holding the 16 shared libraries it is otherwise missing. Shown
   red the way #20 requires — run **23** green on `3190420` with the step added,
@@ -260,7 +260,7 @@ nothing in the core may foreclose it.
   `tools/filter-golden.py` runs the real filter under plain pandoc.
   `tools/quarto-shim.lua` supplies the three `quarto.*` functions the filter
   calls — `doc.add_html_dependency`, `doc.is_format`, `log.warning` — and
-  nothing else, then `dofile`s the filter unmodified. That is the route urtu
+  nothing else, then `dofile`s the filter unmodified. That is the route a reviewer
   took by hand for the U+202F crossing recorded above; this makes it a gate
   rather than a memory. 160 corpus runs cross the whole chain as one span each
   and shape as the golden recorded, every block kind the wire encodes comes back
@@ -329,15 +329,15 @@ nothing in the core may foreclose it.
   matched that sentence instead of the code. It reported the hook present on a
   stylesheet stripped of it. Comments are removed before anything is read now.
 
-- **The `anton` runner is a container, and the whole job has been run inside
-  it.** Its registration reads `anton:docker://azura-ci:latest`, so a job sees
+- **The runner is a container, and the whole job has been run inside
+  it.** Its label maps to a docker image, so a job sees
   that image's toolchain — cargo 1.98, node 18, python3.11 — and not the
   machine's. `ci.yml`'s header asserted the opposite ("there is no container")
   from the day it was written, and the first step written to its word went red:
   runs 15 and 16 (tasks 70, 71) failed on `a38f3bc` and `7bf49cc`, because
   Debian splits `venv` and `pip` out of `python3` into `python3-venv` and the
   image does not carry it. Every one of the five steps has now been executed
-  against `azura-ci:latest` on this machine, in order, and the shaping step
+  against the CI image on this machine, in order, and the shaping step
   installs what it is missing before using it. The header says what the runner
   is.
 
@@ -354,7 +354,7 @@ nothing in the core may foreclose it.
   bootstrap, popper, tippy, clipboard and anchor carrying no licence or
   attribution). Three things were checked before they went, not after:
   the committed filter was blob `9938d18b` against a source at `0c24c158`, and
-  `9938d18b` is the same revision `alcuka/docs` vendored — the drift was real
+  `9938d18b` is the same revision a downstream documentation site vendored — the drift was real
   and was the known-bad one; `diff -rq` puts it in `vertext.lua` alone, with
   `_extension.yml` and `vertext.css` identical; and nothing in the repository
   reads either path — the one hit for `_extensions` in a test is
@@ -628,7 +628,7 @@ nothing in the core may foreclose it.
   `ci.yml` now carries an `id`, and a last step running under `if: always()`
   writes one commit status per gate through the API that does answer:
 
-      GET /api/v1/repos/alcuka/frontend-vertext/commits/<sha>/statuses
+      GET /api/v1/repos/{owner}/{repo}/commits/<sha>/statuses
         failure  gate/filter-copies    failure in this run
         warning  gate/delivery-golden  skipped in this run
         success  gate/engine           success in this run
@@ -649,8 +649,8 @@ nothing in the core may foreclose it.
   CI also runs on **every branch** now, not only `main` and pull requests. Under
   C14 a work branch carries a milestone's commits for days before any MR exists,
   and until this it ran no gate until the MR opened.
-- **`alcuka/docs` runs a mismatched pair today.** Its vendored `vertext.lua` is
+- **The downstream documentation site runs a mismatched pair today.** Its vendored `vertext.lua` is
   blob `9938d18b` (`1ac79f0`, 2026-08-16) while `install-vertext.sh` pins
   `VERTEXT_REF=ebd004c` (2026-08-07) — nine days apart across a commit that
   changed block encoding, the vendoring ahead of the pin. Fix: pin `0e38451` and
-  re-vendor as one action. Not tata's lane, and no grant on that repo.
+  re-vendor as one action. That change belongs to that site's owner.

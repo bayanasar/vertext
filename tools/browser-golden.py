@@ -44,7 +44,7 @@ can still go red. This gate is a differential experiment — it compares two
 renders of the same page taken minutes apart — and its negative control runs
 every time: the single-letter runs that MUST NOT change are the proof that the
 rig discriminates. Adding a `--prove` would be adding a second copy of an
-assertion this gate already makes on every run. (urtu, reviewing #31.)
+assertion this gate already makes on every run. (A reviewer's point.)
 
 What it does not prove
 ----------------------
@@ -238,7 +238,7 @@ html, body {{ margin: 0; padding: 0; background: #fff; }}
 def shoot(chrome, page, png, width, height):
     # --disable-dev-shm-usage is not boilerplate: a container gets a 64MB
     # /dev/shm by default, and at that size this grid (1728x3360) does not fail,
-    # it HANGS -- measured inside azura-ci:latest, where the same shot is 1.0s
+    # it HANGS -- measured inside the CI image, where the same shot is 1.0s
     # with the flag and still running at 120s without it. The gate's own 300s
     # timeout then reports a timeout rather than a cause. Writing the shared
     # memory to /tmp instead costs nothing here and is what lets this run

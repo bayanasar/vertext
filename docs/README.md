@@ -53,5 +53,5 @@ answers for a tracked path as though no rule existed, so nothing reported it.
 
 It cost what this section says it costs. The committed filter drifted to blob
 `9938d18b` while its source moved on — and `9938d18b` is precisely the revision
-`alcuka/docs` vendored, so the repository was shipping, under `examples/`, a
+a downstream documentation site vendored, so the repository was shipping, under `examples/`, a
 demonstration of the exact drift the paragraph above warns about.

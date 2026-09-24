@@ -11,7 +11,7 @@
 // at the button's centre LANDS on the button, and that collapsing moves real
 // pixels. A control that renders correctly and is unclickable has shipped from
 // this extension before, green the whole way. For that, drive a real browser --
-// `tools/check-nav-toggle.py` in the kele repo does exactly that, and its
+// `tools/check-nav-toggle.py` in the lesson site's repository does exactly that, and its
 // selectors are this engine's, so it can be pointed at any page we render.
 
 const fs = require('fs');

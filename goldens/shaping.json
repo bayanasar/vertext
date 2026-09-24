@@ -9,7 +9,7 @@
   "uharfbuzz": "0.56.1"
  },
  "corpus": {
-  "source": "kele",
+  "source": "lessons",
   "commit": "409d212",
   "runs": [
    "ᠰᠠᠶᠢᠨ",

@@ -19,8 +19,8 @@ extensions/vertext-theme/           SCSS; sizes the page around the columns
         │
    ┌────┴───────────────────────────────┐
    │                                    │
-alcuka/frontend-kele              alcuka/docs
-Mongolian lesson notes            Quarto site (gilfoyle's lane)
+lesson-notes site                 documentation site
+Mongolian lesson notes            Quarto website
 ```
 
 The filter and the binary talk over a Private Use Area wire protocol. Two halves
@@ -30,8 +30,8 @@ far.
 
 | Consumer | How it binds the engine | Exposure |
 |---|---|---|
-| `frontend-kele` | runs `../vertext/target/release/vertext`, the sibling checkout | none: no pin to drift, picks up a rebuild immediately |
-| `alcuka/docs` | vendors `vertext.lua` **and** pins `VERTEXT_REF` for the binary | two independent pins, which can and did drift apart |
+| lesson-notes site | runs `../vertext/target/release/vertext`, the sibling checkout | none: no pin to drift, picks up a rebuild immediately |
+| documentation site | vendors `vertext.lua` **and** pins `VERTEXT_REF` for the binary | two independent pins, which can and did drift apart |
 
 ## Where it stands
 
@@ -47,7 +47,7 @@ What holds across commits:
   and none written; the designs are indexed in [`ROADMAP.md`](ROADMAP.md).
   `vertext-wasm` is the second consumer of the core, and renders the CLI's
   bytes; `examples/wasm/caret.html` is a demo, not a shipped host.
-- **`kele` cannot drift from the engine; `alcuka/docs` can.** The binding table
+- **The lesson-notes site cannot drift from the engine; the documentation site can.** The binding table
   above is the reason, and it is structural rather than a passing state: two
   independent pins have already drifted apart once.
 
