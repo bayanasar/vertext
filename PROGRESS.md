@@ -537,6 +537,15 @@ nothing in the core may foreclose it.
   the first column must be in the viewport on load. Red with the region written
   back to `vertical-rl`: the `lr` document's first column at x=-2359.
 
+- **Conformance to CLReq and MLReq is written down** (#10).
+  `docs/CONFORMANCE.md` classifies every section; the measurements behind its
+  line-length and line-gap rows, taken in headless Chrome with Noto Sans SC:
+  34 declared characters give a 612px column, 18.0px per character, so the
+  setting is solid; in a 1280×713 viewport (`--window-size=1280,800`) the
+  document-mode column is capped at 521px (713 − 12rem), which is not a whole number of 18px cells; and the lines of one wrapped
+  paragraph sit 24.2px apart, a 6.2px gap, 34% of the 18px frame, against
+  CLReq's usual 50–100%. The last is not in CI.
+
 ## Not sealed
 
 

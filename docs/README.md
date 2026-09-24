@@ -1,14 +1,15 @@
 # docs
 
-Four kinds of writing live in this repository, and mixing them is what makes
+Five kinds of writing live in this repository, and mixing them is what makes
 documentation rot. Each answers one question and nothing else:
 
 | Where | Question | Ages? |
 |---|---|---|
 | `/README.md` | What is this and how do I run it? | No — it must stay true for a stranger arriving today |
 | `/PROGRESS.md` | Which claims have actually been run, and which have not? | Yes — dated on purpose, rewritten at every seal |
-| `docs/*.md` | Why is it built this way? | Slowly — a design outlives the code that expresses it |
+| `docs/*.md` except `CONFORMANCE.md` | Why is it built this way? | Slowly — a design outlives the code that expresses it |
 | Doc comments in `crates/` | What does this function do? | With the code, in the same commit |
+| `docs/CONFORMANCE.md` | How does it measure against the W3C layout requirements? | With the specifications — re-read when CLReq or MLReq publishes a new version, or when a behaviour it lists changes |
 
 The rule that follows: **a statement belongs in exactly one of them.** A
 mechanism explained in a doc comment is not re-explained here; a run result is
@@ -26,6 +27,9 @@ a fact drift, and the reader cannot tell which half is stale.
 - [`ARCHITECTURE.md`](ARCHITECTURE.md) — how the layout works end to end: the
   slot model, the orientation measure, progression, the document model, and the
   wire protocol between the Quarto filter and the binary.
+- [`CONFORMANCE.md`](CONFORMANCE.md) — CLReq and MLReq section by section:
+  what conforms and which test shows it, what is partial, what is not
+  implemented and why, and what the CLReq gap analysis means for this engine.
 
 ## API reference
 
