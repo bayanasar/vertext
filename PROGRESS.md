@@ -498,16 +498,17 @@ nothing in the core may foreclose it.
 
 - **The module and its glue refuse each other across releases, and ship as one
   archive** (#46). `vertext_version` exports the crate version; the glue's
-  `load()` throws `VersionMismatch` unless its MAJOR.MINOR is the glue's
-  `WIRE_VERSION`, so a patch release may not change an export or the source
+  `load()` throws `VersionMismatch` unless its wire version is the glue's
+  (MAJOR.MINOR for a release, the whole version for a pre-release), so a patch
+  release may not change an export or the source
   map's meaning. `tools/wasm-caret.py` loads the page three more times — glue
   changed by one digit, the version inside the `.wasm` changed by one digit,
   the export renamed away — and each is refused, naming both sides. Red
   with the check disabled (all three render), and with only the missing-export
   branch removed (the refusal is a `TypeError`, not the versions).
   `tools/wasm-archive.py` builds `vertext-wasm-<version>.zip` (`vertext.mjs`,
-  `vertext.wasm`) in CI on every run, refusing when the glue's `WIRE_VERSION`
-  is not the crate's MAJOR.MINOR (shown with `0.3`), when the module does not
+  `vertext.wasm`) in CI on every run, refusing when the version declarations
+  disagree (shown with the glue at `0.3`), when the module does not
   load through the glue, or when it carries a build-machine path. The last is
   real: a release `.wasm` keeps panic locations, and dependency paths sit under
   `$CARGO_HOME` — a home directory in a published file. Built with the prefixes
@@ -546,6 +547,24 @@ nothing in the core may foreclose it.
   paragraph sit 24.2px apart, a 6.2px gap, 34% of the 18px frame, against
   CLReq's usual 50–100%. The last is not in CI.
 
+- **Main no longer claims a released version** (#55). From `v0.2.0` until
+  this change main still said 0.2.0, so a half built from a checkout and a half
+  from the release passed each other's handshake. Main now says `0.3.0-dev`,
+  and a pre-release speaks its whole version (`tools/versions.py` states the
+  rule; the filter and the glue apply it). Run through pandoc 3.9 and the shim:
+  the `v0.2.0` release's filter against this binary, `vertext 0.3.0-dev`, warns
+  "the filter speaks wire version 0.2 and the binary on PATH speaks 0.3" and
+  emits no spans; this filter against a binary built at `v0.2.0` warns "the
+  filter is 0.3.0-dev (wire version 0.3.0-dev) and the binary on PATH is 0.2.0
+  (wire version 0.2)" and emits no spans. `tools/filter-golden.py` adds a stub
+  reporting the release this pre-release is heading for (`vertext 0.3.0`):
+  refused, and accepted once the pre-release branch is removed from the rule.
+  `tools/wasm-parity.mjs` checks the glue's rule on four pairs; red with the
+  same branch removed. The `version` gate: the four declarations are one
+  string, and a version an existing tag names is built only at that tag. Red
+  with all four set back to `0.2.0` (tagged `v0.2.0`, HEAD elsewhere), and with
+  only the glue left at `0.3.0-dev`; both archives refuse the first case too.
+
 ## Not sealed
 
 
@@ -565,7 +584,9 @@ nothing in the core may foreclose it.
   measured. Moving it means declaring only the space
   (`--vertext-column-theme-height`) and rebuilding and re-sealing its pages,
   which is a change in that repository.
-- **A mismatched pair is now refused, not rendered** (#9, step 3). `vertext
+- **A mismatched pair is now refused, not rendered** (#9, step 3). The rule
+  below was tightened for pre-releases and a fourth declaration; see "Main no
+  longer claims a released version". `vertext
   --version` prints `vertext 0.2.0`, and the filter asks for it once per
   document before it sends anything: if the binary does not speak the filter's
   `WIRE_VERSION` — MAJOR.MINOR, because the protocol is what has to match and a

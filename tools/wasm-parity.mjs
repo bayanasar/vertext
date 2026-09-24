@@ -18,7 +18,7 @@ import { readFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
-import { load, CODE, PAGE, LEFT_TO_RIGHT } from '../examples/wasm/vertext.mjs';
+import { load, wireOf, CODE, PAGE, LEFT_TO_RIGHT } from '../examples/wasm/vertext.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const BINARY = path.join(ROOT, 'target/release/vertext');
@@ -94,6 +94,16 @@ for (const text of inputs) {
         fails.push(`${JSON.stringify(text.slice(0, 40))}: slot ${c}/${i} does not start at byte ${slot.start}`);
       }
     }));
+  }
+}
+
+// The glue's wire rule, the same one vertext.lua applies (tools/versions.py
+// states it): patch releases of a minor agree, a pre-release agrees only with
+// itself -- not even with the release it is heading for.
+for (const [a, b, agree] of [['0.3.0', '0.3.1', true], ['0.3.0-dev', '0.3.0', false],
+                             ['0.3.0-dev', '0.3.0-dev', true], ['0.2.0', '0.3.0', false]]) {
+  if ((wireOf(a) === wireOf(b)) !== agree) {
+    fails.push(`wire rule: ${a} and ${b} should ${agree ? '' : 'not '}agree`);
   }
 }
 

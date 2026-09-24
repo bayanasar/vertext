@@ -7,15 +7,21 @@
 // talks to a textarea converts with `byteToUtf16` and `utf16ToByte`.
 //
 // This file and the .wasm are two halves of one release that travel
-// separately, so `load` refuses a module that does not speak this glue's
-// WIRE_VERSION -- MAJOR.MINOR, the rule the Quarto filter applies to the
-// binary -- instead of rendering with it.
+// separately, so `load` refuses a module that does not speak this glue's wire
+// version instead of rendering with it. The rule is the Quarto filter's: a
+// release speaks MAJOR.MINOR, a pre-release its whole version (see
+// tools/versions.py).
 
 export const CODE = 1;
 export const PAGE = 2;
 export const LEFT_TO_RIGHT = 4;
 
-export const WIRE_VERSION = '0.2';
+export const VERSION = '0.3.0-dev';
+
+/** The wire version a half with version `v` speaks. */
+export const wireOf = v => v.includes('-') ? v : v.split('.').slice(0, 2).join('.');
+
+export const WIRE_VERSION = wireOf(VERSION);
 
 const NONE = 0xFFFFFFFF;           // usize::MAX on wasm32
 const encoder = new TextEncoder();
@@ -24,10 +30,10 @@ const decoder = new TextDecoder('utf-8', { fatal: true });
 export class VersionMismatch extends Error {
   constructor(wasm) {
     super(`vertext.wasm is ${wasm ?? 'from before the version handshake'} but vertext.mjs ` +
-          `speaks ${WIRE_VERSION}: load both from one release`);
+          `is ${VERSION}: load both from one release`);
     this.name = 'VersionMismatch';
     this.wasm = wasm;
-    this.glue = WIRE_VERSION;
+    this.glue = VERSION;
   }
 }
 
@@ -40,7 +46,7 @@ export async function load(bytes) {
     const length = x.vertext_version();
     version = decoder.decode(new Uint8Array(x.memory.buffer, x.vertext_output(), length));
   }
-  if (version === null || version.split('.').slice(0, 2).join('.') !== WIRE_VERSION) {
+  if (version === null || wireOf(version) !== WIRE_VERSION) {
     throw new VersionMismatch(version);
   }
   return new Vertext(x, version);

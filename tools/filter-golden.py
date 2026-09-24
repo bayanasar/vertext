@@ -79,6 +79,9 @@ import subprocess
 import sys
 import tempfile
 
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import versions  # noqa: E402  (tools/versions.py)
+
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 BINARY = ROOT / "target" / "release" / "vertext"
 SHIM = ROOT / "tools" / "quarto-shim.lua"
@@ -175,7 +178,7 @@ def with_stub(pandoc, script):
         shutil.rmtree(directory, ignore_errors=True)
 
 
-# Two binaries the filter must refuse. The first speaks a wire version that is
+# Binaries the filter must refuse. The first speaks a wire version that is
 # not ours; the second is old enough not to know `--version` at all, so it reads
 # the empty stdin and prints an empty render -- which is why the filter anchors
 # its pattern to the word `vertext` rather than hunting for digits.
@@ -198,40 +201,25 @@ STUBS = [
      '#!/bin/sh\ncat >/dev/null; echo "<div class=\\"vertext\\"></div>"\n'),
 ]
 
+# A pre-release speaks its whole version, so a filter from main refuses the
+# release of the very minor main is heading for: `0.3.0-dev` against `0.3.0`.
+# Built from the current version so it follows every bump, and only while the
+# version IS a pre-release -- on a release it would report our own version.
+HEADING_FOR = ("the release a pre-release is heading for",
+               '#!/bin/sh\n[ "$1" = "--version" ] && { echo "vertext @RELEASE@"; exit 0; }\n'
+               'cat >/dev/null; echo "<p>not ours</p>"\n')
+
 
 def versions_agree():
-    """The three hand-typed version declarations must be one version.
+    """The four hand-typed version declarations must be one version.
 
-    `Cargo.toml`'s workspace version is what the binary prints; `_extension.yml`
-    is what Quarto installs by; `WIRE_VERSION` in the filter is what the
-    handshake compares. They were equal by coincidence -- three constants, three
-    files, nobody checking -- which is the shape of #17 (`RESERVED_END` one off
-    from its own comment) and of #25 (a file one commit off from its source).
-    A handshake built on a constant that can drift from the version it claims to
-    speak would be worse than none: it would refuse correct pairs.
+    `Cargo.toml` is what the binary prints; `_extension.yml` is what Quarto
+    installs by; `VERSION` in the filter and in the wasm glue is what each
+    handshake compares. A handshake built on a constant that can drift from the
+    version it claims to speak would refuse correct pairs. The reading and the
+    comparison live in tools/versions.py, shared with both release archives.
     """
-    fails = []
-    cargo = re.search(r'(?m)^version = "([^"]+)"',
-                      (ROOT / "Cargo.toml").read_text(encoding="utf-8"))
-    manifest = re.search(r"(?m)^version:\s*(\S+)",
-                         (ROOT / "extensions" / "vertext" / "_extension.yml")
-                         .read_text(encoding="utf-8"))
-    wire = re.search(r'(?m)^local WIRE_VERSION = "([^"]+)"',
-                     (ROOT / "extensions" / "vertext" / "vertext.lua")
-                     .read_text(encoding="utf-8"))
-    if not (cargo and manifest and wire):
-        return [f"versions: a declaration has moved -- Cargo.toml {bool(cargo)}, "
-                f"_extension.yml {bool(manifest)}, WIRE_VERSION {bool(wire)}"]
-    if cargo.group(1) != manifest.group(1):
-        fails.append(f"versions: Cargo.toml says {cargo.group(1)} and "
-                     f"_extension.yml says {manifest.group(1)}")
-    wanted = ".".join(cargo.group(1).split(".")[:2])
-    if wire.group(1) != wanted:
-        fails.append(f"versions: the crates are {cargo.group(1)}, so the "
-                     f"filter's WIRE_VERSION should be {wanted}, not "
-                     f"{wire.group(1)} -- the handshake would refuse the very "
-                     f"binary it ships with")
-    return fails
+    return versions.check()
 
 
 def check(html, stderr, runs, golden, font, hb, label):
@@ -348,7 +336,12 @@ def main():
     # The handshake (#9, step 3). Nothing else in this repository checks that
     # the filter and the binary came from the same release, and a mismatched
     # pair renders the page wrong with every other gate green.
-    for why, script in STUBS:
+    stubs = list(STUBS)
+    version = versions.version()
+    if version and "-" in version:
+        why, script = HEADING_FOR
+        stubs.append((why, script.replace("@RELEASE@", version.split("-")[0])))
+    for why, script in stubs:
         html, stderr = with_stub(args.pandoc, script)
         if "wire version" not in stderr:
             fails.append(f"handshake: {why} was accepted -- the filter said "
@@ -372,7 +365,7 @@ def main():
           f"span each and shape as the golden recorded.")
     print(f"      every block kind survives the wire: heading, table, bullet "
           f"list, ordered list, code.")
-    print(f"      and the handshake refuses {len(STUBS)} binaries that do not "
+    print(f"      and the handshake refuses {len(stubs)} binaries that do not "
           f"speak this filter's wire version, degrading horizontal rather than "
           f"rendering a mismatched pair.")
     print(f"      {version}, the real extensions/vertext/vertext.lua through "

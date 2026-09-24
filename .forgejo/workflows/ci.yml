@@ -48,6 +48,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # The checkout is shallow and carries no tags, and the version gate and
+      # both release archives ask which versions are already tagged. With no
+      # tags visible they fail rather than pass, so a fetch that broke would
+      # show up here instead of letting every version through.
+      - name: Fetch the release tags
+        run: git fetch --tags --force --quiet origin
+
+      # Four files declare the version and the two handshakes compare it, so
+      # they must be one string -- and a version an existing tag names is only
+      # built at that tag. After a release main moves to the next minor's
+      # pre-release, or a checkout's half and a release's half both claim the
+      # same version and the handshakes let them pair.
+      - name: The version is declared once and names no other commit
+        id: version
+        run: python3 tools/version-gate.py
+
       # Every `run:` is its own shell, so an `export` in one step is gone by
       # the next. $GITHUB_PATH is the mechanism that outlives a step -- the
       # version print below runs in a different shell than this line, which is

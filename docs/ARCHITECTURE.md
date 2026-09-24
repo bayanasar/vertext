@@ -197,10 +197,38 @@ Two consequences the code enforces:
    renumbering, while the literal in `vertext.lua` quietly comes to mean
    something else.
 
-What is *not* enforced: that the filter and the binary in a given installation
-were built from the same source. There is no version handshake, and a mismatched
-pair produces no error — only misplaced text, with every check green. See
-`PROGRESS.md`.
+### The version handshake
+
+A mismatched pair produces no error of its own — only misplaced text, with
+every check green — so the two halves check each other before any text
+crosses. The filter asks `vertext --version` once per document; the wasm glue
+calls the module's `vertext_version` export on load. Each compares the other's
+**wire version** with its own and, on a mismatch, refuses: the filter leaves
+the document horizontal with a warning naming both versions, and the glue
+throws `VersionMismatch`.
+
+The wire version follows one rule, written in `tools/versions.py` and applied
+the same way in `vertext.lua` and `vertext.mjs`:
+
+| Version | Wire version | Accepts |
+|---|---|---|
+| a release, `0.3.1` | `0.3` | any release of the same minor: a patch may not change the protocol, an export or the source map's meaning |
+| a pre-release, `0.4.0-dev` | `0.4.0-dev` | only itself, not even the `0.4.0` release it is heading for |
+
+Main carries the next minor's pre-release from the day after a tag, so a half
+built from a checkout refuses every released half and the reverse. The
+`version` gate in CI enforces that: the four declarations (`Cargo.toml`,
+`_extension.yml`, and `VERSION` in the filter and the glue) are one string, and
+a version an existing tag names is only built at that tag. Both release
+archives refuse on the same condition.
+
+What the handshake cannot do:
+
+- **Teach an old half.** A filter from before the handshake asks nothing, and
+  a filter from 0.2 compares MAJOR.MINOR only. Those pairings are held by
+  release discipline — both halves installed from one release — not by code.
+- **Tell two checkouts apart.** Two builds of main between the same two tags
+  both report the same pre-release and accept each other.
 
 ## Where the seams are
 

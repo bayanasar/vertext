@@ -35,8 +35,10 @@ a fix applied to one of them fails there.
 ### Install
 
 The filter and the binary are two halves of one release and must come from
-the same one: the filter refuses a binary whose MAJOR.MINOR differs and leaves
-the document horizontal with a warning.
+the same one: the filter refuses a binary whose wire version differs and leaves
+the document horizontal with a warning. A release's wire version is its
+MAJOR.MINOR and a pre-release's is its whole version, so a build from `main`
+(`0.3.0-dev`) pairs with no release; see `docs/ARCHITECTURE.md`.
 
 ```sh
 cargo install vertext-cli --version 0.2.0
@@ -51,7 +53,7 @@ A browser host takes `vertext-wasm-<version>.zip` from the same release:
 `vertext.wasm` and its glue `vertext.mjs`, built by
 `python3 tools/wasm-archive.py`. They are two halves in the same way, and the
 glue's `load()` throws `VersionMismatch`, naming both versions, rather than
-render with a module whose MAJOR.MINOR is not its own. `vertext-wasm` is
+render with a module whose wire version is not its own. `vertext-wasm` is
 `publish = false`: this zip is the only official source of the module.
 
 Then use it in a Quarto document:

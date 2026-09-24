@@ -20,9 +20,9 @@
 //!
 //! The module and its glue travel as two files, so they carry a handshake:
 //! [`vertext_version`] reports the crate version, and the glue refuses a module
-//! whose MAJOR.MINOR is not its own, as the Quarto filter refuses a binary. A
-//! patch release therefore may not change an export or what the source map
-//! means.
+//! whose wire version is not its own, as the Quarto filter refuses a binary: a
+//! release speaks MAJOR.MINOR, a pre-release its whole version. A patch release
+//! therefore may not change an export or what the source map means.
 
 use std::cell::RefCell;
 

@@ -48,7 +48,10 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 WASM = ROOT / "target" / "wasm32-unknown-unknown" / "release" / "vertext_wasm.wasm"
 FONT = ROOT / "goldens" / "fonts" / "NotoSansMongolian-Regular.ttf"
 
-# The release archive's builder: its version reader and the module's name.
+# The version declarations (tools/versions.py), and the release archive's
+# builder for the module's name.
+sys.path.insert(0, str(ROOT / "tools"))
+import versions  # noqa: E402
 _spec = importlib.util.spec_from_file_location("wasm_archive", ROOT / "tools" / "wasm-archive.py")
 archive = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(archive)
@@ -120,22 +123,22 @@ def other(version):
 def refusals(chrome, work):
     """Load the page against a mismatched pair three ways; each must refuse."""
     glue = (work / "vertext.mjs").read_text(encoding="utf-8")
-    # The same reader the release archive uses, so the two cannot disagree
-    # about which version the crate declares.
-    crate, wire = archive.versions()
-    if not (wire and crate):
-        return ["could not read the glue's WIRE_VERSION or the crate version"]
+    # The same reader the release archives use, so the two cannot disagree
+    # about which version is declared (tools/versions.py).
+    version = versions.version()
+    if not version:
+        return versions.check() or ["could not read the version declarations"]
     module = WASM.read_bytes()
-    if module.count(crate.encode()) != 1 or b"vertext_version" not in module:
-        return [f"the module should carry {crate} exactly once and export vertext_version, "
+    if module.count(version.encode()) != 1 or b"vertext_version" not in module:
+        return [f"the module should carry {version} exactly once and export vertext_version, "
                 f"or the patched modules below are not the cases they claim to be"]
 
     cases = [
-        ("the glue speaks another version", [other(wire), crate],
-         "vertext.mjs", glue.replace(f"WIRE_VERSION = '{wire}'", f"WIRE_VERSION = '{other(wire)}'").encode()),
-        ("the module is another version", [other(crate), wire],
-         MODULE, module.replace(crate.encode(), other(crate).encode())),
-        ("the module predates the handshake", ["before the version handshake", wire],
+        ("the glue is another version", [other(version), version],
+         "vertext.mjs", glue.replace(f"VERSION = '{version}'", f"VERSION = '{other(version)}'").encode()),
+        ("the module is another version", [other(version), version],
+         MODULE, module.replace(version.encode(), other(version).encode())),
+        ("the module predates the handshake", ["before the version handshake", version],
          MODULE, module.replace(b"vertext_version", b"vertext_versioX")),
     ]
     fails = []

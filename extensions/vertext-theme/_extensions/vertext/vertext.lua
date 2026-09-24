@@ -76,22 +76,30 @@ end
 -- worked. Raising here instead would surface as `string expected, got
 -- PandocError` from deep inside pandoc's walk, which names neither the real
 -- problem nor its fix.
--- The wire version this filter speaks: MAJOR.MINOR of the pair, not the patch.
+-- The version this filter was released as, and the wire version it speaks.
 --
--- That comparison is a POLICY, not a convenience, and it is stated here because
--- until now it lived only in the behaviour of one `match`: **a patch release
--- must not change the wire protocol.** 0.2.1's binary is accepted by 0.2.0's
--- filter, so anything that moves a reserved codepoint, a separator or a mode
--- marker is a MINOR bump at least. If that ever stops being true, this
--- comparison is the thing that has to change first.
+-- A release speaks MAJOR.MINOR, not the patch. That comparison is a POLICY:
+-- **a patch release must not change the wire protocol.** 0.2.1's binary is
+-- accepted by 0.2.0's filter, so anything that moves a reserved codepoint, a
+-- separator or a mode marker is a MINOR bump at least.
 --
--- Three places declare a version -- this one, `Cargo.toml`'s workspace version,
--- and `_extension.yml` -- and until now they were equal by coincidence, all
--- three typed by hand. A CI step keeps them equal (see `.forgejo/workflows/
--- ci.yml`), the same way the two copies of this file are kept equal, because
--- this repository has already paid for one constant that drifted from its own
--- comment (#17) and one file that drifted from its own source (#25).
-local WIRE_VERSION = "0.2"
+-- A pre-release (`0.4.0-dev`, what main carries between tags) speaks its whole
+-- version, so a filter from a checkout refuses a binary from any release --
+-- including the release of the minor it is heading for -- and the reverse.
+-- Two checkouts of main between the same tags still accept each other.
+--
+-- Four places declare the version: this one, `Cargo.toml`, `_extension.yml`
+-- and the wasm glue. `tools/versions.py` reads all four and CI requires them to
+-- be one string, because a handshake built on a constant that drifted from the
+-- version it claims would refuse correct pairs.
+local VERSION = "0.3.0-dev"
+
+local function wire_of(version)
+  if version:find("-", 1, true) then return version end
+  return version:match("^(%d+%.%d+)")
+end
+
+local WIRE_VERSION = wire_of(VERSION)
 
 -- nil until the binary has been asked; then true or false for the rest of the
 -- render. Asked once per document, not once per block.
@@ -116,7 +124,9 @@ local function binary_speaks_our_wire()
   -- if a host's pipe ever stops closing stdin it surfaces as a red test instead
   -- of a hung build.
   local ok, reported = pcall(pandoc.pipe, "vertext", { "--version" }, "")
-  local theirs = ok and reported and reported:match("^vertext%s+(%d+%.%d+)")
+  local reported_version = ok and reported
+    and reported:match("^vertext%s+(%d+%.%d+%.%d+[%w%.%-]*)")
+  local theirs = reported_version and wire_of(reported_version)
   -- A binary too old to know `--version` does not fail here: it reads the empty
   -- stdin and prints an empty render, which is why the pattern is anchored to
   -- the word `vertext` instead of hunting for digits anywhere in the output.
@@ -124,9 +134,10 @@ local function binary_speaks_our_wire()
   wire_agrees = theirs == WIRE_VERSION
   if not wire_agrees then
     quarto.log.warning(
-      "vertext: the filter speaks wire version " .. WIRE_VERSION ..
-      " and the binary on PATH " ..
-      (theirs and ("speaks " .. theirs) or "does not report one") ..
+      "vertext: the filter is " .. VERSION .. " (wire version " .. WIRE_VERSION ..
+      ") and the binary on PATH " ..
+      (reported_version and ("is " .. reported_version .. " (wire version " .. theirs .. ")")
+        or "does not report a version") ..
       ". A mismatched pair renders the page wrong with every check green, so " ..
       "this document is left horizontal. Install the filter and the binary " ..
       "from the same release.")

@@ -14,7 +14,8 @@ and this archive is the one official place to take it from.
 
 The builder refuses to write the archive when
 
-- the glue's `WIRE_VERSION` is not the MAJOR.MINOR of the crate version,
+- the version declarations disagree (tools/versions.py), or the version is
+  already tagged and HEAD is not that tag,
 - the module does not load through the glue, which runs the handshake itself,
 - or the module still carries a path from the machine that built it.
 
@@ -39,10 +40,12 @@ import argparse
 import hashlib
 import os
 import pathlib
-import re
 import subprocess
 import sys
 import zipfile
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import versions  # noqa: E402  (tools/versions.py)
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 GLUE = ROOT / "examples" / "wasm" / "vertext.mjs"
@@ -54,15 +57,6 @@ GLUE_NAME = "vertext.mjs"
 MODULE_NAME = "vertext.wasm"
 # 1980-01-01 is the earliest time a zip entry can carry.
 EPOCH = (1980, 1, 1, 0, 0, 0)
-
-
-def versions():
-    cargo = re.search(r'^\[workspace\.package\][^\[]*?^version\s*=\s*"([^"]+)"',
-                      (ROOT / "Cargo.toml").read_text(encoding="utf-8"),
-                      re.MULTILINE | re.DOTALL)
-    wire = re.search(r"^export const WIRE_VERSION = '([^']+)';$",
-                     GLUE.read_text(encoding="utf-8"), re.MULTILINE)
-    return cargo and cargo.group(1), wire and wire.group(1)
 
 
 def build():
@@ -98,12 +92,13 @@ def main():
     ap.add_argument("--out", default=str(ROOT / "target" / "wasm-archive"))
     args = ap.parse_args()
 
-    version, wire = versions()
-    if not (version and wire):
-        sys.exit(f"could not read the versions: Cargo.toml {version}, WIRE_VERSION {wire}")
-    if not version.startswith(wire + "."):
-        sys.exit(f"the version declarations disagree: Cargo.toml {version}, "
-                 f"vertext.mjs WIRE_VERSION {wire}")
+    disagree = versions.check()
+    if disagree:
+        sys.exit("\n".join(disagree))
+    version = versions.version()
+    problem = versions.release_problem(version)
+    if problem:
+        sys.exit(f"refusing to name an archive for {version}: {problem}")
 
     forbidden = build()
     module = MODULE.read_bytes()

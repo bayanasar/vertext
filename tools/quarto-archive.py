@@ -29,8 +29,9 @@ Two details in Quarto's installer decide the format, read from its source
   so the entries start there and nothing wraps them.
 
 The binary half comes from crates.io at the same version. The filter refuses a
-binary whose MAJOR.MINOR differs, so the two halves must come from one release:
-the archive carries the version in its name for that reason.
+binary whose wire version differs (see tools/versions.py), so the two halves
+must come from one release: the archive carries the version in its name for
+that reason.
 
 The zip is byte-reproducible: entries are sorted, timestamps are fixed and the
 permission bits are constant, so the same tree always gives the same sha256.
@@ -44,9 +45,11 @@ Usage
 import argparse
 import hashlib
 import pathlib
-import re
 import sys
 import zipfile
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import versions  # noqa: E402  (tools/versions.py)
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SOURCE = ROOT / "extensions" / "vertext"
@@ -55,38 +58,21 @@ FILES = ["_extension.yml", "vertext.css", "vertext.lua"]
 EPOCH = (1980, 1, 1, 0, 0, 0)
 
 
-def versions():
-    """The version each of the three declarations states, by name."""
-    cargo = re.search(r'^\[workspace\.package\][^\[]*?^version\s*=\s*"([^"]+)"',
-                      (ROOT / "Cargo.toml").read_text(encoding="utf-8"),
-                      re.MULTILINE | re.DOTALL)
-    extension = re.search(r"^version:\s*(\S+)\s*$",
-                          (SOURCE / "_extension.yml").read_text(encoding="utf-8"),
-                          re.MULTILINE)
-    wire = re.search(r'^local WIRE_VERSION = "([^"]+)"',
-                     (SOURCE / "vertext.lua").read_text(encoding="utf-8"),
-                     re.MULTILINE)
-    return {
-        "Cargo.toml": cargo and cargo.group(1),
-        "_extension.yml": extension and extension.group(1),
-        "WIRE_VERSION": wire and wire.group(1),
-    }
-
-
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default=str(ROOT / "target" / "quarto"))
     args = ap.parse_args()
 
-    found = versions()
-    if None in found.values():
-        sys.exit(f"could not read every version declaration: {found}")
-    version = found["Cargo.toml"]
     # CI already holds these equal; the archive checks again because it is the
     # thing that goes out, and a zip named for one version carrying another is
     # the mismatched pair this release exists to prevent.
-    if found["_extension.yml"] != version or not version.startswith(found["WIRE_VERSION"] + "."):
-        sys.exit(f"the version declarations disagree: {found}")
+    disagree = versions.check()
+    if disagree:
+        sys.exit("\n".join(disagree))
+    version = versions.version()
+    problem = versions.release_problem(version)
+    if problem:
+        sys.exit(f"refusing to name an archive for {version}: {problem}")
 
     missing = [name for name in FILES if not (SOURCE / name).is_file()]
     extra = sorted(p.name for p in SOURCE.iterdir() if p.name not in FILES)
