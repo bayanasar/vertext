@@ -32,7 +32,7 @@ Usage
 -----
     python3 tools/shaping-golden.py            # check, exit 1 on any diff
     python3 tools/shaping-golden.py --update    # rewrite the golden
-    python3 tools/shaping-golden.py --update --corpus ../lessons   # re-extract too
+    python3 tools/shaping-golden.py --update --corpus <lesson repo checkout>   # re-extract too
 
 Needs uharfbuzz. CI installs it into a venv; see .forgejo/workflows/ci.yml.
 """
@@ -87,7 +87,7 @@ CASES = [
 # READ THIS BEFORE EDITING THE TABLE. It is provenance and rationale only: the
 # values the gates actually run on -- the line's text AND its pinned path -- are
 # frozen into `goldens/shaping.json` and read from there. Changing a `path` or a
-# line number here changes nothing until `--update --corpus <a lessons checkout>`
+# line number here changes nothing until `--update --corpus <lesson repo checkout>`
 # re-extracts, and until then the gate follows the JSON while this table says
 # something else. That is the shape of every drift this repository has paid for.
 LINES = [
@@ -238,7 +238,7 @@ def extract_lines(corpus_root):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--update", action="store_true")
-    ap.add_argument("--corpus", help="path to a lessons checkout, to re-extract")
+    ap.add_argument("--corpus", help="root of a lesson repository checkout (holds lessons/ and index.md), to re-extract")
     ap.add_argument("--prove", action="store_true",
                     help="show the golden can go red: shape with joining OFF")
     args = ap.parse_args()
@@ -257,7 +257,7 @@ def main():
 
     if args.corpus:
         runs = extract(args.corpus)
-        # Name the commit, not the path: "../lessons" says nothing a year from now
+        # Name the commit, not the path: a checkout path says nothing a year from now
         # about which lessons these 160 runs were taken from.
         head = subprocess.run(["git", "-C", args.corpus, "rev-parse", "--short", "HEAD"],
                               capture_output=True, text=True).stdout.strip() or "unknown"
@@ -287,7 +287,7 @@ def main():
         return 0
 
     if not old:
-        sys.exit("no golden yet -- run with --update --corpus ../lessons")
+        sys.exit("no golden yet -- run with --update --corpus <lesson repo checkout>")
 
     if args.prove:
         # A gate that has never gone red is a gate whose every green is

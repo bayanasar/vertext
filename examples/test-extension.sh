@@ -183,7 +183,7 @@ check "wrapped code is laid out as code"        'vertext-horizontal-code' "$cell
 # `stringify` returns "" for a RawBlock too, so a Div holding one lost it
 # entirely. That is not a corner case: a cell magic that renders its own
 # output -- syntax-highlighted source, a plot, a table -- emits it as
-# `{=html}` inside `.cell-output-display`. Every code listing in the Crust
+# `{=html}` inside `.cell-output-display`. Every code listing in one Rust
 # book went this way, leaving each program's printed result on the page with
 # the Rust and C++ it came from deleted.
 printf '%s\n' '---' 'title: "raw"' 'vertext: true' 'filters: [vertext]' \

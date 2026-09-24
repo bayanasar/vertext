@@ -1058,7 +1058,7 @@ function Pandoc(doc)
   -- executed output, now this) and it hides the same way every time: silently
   -- empty, never an error.
   --
-  -- What it cost: every code listing in the Crust book. The `%%rust` and
+  -- What it cost: every code listing in one Rust book. The `%%rust` and
   -- `%%cpp` magics emit their syntax-highlighted source as a RawBlock html
   -- inside `.cell-output-display`, with `#| echo: false` hiding the Python
   -- wrapper -- so the page kept each program's printed result (a CodeBlock,
