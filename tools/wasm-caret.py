@@ -7,7 +7,12 @@ module renders it vertically, a click on a glyph moves the textarea caret to
 that character, and moving the textarea caret outlines the slot. Its
 `?selftest` mode clicks every grapheme of every slot through the browser's own
 hit test (`caretRangeFromPoint`) and moves the caret onto every slot, then
-reports; this script serves the page, runs it headless and fails on any finding.
+POSTs a report; this script serves the page, runs it headless, waits for that
+report and fails on any finding.
+
+It waits in real time rather than dumping the DOM after a virtual-time budget:
+virtual time does not wait for the font or the wasm compile, and the dump came
+back before `document.fonts.ready` had resolved in about one run in five.
 
 The Mongolian run in the page is the case that matters: one slot, and a click
 between two of its letters has to land between those letters, not at the start
@@ -21,11 +26,10 @@ Usage
 
 import argparse
 import functools
-import html
 import http.server
 import json
 import pathlib
-import re
+import queue
 import shutil
 import subprocess
 import sys
@@ -69,25 +73,9 @@ def main():
         "</head>", f'<style>@font-face {{ font-family: "Noto Sans Mongolian"; '
                    f'src: url("{FONT.name}"); }}</style>\n</head>', 1), encoding="utf-8")
 
-    class Quiet(http.server.SimpleHTTPRequestHandler):
-        def log_message(self, *args):
-            pass
-
-    handler = functools.partial(Quiet, directory=str(work))
-    server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), handler)
-    threading.Thread(target=server.serve_forever, daemon=True).start()
-    url = f"http://127.0.0.1:{server.server_address[1]}/caret.html?selftest"
-    try:
-        done = subprocess.run(
-            [str(chrome), "--headless", "--no-sandbox", "--disable-gpu", "--hide-scrollbars",
-             "--window-size=1280,900", "--virtual-time-budget=30000", "--dump-dom", url],
-            capture_output=True, text=True, timeout=180)
-    finally:
-        server.shutdown()
-    found = re.search(r'<pre id="selftest">([^<]*)</pre>', done.stdout)
-    if not found:
-        sys.exit(f"the page reported nothing\n{done.stderr[-1500:]}")
-    result = json.loads(html.unescape(found.group(1)))
+    result = run_page(chrome, work, "?selftest")
+    if result is None:
+        sys.exit("the page reported nothing within 120s")
     if result["failed"] or not result["clicks"] or not result["follows"]:
         print(f"FAIL: {result['failed']} finding(s) over {result['clicks']} clicks "
               f"and {result['follows']} caret moves")
@@ -97,6 +85,41 @@ def main():
     print(f"PASS: {result['clicks']} clicks on graphemes land the textarea caret on "
           f"that character, and {result['follows']} caret moves outline their slot")
     return 0
+
+
+def run_page(chrome, work, query):
+    """Serve `work`, open caret.html with `query` headless, and return the JSON
+    the page POSTs to `selftest`, or None if nothing arrives in time."""
+    reports = queue.Queue()
+
+    class Handler(http.server.SimpleHTTPRequestHandler):
+        def log_message(self, *args):
+            pass
+
+        def do_POST(self):
+            body = self.rfile.read(int(self.headers.get("Content-Length", 0)))
+            self.send_response(204)
+            self.end_headers()
+            reports.put(json.loads(body))
+
+    handler = functools.partial(Handler, directory=str(work))
+    server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), handler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    url = f"http://127.0.0.1:{server.server_address[1]}/caret.html{query}"
+    profile = tempfile.mkdtemp(prefix="vertext-caret-profile-")
+    browser = subprocess.Popen(
+        [str(chrome), "--headless", "--no-sandbox", "--disable-gpu", "--hide-scrollbars",
+         "--window-size=1280,900", f"--user-data-dir={profile}", url],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    try:
+        return reports.get(timeout=120)
+    except queue.Empty:
+        return None
+    finally:
+        browser.kill()
+        browser.wait()
+        server.shutdown()
+        shutil.rmtree(profile, ignore_errors=True)
 
 
 if __name__ == "__main__":

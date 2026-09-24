@@ -129,10 +129,18 @@ if (new URLSearchParams(location.search).has('selftest')) {
     follows++;
     if (!span.classList.contains('here')) fails.push(`caret at ${start} did not outline slot ${c}/${i}`);
   }));
+  report({ clicks, follows, fails: fails.slice(0, 20), failed: fails.length });
+}
+
+// Show the result, and POST it back to the server for a driver that waits on
+// it (tools/wasm-caret.py) -- a DOM dump taken at a fixed time can come before
+// the font has loaded.
+function report(result) {
   const pre = document.createElement('pre');
   pre.id = 'selftest';
-  pre.textContent = JSON.stringify({ clicks, follows, fails: fails.slice(0, 20), failed: fails.length });
+  pre.textContent = JSON.stringify(result);
   document.body.appendChild(pre);
+  fetch('selftest', { method: 'POST', body: pre.textContent }).catch(() => {});
 }
 </script>
 </body>
