@@ -248,6 +248,17 @@ jobs:
           cargo build --release -p vertext-wasm --target wasm32-unknown-unknown
           node tools/wasm-parity.mjs
 
+      # The module and its glue ship together as one release zip beside the
+      # filter's, and the glue refuses a module from another release. The
+      # builder refuses when the glue's WIRE_VERSION is not the crate's
+      # MAJOR.MINOR, when the module does not load through the glue, or when it
+      # still carries a build-machine path: a release .wasm keeps the source
+      # location of every panic site, and for dependencies that is under
+      # $CARGO_HOME unless the build remaps it.
+      - name: The browser build ships as one release archive
+        id: wasm-archive
+        run: python3 tools/wasm-archive.py
+
       # The source map is only worth its API if a caret uses it. The caret page
       # clicks every grapheme through the browser's own hit test and moves the
       # textarea caret onto every slot.

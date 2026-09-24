@@ -47,6 +47,13 @@ The zip holds `_extensions/vertext/` and nothing else. It is built from
 `extensions/vertext` by `python3 tools/quarto-archive.py`, so there is no copy
 of the filter at the repository root for `quarto add <org>/<repo>` to find.
 
+A browser host takes `vertext-wasm-<version>.zip` from the same release:
+`vertext.wasm` and its glue `vertext.mjs`, built by
+`python3 tools/wasm-archive.py`. They are two halves in the same way, and the
+glue's `load()` throws `VersionMismatch`, naming both versions, rather than
+render with a module whose MAJOR.MINOR is not its own. `vertext-wasm` is
+`publish = false`: this zip is the only official source of the module.
+
 Then use it in a Quarto document:
 
 ```markdown

@@ -17,6 +17,12 @@
 //! left in one output buffer, read with [`vertext_output`] and the returned
 //! length, and valid until the next call. The input allocation is the host's to
 //! release with [`vertext_free`].
+//!
+//! The module and its glue travel as two files, so they carry a handshake:
+//! [`vertext_version`] reports the crate version, and the glue refuses a module
+//! whose MAJOR.MINOR is not its own, as the Quarto filter refuses a binary. A
+//! patch release therefore may not change an export or what the source map
+//! means.
 
 use std::cell::RefCell;
 
@@ -91,6 +97,13 @@ fn set_output(bytes: &[u8]) -> usize {
         o.extend_from_slice(bytes);
         o.len()
     })
+}
+
+/// The crate version, for the glue's handshake; returns its length in the
+/// output buffer.
+#[unsafe(no_mangle)]
+pub extern "C" fn vertext_version() -> usize {
+    set_output(env!("CARGO_PKG_VERSION").as_bytes())
 }
 
 /// Reserve `len` bytes for the host to write input into.
@@ -199,6 +212,13 @@ mod tests {
             }).as_bytes());
             vertext_free(pointer, text.len());
         }
+    }
+
+    #[test]
+    fn the_version_export_is_the_crate_version() {
+        let len = vertext_version();
+        let version = unsafe { std::slice::from_raw_parts(vertext_output(), len) };
+        assert_eq!(version, env!("CARGO_PKG_VERSION").as_bytes());
     }
 
     #[test]

@@ -1,7 +1,7 @@
 # PROGRESS — vertext
 
 <!-- progress -->
-updated: 2026-09-12
+updated: 2026-09-23
 owner: maintainer
 stage: Quarto path works end to end; Mongolian joining proven in the font, proven to reach the page in one piece, and proven by CI to be applied by a real browser — no reader has looked at a page yet
 <!-- /progress -->
@@ -491,7 +491,28 @@ nothing in the core may foreclose it.
   through `caretRangeFromPoint` and the textarea caret lands on that character,
   including each letter inside a 9-grapheme Mongolian run; 23 caret moves outline
   their slot. Red when the grapheme index is fixed at 0: every click inside the
-  run lands at its start. Both run in CI.
+  run lands at its start. Both run in CI. The caret check waits for the page to
+  POST its result rather than dumping the DOM after a virtual-time budget,
+  which did not wait for the font and reported nothing in 3 of 12 runs (#47);
+  15 of 15 green since.
+
+- **The module and its glue refuse each other across releases, and ship as one
+  archive** (#46). `vertext_version` exports the crate version; the glue's
+  `load()` throws `VersionMismatch` unless its MAJOR.MINOR is the glue's
+  `WIRE_VERSION`, so a patch release may not change an export or the source
+  map's meaning. `tools/wasm-caret.py` loads the page three more times — glue
+  changed by one digit, the version inside the `.wasm` changed by one digit,
+  the export renamed away — and each is refused, naming both sides. Red
+  with the check disabled (all three render), and with only the missing-export
+  branch removed (the refusal is a `TypeError`, not the versions).
+  `tools/wasm-archive.py` builds `vertext-wasm-<version>.zip` (`vertext.mjs`,
+  `vertext.wasm`) in CI on every run, refusing when the glue's `WIRE_VERSION`
+  is not the crate's MAJOR.MINOR (shown with `0.3`), when the module does not
+  load through the glue, or when it carries a build-machine path. The last is
+  real: a release `.wasm` keeps panic locations, and dependency paths sit under
+  `$CARGO_HOME` — a home directory in a published file. Built with the prefixes
+  remapped, the archive has the same sha256 from two checkout paths; without
+  the remap it is refused.
 
 ## Not sealed
 
@@ -560,6 +581,10 @@ nothing in the core may foreclose it.
   build from the 0.2.0 source, a tampered zip and a 0.1 binary both refused. The
   docs site still vendors the filter and pins the binary separately; its switch
   is #43, which belongs to that site's owner.
+
+- **No release carries the wasm archive yet** (#46). The `v0.2.0` tag
+  predates it; the next tag should attach `vertext-wasm-<version>.zip` beside
+  the filter's zip, and until then a browser host has only a build from source.
 
 ## Decisions
 

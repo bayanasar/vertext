@@ -31,10 +31,20 @@
 // run is one slot, and the click still lands between the letters clicked.
 import { load, utf16ToByte, byteToUtf16 } from './vertext.mjs';
 
-const vertext = await load(await (await fetch('vertext_wasm.wasm')).arrayBuffer());
 const source = document.getElementById('source');
 const strip = document.getElementById('strip');
 const status = document.getElementById('status');
+let vertext;
+try {
+  vertext = await load(await (await fetch('vertext.wasm')).arrayBuffer());
+} catch (error) {
+  // A module from another release is not rendered with: say which two met.
+  status.textContent = error.message;
+  if (new URLSearchParams(location.search).has('selftest')) {
+    report({ refused: error.message });
+  }
+  throw error;
+}
 const graphemes = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
 let map = null;
 

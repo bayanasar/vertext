@@ -5,22 +5,49 @@
 // Offsets in the source map are UTF-8 byte offsets, because that is what the
 // engine measures. JavaScript strings index UTF-16 code units, so a host that
 // talks to a textarea converts with `byteToUtf16` and `utf16ToByte`.
+//
+// This file and the .wasm are two halves of one release that travel
+// separately, so `load` refuses a module that does not speak this glue's
+// WIRE_VERSION -- MAJOR.MINOR, the rule the Quarto filter applies to the
+// binary -- instead of rendering with it.
 
 export const CODE = 1;
 export const PAGE = 2;
 export const LEFT_TO_RIGHT = 4;
 
+export const WIRE_VERSION = '0.2';
+
 const NONE = 0xFFFFFFFF;           // usize::MAX on wasm32
 const encoder = new TextEncoder();
 const decoder = new TextDecoder('utf-8', { fatal: true });
 
+export class VersionMismatch extends Error {
+  constructor(wasm) {
+    super(`vertext.wasm is ${wasm ?? 'from before the version handshake'} but vertext.mjs ` +
+          `speaks ${WIRE_VERSION}: load both from one release`);
+    this.name = 'VersionMismatch';
+    this.wasm = wasm;
+    this.glue = WIRE_VERSION;
+  }
+}
+
+/** Instantiate the module; throws VersionMismatch rather than return one that does not match. */
 export async function load(bytes) {
   const { instance } = await WebAssembly.instantiate(bytes, {});
-  return new Vertext(instance.exports);
+  const x = instance.exports;
+  let version = null;
+  if (typeof x.vertext_version === 'function') {
+    const length = x.vertext_version();
+    version = decoder.decode(new Uint8Array(x.memory.buffer, x.vertext_output(), length));
+  }
+  if (version === null || version.split('.').slice(0, 2).join('.') !== WIRE_VERSION) {
+    throw new VersionMismatch(version);
+  }
+  return new Vertext(x, version);
 }
 
 export class Vertext {
-  constructor(exports) { this.x = exports; }
+  constructor(exports, version) { this.x = exports; this.version = version; }
 
   #call(fn, text, flags) {
     const input = encoder.encode(text);
