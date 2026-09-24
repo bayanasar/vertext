@@ -565,6 +565,13 @@ nothing in the core may foreclose it.
   with all four set back to `0.2.0` (tagged `v0.2.0`, HEAD elsewhere), and with
   only the glue left at `0.3.0-dev`; both archives refuse the first case too.
 
+- **The lesson site builds from the 0.2.0 release** (#9, step 2). Merged in
+  that site's repository: `build.py` pins `VERTEXT_VERSION = "0.2.0"`, and its
+  fetch tool installs the binary from crates.io and the filter from the
+  release zip, checked against a pinned sha256. On its merge request its 13
+  pages were byte-identical to the build from the 0.2.0 source, and a tampered
+  zip and a 0.1 binary were both refused. It no longer reads a sibling checkout.
+
 ## Not sealed
 
 
@@ -628,11 +635,8 @@ nothing in the core may foreclose it.
   actually for: two consumers still install the two halves separately, so there
   is still a pair to mismatch. This is the second line of defence the issue
   asks for, built before the first.
-- **The consumers are moving to 0.2.0, not moved yet** (#9, step 2). The lesson
-  site builds from the release on its own merge request: the binary from
-  crates.io and the filter from the zip, its 13 pages byte-identical to the
-  build from the 0.2.0 source, a tampered zip and a 0.1 binary both refused. The
-  docs site still vendors the filter and pins the binary separately; its switch
+- **The docs site still pins its two halves separately** (#9, step 2). It
+  vendors the filter and pins the binary on its own; its switch to the release
   is #43, which belongs to that site's owner.
 
 - **No release carries the wasm archive yet** (#46). The `v0.2.0` tag

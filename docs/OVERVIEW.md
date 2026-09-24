@@ -30,7 +30,7 @@ far.
 
 | Consumer | How it binds the engine | Exposure |
 |---|---|---|
-| lesson-notes site | runs `../vertext/target/release/vertext`, the sibling checkout | none: no pin to drift, picks up a rebuild immediately |
+| lesson-notes site | pins one release: the binary from crates.io and the filter from that release's zip, checked against a pinned sha256 | one version for both halves; moving it is a one-line change |
 | documentation site | vendors `vertext.lua` **and** pins `VERTEXT_REF` for the binary | two independent pins, which can and did drift apart |
 
 ## Where it stands
@@ -47,9 +47,10 @@ What holds across commits:
   and none written; the designs are indexed in [`ROADMAP.md`](ROADMAP.md).
   `vertext-wasm` is the second consumer of the core, and renders the CLI's
   bytes; `examples/wasm/caret.html` is a demo, not a shipped host.
-- **The lesson-notes site cannot drift from the engine; the documentation site can.** The binding table
-  above is the reason, and it is structural rather than a passing state: two
-  independent pins have already drifted apart once.
+- **The lesson-notes site takes both halves from one release; the documentation
+  site still pins them separately.** Two independent pins have already drifted
+  apart once, and the handshake refuses such a pair rather than rendering it,
+  which turns a silent wrong page into a horizontal one with a warning.
 
 ## What is not proven
 
