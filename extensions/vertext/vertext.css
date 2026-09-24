@@ -7,6 +7,14 @@
    vertext-core. A cap declared in two places is a cap that will drift, and a
    drifted cap truncates silently instead of wrapping visibly. */
 
+/* The upright cell: the size a CJK glyph is set at, and the unit the column
+   budget counts in (`--vertext-column-chars` cells). Declared here once and
+   read everywhere below and by the filter's budget, so the glyph size and the
+   measure cannot part (#48). On :root rather than `.vertext` because the
+   filter computes the budget on `body`, and a custom property resolves on the
+   element that declares it. */
+:root { --vertext-cell: 18px; }
+
 .vertext {
   display: flex;
   flex-direction: row-reverse;
@@ -17,7 +25,7 @@
   min-block-size: 20rem;
   padding: 1rem;
   border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
-  font-size: 18px;
+  font-size: var(--vertext-cell);
 }
 /* Progression is data: the renderer stamps it on the root and the stylesheet
    follows. `left` means columns advance leftward (vertical-rl, CJK); `right`
@@ -46,7 +54,7 @@
   text-orientation: upright;
   flex: 0 0 auto;
   block-size: auto;
-  height: var(--vertext-column-height, calc(var(--vertext-column-chars, 34) * 18px));
+  height: var(--vertext-column-height, calc(var(--vertext-column-chars, 34) * var(--vertext-cell)));
   line-height: 1.05;
 }
 .vertext[data-column-advance="right"] .vertext-column { writing-mode: vertical-lr; }
@@ -65,12 +73,12 @@
      gets its natural single line and does not break "蒙古文" into three
      one-character columns reading backwards -- and only bites on the long
      cell, which then wraps inside its own cell instead of leaving the page. */
-  max-height: var(--vertext-cell-cap, var(--vertext-column-height, calc(var(--vertext-column-chars, 34) * 18px)));
+  max-height: var(--vertext-cell-cap, var(--vertext-column-height, calc(var(--vertext-column-chars, 34) * var(--vertext-cell))));
 }
 /* Upright glyphs need no box at all: the column's `text-orientation: upright`
    already stands them up, and leaving them as bare inline text is what keeps
    a selection continuous. */
-.vertext-upright, .vertext-neutral { font-size: 18px; }
+.vertext-upright, .vertext-neutral { font-size: var(--vertext-cell); }
 
 /* Centre every slot across the width of its column.
    In a vertical writing mode the block axis is horizontal, so what centres a
@@ -100,7 +108,7 @@
 .vertext-column-heading .vertext-neutral,
 .vertext-column-heading .vertext-vform,
 .vertext-column-heading .vertext-corner {
-  font-size: calc(18px * var(--vertext-heading-scale));
+  font-size: calc(var(--vertext-cell) * var(--vertext-heading-scale));
 }
 .vertext-column-heading .vertext-latin,
 .vertext-column-heading .vertext-mongolian {
@@ -125,7 +133,7 @@
      display by writing U+00A0 into the document — a different character than
      the author typed, which is the substitution trap again.
      The advance is set explicitly rather than left to the font: a space
-     inherits the full em of an 18px column, which opens a gap wider than the
+     inherits the full em of the column's cell, which opens a gap wider than the
      characters around it, and the gap then varies with whatever font each
      run happens to use. Half an em is the usual measure for an inter-word
      space, and fixing it here keeps every space in the document identical. */
@@ -135,7 +143,7 @@
      logical properties would set the horizontal extent instead of the gap. */
   height: .5em;
   width: 1em;
-  font-size: 18px;
+  font-size: var(--vertext-cell);
   overflow: hidden;
 }
 .vertext-column-code .vertext-space,
@@ -191,7 +199,7 @@
    blanket `transform` -- that turned the fullwidth marks a second time. */
 .vertext-vform {
   display: inline-block;
-  font-size: 18px;
+  font-size: var(--vertext-cell);
   text-orientation: mixed;
 }
 /* Stops and commas do not turn — they sit in the upper-right corner of their
@@ -199,7 +207,7 @@
    the glyph moves. */
 .vertext-corner {
   display: inline-block;
-  font-size: 18px;
+  font-size: var(--vertext-cell);
   transform: translate(.32em, -.34em);
 }
 /* A Latin word reads horizontally inside the vertical flow. `inline-block`
@@ -302,7 +310,7 @@
 .vertext-hstack,
 .vertext > .vertext-horizontal,
 .vertext > .vertext-table {
-  max-height: var(--vertext-column-height, calc(var(--vertext-column-chars, 34) * 18px));
+  max-height: var(--vertext-column-height, calc(var(--vertext-column-chars, 34) * var(--vertext-cell)));
   overflow-y: auto;
   overscroll-behavior: contain;
   /* Reachable is not the same as knowing it is reachable. Chrome's overlay
@@ -365,7 +373,7 @@
   vertical-align: top;
   inline-size: max-content;
   max-inline-size: var(--vertext-wrap, 80ch);
-  max-height: var(--vertext-column-height, calc(var(--vertext-column-chars, 34) * 18px));
+  max-height: var(--vertext-column-height, calc(var(--vertext-column-chars, 34) * var(--vertext-cell)));
   overflow: auto;
   overscroll-behavior: contain;
   margin-inline: .75rem;

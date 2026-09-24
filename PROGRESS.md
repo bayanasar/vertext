@@ -514,6 +514,19 @@ nothing in the core may foreclose it.
   remapped, the archive has the same sha256 from two checkout paths; without
   the remap it is refused.
 
+- **The upright cell is declared once** (#48). `--vertext-cell: 18px` on
+  `:root` in `vertext.css` is the glyph size and the unit the column budget
+  counts in; the stylesheet's 10 restatements now read it, and the filter's 2
+  budgets read it with an 18px fallback for a page without the stylesheet.
+  `examples/test-column-budget.js` requires the fallback to equal the
+  declaration and no other px equal to the cell in the stylesheet or filter;
+  red for a restated `18px` in `.vertext-corner`, for a declaration changed to
+  20px, and for one fallback changed to 20px. Real render, Chrome with Noto
+  Sans SC: `tools/measure-column-budget.py` gives the same table as `main` on
+  4 windows × 2 modes, and the 4 measurement pages screenshot byte-identical
+  to `main`'s. Declared at 20px, both modes give 680px columns holding 34
+  characters at 20px each. The tool now reads the cell from the page.
+
 ## Not sealed
 
 

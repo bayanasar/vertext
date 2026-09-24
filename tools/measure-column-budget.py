@@ -129,6 +129,7 @@ const perColumn = columns.map(visualLines);
 const out = {
   declared: style.getPropertyValue('--vertext-column-height').trim(),
   rootFontSize: parseFloat(getComputedStyle(document.documentElement).fontSize),
+  cell: parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--vertext-cell')),
   bodyFontSize: parseFloat(style.fontSize),
   viewport: [window.innerWidth, window.innerHeight],
   columns: columns.length,
@@ -143,9 +144,9 @@ document.body.setAttribute('data-measured', JSON.stringify(out));
 """
 
 
-# The upright cell, `.vertext-upright { font-size: 18px }`. A probe character
-# that advances by anything else is not being drawn by a CJK font.
-CELL_PX = 18
+# The upright cell is read from the page, `--vertext-cell` in vertext.css
+# (#48), not restated here. A probe character that advances by anything else
+# is not being drawn by a CJK font.
 
 
 def measure(chrome, mode, html, width, height, work, tag="sample", cjk_font=None):
@@ -225,9 +226,12 @@ def main():
             p = measure(chrome, mode, probes[mode], width, height, work,
                         tag="probe", cjk_font=args.cjk_font)
             probe_px = max(p["heights"]) if p["heights"] else 0
-            if p["longestLine"] and abs(probe_px / p["longestLine"] - CELL_PX) > 1:
+            cell = p.get("cell")
+            if not cell:
+                sys.exit("the page declares no --vertext-cell: is vertext.css loaded?")
+            if p["longestLine"] and abs(probe_px / p["longestLine"] - cell) > 1:
                 sys.exit(f"the probe advances {probe_px / p['longestLine']:.1f}px a "
-                         f"character, not the {CELL_PX}px upright cell: no CJK font "
+                         f"character, not the {cell:g}px upright cell: no CJK font "
                          f"is drawing it, so every count would be wrong. "
                          f"Pass --cjk-font.")
             longest = max(m["heights"]) if m["heights"] else 0
@@ -243,7 +247,7 @@ def main():
     print(f"document mode spans {min(doc.values())}px to {max(doc.values())}px "
           f"across these {len(doc)} windows.")
     print(f"page mode spans {min(page.values())}px to {max(page.values())}px.")
-    print(f"Both budget a declared count of the {CELL_PX}px cell, capped by the space "
+    print(f"Both budget a declared count of the {cell:g}px cell, capped by the space "
           f"there is (#26), so a window with room shows the same length in both.")
     print(f"      pages left in {work}")
     return 0

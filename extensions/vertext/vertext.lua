@@ -194,15 +194,17 @@ local function document_style()
 
      The budget is a number of characters, capped by that space (issue #26).
      `--vertext-column-chars` is the measure an author declares with
-     `vertext-column-chars:`; it is multiplied by 18px because that is the
-     upright cell, `.vertext-upright { font-size: 18px }` in vertext.css, and
-     a length in px resolves the same on every element that spends the budget
+     `vertext-column-chars:`; it is multiplied by the upright cell,
+     `--vertext-cell`, declared once in vertext.css (#48). The cell is a px
+     length, so it resolves the same on every element that spends the budget
      (a column, a stack, a raw block), where an `em` would follow each one's
-     own font size. The cap keeps a declared measure from running under the
-     chrome on a short window. So the page keeps its measure on every screen
-     that has room for it, and only a window too short for it wraps sooner. */
+     own font size. The 18px fallback is for a page without vertext.css, and
+     test-column-budget.js holds it equal to the declaration. The cap keeps a
+     declared measure from running under the chrome on a short window. So the
+     page keeps its measure on every screen that has room for it, and only a
+     window too short for it wraps sooner. */
   body {
-    --vertext-column-height: min(calc(var(--vertext-column-chars, 34) * 18px),
+    --vertext-column-height: min(calc(var(--vertext-column-chars, 34) * var(--vertext-cell, 18px)),
                                  var(--vertext-column-theme-height, calc(100vh - 12rem)));
   }
   /* The content region becomes the vertical surface.
@@ -576,10 +578,11 @@ local function page_style(mode)
        number of characters, capped by the space there is. Before, page mode
        held a fixed 34em and document mode followed the window, so one source
        got two measures depending on a line of YAML. 34 characters of the 18px
-       cell is exactly the old 34em, so a page that declares nothing keeps its
-       measure; what changes is that a window too short for it now wraps inside
-       the body's own padding instead of running past the bottom edge. */
-    --vertext-column-height: min(calc(var(--vertext-column-chars, 34) * 18px),
+       cell (`--vertext-cell`) is exactly the old 34em, so a page that
+       declares nothing keeps its measure; what changes is that a window too
+       short for it now wraps inside the body's own padding instead of running
+       past the bottom edge. */
+    --vertext-column-height: min(calc(var(--vertext-column-chars, 34) * var(--vertext-cell, 18px)),
                                  var(--vertext-column-theme-height, calc(100vh - 3rem)));
   }
   /* Quarto's grid chrome assumes a horizontal axis. Collapse it to plain block

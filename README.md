@@ -119,8 +119,12 @@ reader's eye moves across. It is declared as a number of characters.
 vertext-column-chars: 34   # the default
 ```
 
-A column is that many 18px upright cells long, unless the space on the page is
-shorter, in which case it is the space. The space is whatever a theme reports
+A column is that many upright cells long, unless the space on the page is
+shorter, in which case it is the space. The cell is `--vertext-cell` (18px),
+declared once in `vertext.css`: it is both the size an upright CJK glyph is set
+at and the unit the column counts in, so changing it scales those glyphs and
+the measure together. Latin (14px) and Mongolian (15px) keep their own sizes
+and do not follow it. The space is whatever a theme reports
 through `--vertext-column-theme-height`; without a theme it is the window
 height less the mode's own margins. So a document keeps one measure on every
 screen with room for it, and a short window wraps sooner instead of cutting

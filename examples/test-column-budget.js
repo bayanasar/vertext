@@ -81,7 +81,7 @@ for (const [copy, file] of FILTERS) {
   // declaration -- the count without the cap runs under the chrome on a short
   // window, and the cap without the count is the window-following measure the
   // issue replaced.
-  const counted = /min\(\s*calc\(\s*var\(\s*--vertext-column-chars\s*,\s*(\d+)\s*\)\s*\*\s*(\d+)px\s*\)\s*,\s*var\(\s*--vertext-column-theme-height/.exec(value);
+  const counted = /min\(\s*calc\(\s*var\(\s*--vertext-column-chars\s*,\s*(\d+)\s*\)\s*\*\s*var\(\s*--vertext-cell\s*,\s*(\d+)px\s*\)\s*\)\s*,\s*var\(\s*--vertext-column-theme-height/.exec(value);
   check(`${mode} mode budgets a declared character count, capped by the theme hook`, !!counted, value);
   if (counted) {
     chars.add(counted[1]);
@@ -90,24 +90,39 @@ for (const [copy, file] of FILTERS) {
  }
 }
 
-// One default and one cell size across both modes and both copies, and the
-// cell has to be the size an upright glyph is actually set at: the budget
-// multiplies characters by it, so a stylesheet that changed the glyph size and
-// not the multiplier would quietly give every column a different count.
+// One default across both modes and both copies. The cell is declared once,
+// as `--vertext-cell` in vertext.css (#48): the budget multiplies characters
+// by it and the upright glyph is set at it, so the two cannot part. The
+// filter keeps a px fallback for a page without the stylesheet, which has to
+// be the declared value -- that fallback is the one second copy left.
 check('one default character count everywhere', chars.size === 1, [...chars].join(', '));
-check('one cell size everywhere', cells.size === 1, [...cells].join(', '));
 const stylesheet = fs.readFileSync(
   path.join(__dirname, '..', 'extensions', 'vertext', 'vertext.css'), 'utf8')
   .replace(/\/\*[\s\S]*?\*\//g, '');
-const upright = /\.vertext-upright,\s*\.vertext-neutral\s*\{\s*font-size:\s*(\d+)px;/.exec(stylesheet);
-check('the cell is the upright glyph size', upright && cells.has(upright[1]),
-      `upright ${upright && upright[1]}px, budget ${[...cells].join(', ')}px`);
+const declared = /:root\s*\{\s*--vertext-cell:\s*(\d+)px;\s*\}/.exec(stylesheet);
+check('the stylesheet declares the cell once, on :root', !!declared);
+const cell = declared && declared[1];
+check('the filter fallback is the declared cell', cells.size === 1 && cells.has(cell),
+      `declared ${cell}px, fallbacks ${[...cells].join(', ')}px`);
+// No size in the stylesheet may restate the cell as a number: every px equal
+// to it outside the declaration is a second source waiting to drift.
+const restated = cell ? (stylesheet.match(new RegExp(`(?<![\\d.])${cell}px`, 'g')) || []).length - 1 : -1;
+check('the stylesheet never restates the cell', restated === 0, `${restated} restatement(s)`);
+const upright = /\.vertext-upright,\s*\.vertext-neutral\s*\{\s*font-size:\s*var\(--vertext-cell\);/.test(stylesheet);
+check('the upright glyph is set at the cell', upright);
+for (const [copy, file] of FILTERS) {
+  const lua = fs.readFileSync(file, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const bare = cell ? (lua.match(new RegExp(`(?<![\\d.])${cell}px`, 'g')) || []).length : -1;
+  const fallback = cell ? (lua.match(new RegExp(`var\\(--vertext-cell, ${cell}px\\)`, 'g')) || []).length : -2;
+  check(`${copy} filter restates the cell only as the fallback`, bare === fallback,
+        `${bare} px literal(s), ${fallback} of them fallbacks`);
+}
 // Every fallback in the stylesheet spends the same measure, so a strip on a
 // page with no mode stylesheet still gets the declared count.
 const fallbacks = stylesheet.match(/var\(--vertext-column-height,\s*[^;]*;/g) || [];
 check('every stylesheet fallback reads the declared count',
-      fallbacks.length > 0 && fallbacks.every(f => /var\(--vertext-column-chars,\s*\d+\)\s*\*\s*\d+px/.test(f)),
-      fallbacks.filter(f => !/--vertext-column-chars/.test(f)).join(' | '));
+      fallbacks.length > 0 && fallbacks.every(f => /var\(--vertext-column-chars,\s*\d+\)\s*\*\s*var\(--vertext-cell\)/.test(f)),
+      fallbacks.filter(f => !/--vertext-cell/.test(f)).join(' | '));
 // And the YAML key has to reach the property.
 for (const [copy, file] of FILTERS) {
   const lua = fs.readFileSync(file, 'utf8');
