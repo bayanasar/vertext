@@ -173,8 +173,9 @@ end
 -- hidden and re-rendered through the layout, because a horizontal Chinese
 -- title above a vertical Chinese document is the one thing this library
 -- exists to stop.
-local function document_style()
-  return [[
+local function document_style(mode)
+  local writing_mode = (mode == 'lr') and 'vertical-lr' or 'vertical-rl'
+  return (([[
 <style id="vertext-document-mode">
   /* The column length budget: how far a paragraph runs before wrapping into
      the next visual column. This is the vertical analogue of a measure, and
@@ -219,8 +220,13 @@ local function document_style()
      Physical `height`/`overflow-x` are used deliberately: under a vertical
      writing mode the logical properties swap axes, and this rule is easier to
      keep correct in physical terms. */
+  /* The region follows the declared progression, as the page does in page
+     mode. Under `vertical-rl` the scroll origin is the right edge and the
+     overflow runs left; under `vertical-lr` it is the left edge and the
+     overflow runs right. A Mongolian strip in a `vertical-rl` region opens
+     with its first columns off the left edge and its last ones in view. */
   body #quarto-document-content, body main.content {
-    writing-mode: vertical-rl;
+    writing-mode: WRITING_MODE;
     height: calc(100vh - 9rem);
     /* The width must be the *container*, not the content. Left to size itself
        under a vertical writing mode the region grows to fit every column, and
@@ -314,7 +320,7 @@ local function document_style()
   }
   body #quarto-content { max-width: none; padding-inline: 0; }
 </style>
-]]
+]]):gsub('WRITING_MODE', writing_mode))
 end
 
 -- Wheel-to-column-advance.
@@ -1139,7 +1145,7 @@ function Pandoc(doc)
       includes = pandoc.MetaList({ includes })
     end
     local style = (page_mode or page_div_rendered)
-      and page_style(progression) or document_style()
+      and page_style(progression) or document_style(progression)
     includes[#includes + 1] = pandoc.MetaBlocks({
       pandoc.RawBlock('html', column_chars_style() .. style .. SCROLL_SCRIPT .. NAV_TOGGLE) })
     doc.meta['header-includes'] = includes

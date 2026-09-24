@@ -235,6 +235,17 @@ jobs:
         run: |
           python3 tools/browser-golden.py --chrome /opt/chrome/chrome-linux64/chrome
 
+      # Progression decides where a document mode page starts scrolling: the
+      # right edge under vertical-rl, the left under vertical-lr. A region that
+      # ignores it renders every column in order and opens at the END of a
+      # Mongolian text, which no markup check can see. This opens one document
+      # per progression in the browser and requires the first column in view.
+      - name: A document opens at its first column in either progression
+        id: progression-scroll
+        run: |
+          cargo build --release -p vertext-cli
+          python3 tools/progression-scroll.py --chrome /opt/chrome/chrome-linux64/chrome
+
       # vertext-core stays free of I/O and DOM so a second host can share it
       # unchanged, and vertext-wasm is that host. Its claim is exact: for the
       # same input and flags the browser build returns the CLI's bytes. The

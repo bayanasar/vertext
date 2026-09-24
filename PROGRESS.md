@@ -527,6 +527,16 @@ nothing in the core may foreclose it.
   to `main`'s. Declared at 20px, both modes give 680px columns holding 34
   characters at 20px each. The tool now reads the cell from the page.
 
+- **A document mode page opens at its first column in either progression**
+  (#52). The content region took `vertical-rl` whatever the document declared,
+  so a Mongolian (`vertical-lr`) document opened at its end: measured through
+  the real filter, the first column at x=-100 in a 900px window and the last in
+  view. The region now follows the progression, as page mode already did.
+  `tools/progression-scroll.py`, in CI: one overflowing document per
+  progression through pandoc, the filter and the binary, in headless Chrome;
+  the first column must be in the viewport on load. Red with the region written
+  back to `vertical-rl`: the `lr` document's first column at x=-2359.
+
 ## Not sealed
 
 
