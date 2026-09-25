@@ -38,7 +38,7 @@ concurrency:
 jobs:
   test:
     name: tests
-    runs-on: anton
+    runs-on: linux-docker
     env:
       # Pinned, never `@stable`: a floating browser is a floating answer, the
       # same reason the shaping golden vendors its font and pins harfbuzz. This
