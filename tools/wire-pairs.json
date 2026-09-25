@@ -1,0 +1,21 @@
+{
+  "about": "The wire rule as data. tools/versions.py, vertext.lua and vertext.mjs each implement it; version-gate.py, filter-golden.py and wasm-parity.mjs each assert their own implementation against every pair here, so the three cannot drift apart without one of them going red. `ours` is the half doing the checking (the filter or the glue), `theirs` the version the other half reports.",
+  "pairs": [
+    {"ours": "0.3.0", "theirs": "0.3.1", "agree": true,
+     "why": "a patch release of the same minor"},
+    {"ours": "0.3.1", "theirs": "0.3.0", "agree": true,
+     "why": "the same pair, the other way round"},
+    {"ours": "0.3.0", "theirs": "0.3.0", "agree": true,
+     "why": "one release"},
+    {"ours": "0.3.0-dev", "theirs": "0.3.0-dev", "agree": true,
+     "why": "two builds of one pre-release"},
+    {"ours": "0.3.0-dev", "theirs": "0.3.0", "agree": false,
+     "why": "a pre-release refuses the release it is heading for"},
+    {"ours": "0.3.0", "theirs": "0.3.0-dev", "agree": false,
+     "why": "and the release refuses the pre-release"},
+    {"ours": "0.3.0-dev", "theirs": "0.3.0-rc.1", "agree": false,
+     "why": "two different pre-releases of one minor"},
+    {"ours": "0.2.0", "theirs": "0.3.0", "agree": false,
+     "why": "releases of different minors"}
+  ]
+}

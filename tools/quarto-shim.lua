@@ -38,6 +38,7 @@ quarto = {
 
 -- Load the real filter, unmodified, in this environment. It defines Meta, Div,
 -- Pandoc and friends as globals, which is exactly what pandoc collects when a
--- filter file returns nothing.
+-- filter file returns nothing. VERTEXT_FILTER names another copy: the wire-rule
+-- check in filter-golden.py uses one whose only change is its VERSION.
 local here = debug.getinfo(1, "S").source:sub(2):match("(.*)/") or "."
-dofile(here .. "/../extensions/vertext/vertext.lua")
+dofile(os.getenv("VERTEXT_FILTER") or (here .. "/../extensions/vertext/vertext.lua"))

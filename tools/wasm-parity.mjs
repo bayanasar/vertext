@@ -97,13 +97,13 @@ for (const text of inputs) {
   }
 }
 
-// The glue's wire rule, the same one vertext.lua applies (tools/versions.py
-// states it): patch releases of a minor agree, a pre-release agrees only with
+// The glue's wire rule, held to the table tools/versions.py and vertext.lua
+// are held to: patch releases of a minor agree, a pre-release agrees only with
 // itself -- not even with the release it is heading for.
-for (const [a, b, agree] of [['0.3.0', '0.3.1', true], ['0.3.0-dev', '0.3.0', false],
-                             ['0.3.0-dev', '0.3.0-dev', true], ['0.2.0', '0.3.0', false]]) {
-  if ((wireOf(a) === wireOf(b)) !== agree) {
-    fails.push(`wire rule: ${a} and ${b} should ${agree ? '' : 'not '}agree`);
+const pairs = JSON.parse(readFileSync(path.join(ROOT, 'tools/wire-pairs.json'), 'utf8')).pairs;
+for (const { ours, theirs, agree, why } of pairs) {
+  if ((wireOf(ours) === wireOf(theirs)) !== agree) {
+    fails.push(`wire rule: ${ours} and ${theirs} should ${agree ? '' : 'not '}agree (${why})`);
   }
 }
 

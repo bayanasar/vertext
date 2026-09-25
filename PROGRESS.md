@@ -1,7 +1,7 @@
 # PROGRESS — vertext
 
 <!-- progress -->
-updated: 2026-09-23
+updated: 2026-09-25
 owner: maintainer
 stage: Quarto path works end to end; Mongolian joining proven in the font, proven to reach the page in one piece, and proven by CI to be applied by a real browser — no reader has looked at a page yet
 <!-- /progress -->
@@ -565,6 +565,21 @@ nothing in the core may foreclose it.
   string, and a version an existing tag names is built only at that tag. Red
   with all four set back to `0.2.0` (tagged `v0.2.0`, HEAD elsewhere), and with
   only the glue left at `0.3.0-dev`; both archives refuse the first case too.
+
+  Review then found two holes, both closed. The rule had three
+  implementations and no shared cases: Python's `wire()` had no caller or
+  test, and nothing reached the filter's release branch. The pairs are now
+  data, `tools/wire-pairs.json` (8 pairs), and each implementation is held to
+  all of them: `version-gate.py` for Python, `wasm-parity.mjs` for the glue,
+  and `filter-golden.py` for the filter, running a copy whose only change is
+  its `VERSION` against a stub that reports the other side. Red with a
+  release's wire changed to MAJOR.MINOR.PATCH, in the filter and in the glue
+  separately: each gate names `0.3.0`/`0.3.1` both ways, and the old
+  `filter-golden.py` stays green through the filter's cut. And the gate only
+  stopped a version EQUAL to a tag, so an untagged `0.2.1` would have passed
+  and paired with `v0.2.0`. Off a tag it now refuses any version whose wire a
+  tag already speaks: red with all four at `0.2.1` and at `0.2.0`, green at
+  `0.3.0` (no tag speaks 0.3 yet) and `0.3.0-dev`.
 
 - **The lesson site builds from the 0.2.0 release** (#9, step 2). Merged in
   that site's repository: `build.py` pins `VERTEXT_VERSION = "0.2.0"`, and its

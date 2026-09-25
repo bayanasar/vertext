@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
 """The declared version is one string, and honest about where it was built.
 
-Two checks from tools/versions.py:
+Three checks from tools/versions.py:
 
 - the four declarations (Cargo.toml, _extension.yml, the filter's and the
   glue's VERSION) are one version;
-- a version an existing tag already names is only built at that tag. After
-  `v0.3.0` is cut, main must move to `0.4.0-dev`: otherwise every build from
-  main says 0.3.0, and the handshakes, which compare versions, let a checkout's
-  half pair with a release's.
+- off a tag, the version speaks no wire an existing tag speaks. After `v0.3.0`
+  is cut, main must move to a pre-release such as `0.4.0-dev`: `0.3.0` would
+  claim to be the release, and an untagged `0.3.1` would pass the handshakes
+  against it just the same, letting a checkout's half pair with a release's;
+- `wire()`, the Python statement of the rule this relies on, agrees with every
+  pair in tools/wire-pairs.json. The filter and the glue are held to the same
+  table by filter-golden.py and wasm-parity.mjs.
 
 Needs the tags; a shallow CI checkout fetches them first.
 
@@ -22,9 +25,9 @@ import versions
 
 
 def main():
-    problems = versions.check()
-    if not problems:
-        version = versions.version()
+    problems = versions.wire_problems() + versions.check()
+    version = versions.version()
+    if version:
         problem = versions.release_problem(version)
         if problem:
             problems.append(problem)
@@ -32,8 +35,9 @@ def main():
         print("FAIL: " + p)
     if problems:
         return 1
-    print(f"PASS: every declaration says {version}, which is "
-          + ("a pre-release" if "-" in version else "a release") + " and no other commit's tag")
+    print(f"PASS: every declaration says {version}, whose wire version "
+          f"{versions.wire(version)} no other commit's tag speaks, and wire() "
+          f"agrees with {len(versions.wire_pairs())} pairs")
     return 0
 
 

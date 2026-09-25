@@ -57,6 +57,11 @@ What it pins
   6. The three hand-typed version declarations -- Cargo.toml, _extension.yml and
      the filter's WIRE_VERSION -- are one version. A handshake resting on a
      constant that can drift would refuse correct pairs.
+  7. The filter's `wire_of` agrees with every pair in tools/wire-pairs.json,
+     the table tools/versions.py and the wasm glue are held to as well. Item 5
+     only ever sees main's pre-release; this puts each pair's versions on both
+     sides, so the release branch (0.3.0's filter accepting 0.3.1's binary) is
+     exercised too.
 
 Usage
 -----
@@ -135,11 +140,13 @@ STRUCTURE_WANTS = [
 ]
 
 
-def render(pandoc, document, path_extra=None):
+def render(pandoc, document, path_extra=None, filter_copy=None):
     """pandoc -> the real filter -> the wire -> the binary. Returns (html, stderr)."""
     env = dict(os.environ)
     env["PATH"] = (path_extra if path_extra is not None
                    else f"{BINARY.parent}:{env['PATH']}")
+    if filter_copy is not None:
+        env["VERTEXT_FILTER"] = str(filter_copy)
     with tempfile.NamedTemporaryFile("w", suffix=".md", encoding="utf-8",
                                      delete=False) as f:
         f.write(document)
@@ -160,7 +167,7 @@ def spans_of(html):
     return [htmllib.unescape(m) for m in SPAN.findall(html)]
 
 
-def with_stub(pandoc, script):
+def with_stub(pandoc, script, filter_copy=None):
     """Render with a fake `vertext` first on PATH. Returns (html, stderr).
 
     The handshake's whole job is to refuse a binary that does not speak this
@@ -173,9 +180,48 @@ def with_stub(pandoc, script):
         stub.write_text(script)
         stub.chmod(0o755)
         return render(pandoc, STRUCTURE,
-                      path_extra=f"{directory}{os.pathsep}{os.environ['PATH']}")
+                      path_extra=f"{directory}{os.pathsep}{os.environ['PATH']}",
+                      filter_copy=filter_copy)
     finally:
         shutil.rmtree(directory, ignore_errors=True)
+
+
+FILTER = ROOT / "extensions" / "vertext" / "vertext.lua"
+DECLARED = re.compile(r'^local VERSION = "[^"]+"$', re.MULTILINE)
+
+
+def wire_rule_problems(pandoc):
+    """Where the filter's `wire_of` disagrees with tools/wire-pairs.json.
+
+    For each pair, a copy of the real filter with only its VERSION changed to
+    `ours` meets a stub that reports `theirs`; the filter must warn about the
+    wire version exactly when the pair should not agree.
+    """
+    source = FILTER.read_text(encoding="utf-8")
+    if len(DECLARED.findall(source)) != 1:
+        return ["wire rule: no single `local VERSION = \"...\"` line in "
+                "vertext.lua to rewrite"]
+    fails = []
+    directory = pathlib.Path(tempfile.mkdtemp(prefix="vertext-filter-"))
+    try:
+        for pair in versions.wire_pairs():
+            copy = directory / "vertext.lua"
+            copy.write_text(DECLARED.sub(f'local VERSION = "{pair["ours"]}"', source),
+                            encoding="utf-8")
+            _, stderr = with_stub(
+                pandoc,
+                f'#!/bin/sh\n[ "$1" = "--version" ] && '
+                f'{{ echo "vertext {pair["theirs"]}"; exit 0; }}\n'
+                f'cat >/dev/null; echo "<p>stub</p>"\n',
+                filter_copy=copy)
+            refused = "wire version" in stderr
+            if refused == pair["agree"]:
+                fails.append(f"wire rule: a {pair['ours']} filter "
+                             f"{'refused' if refused else 'accepted'} a "
+                             f"{pair['theirs']} binary ({pair['why']})")
+    finally:
+        shutil.rmtree(directory, ignore_errors=True)
+    return fails
 
 
 # Binaries the filter must refuse. The first speaks a wire version that is
@@ -352,6 +398,8 @@ def main():
                          f"rendered {len(spans_of(html))} spans through a "
                          f"binary that does not speak our wire")
 
+    fails += wire_rule_problems(args.pandoc)
+
     if fails:
         print(f"FAIL: {len(fails)} findings\n")
         for f in fails[:20]:
@@ -368,6 +416,8 @@ def main():
     print(f"      and the handshake refuses {len(stubs)} binaries that do not "
           f"speak this filter's wire version, degrading horizontal rather than "
           f"rendering a mismatched pair.")
+    print(f"      its wire rule agrees with all {len(versions.wire_pairs())} "
+          f"pairs in tools/wire-pairs.json.")
     print(f"      {version}, the real extensions/vertext/vertext.lua through "
           f"tools/quarto-shim.lua, binary {binary.name}")
     return 0
