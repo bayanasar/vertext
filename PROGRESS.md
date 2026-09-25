@@ -543,9 +543,10 @@ nothing in the core may foreclose it.
   line-length and line-gap rows, taken in headless Chrome with Noto Sans SC:
   34 declared characters give a 612px column, 18.0px per character, so the
   setting is solid; in a 1280×713 viewport (`--window-size=1280,800`) the
-  document-mode column is capped at 521px (713 − 12rem), which is not a whole number of 18px cells; and the lines of one wrapped
-  paragraph sit 24.2px apart, a 6.2px gap, 34% of the 18px frame, against
-  CLReq's usual 50–100%. The last is not in CI.
+  document-mode column is capped at 521px (713 − 12rem), which is not a whole
+  number of 18px cells; and the lines of one wrapped paragraph sit 24.2px
+  apart, a 6.2px gap, 34% of the 18px frame, against CLReq's usual 50–100%.
+  The last is not in CI.
 
 - **Main no longer claims a released version** (#55). From `v0.2.0` until
   this change main still said 0.2.0, so a half built from a checkout and a half

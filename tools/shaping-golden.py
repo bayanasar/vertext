@@ -238,7 +238,8 @@ def extract_lines(corpus_root):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--update", action="store_true")
-    ap.add_argument("--corpus", help="root of a lesson repository checkout (holds lessons/ and index.md), to re-extract")
+    ap.add_argument("--corpus", help="root of a lesson repository checkout "
+                    "(holds lessons/ and index.md), to re-extract")
     ap.add_argument("--prove", action="store_true",
                     help="show the golden can go red: shape with joining OFF")
     args = ap.parse_args()

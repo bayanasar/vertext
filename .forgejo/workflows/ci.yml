@@ -2,9 +2,10 @@
 #
 # The runner named in `runs-on` is NOT host mode: its label maps to a docker
 # image, so a job runs inside that image and sees the image's toolchain, not
-# the machine's. This header said the opposite until 2026-09-03, and the first step written to its
-# word went red — the image carries cargo 1.98, node 18 and python3.11, but
-# not python3-venv, which Debian splits out of python3 along with pip.
+# the machine's. This header said the opposite until 2026-09-03, and the
+# first step written to its word went red — the image carries cargo 1.98,
+# node 18 and python3.11, but not python3-venv, which Debian splits out of
+# python3 along with pip.
 #
 # The rule the old header stated is still the right one and now has teeth: a
 # step must bring whatever it needs. The CI image is not built from
