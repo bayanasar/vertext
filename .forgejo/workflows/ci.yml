@@ -46,6 +46,9 @@ jobs:
       # one string is the download URL and the cache key both, so a bump is one
       # line. It is the version the golden's evidence line was recorded with.
       CHROME_VERSION: "152.0.7977.75"
+      # Pinned for the same reason, and the version the Dart binding's tests
+      # were first run with.
+      DART_VERSION: "3.13.2"
     steps:
       - uses: actions/checkout@v4
 
@@ -294,6 +297,38 @@ jobs:
       - name: A caret moves between the source and the vertical strip
         id: wasm-caret
         run: python3 tools/wasm-caret.py --chrome /opt/chrome/chrome-linux64/chrome
+
+      # The Dart binding is the core's third host, for a Flutter layout theme
+      # that draws slots itself. Its claim is the page's slots: the same text
+      # must be cut the same way on a Flutter page as on a web page, or one
+      # content reads two ways with every other gate green. The image has no
+      # Dart, so the SDK is fetched once per version and cached like the
+      # browser (~240MB). The binding's build hook compiles vertext-ffi with
+      # the image's cargo, which also checks that the hook finds the toolchain
+      # from PATH alone: hooks drop RUSTUP_HOME, and this image keeps rustup
+      # outside $HOME.
+      - name: The pinned Dart SDK
+        uses: actions/cache@v4
+        with:
+          path: /opt/dart-sdk
+          key: dart-sdk-${{ env.DART_VERSION }}-linux-x64
+
+      - name: The Dart binding cuts text the way the page does
+        id: dart-parity
+        run: |
+          if [ ! -x /opt/dart-sdk/bin/dart ]; then
+            curl -sSfL -o /tmp/dart.zip \
+              "https://storage.googleapis.com/dart-archive/channels/stable/release/$DART_VERSION/sdk/dartsdk-linux-x64-release.zip"
+            unzip -q /tmp/dart.zip -d /opt
+            rm -f /tmp/dart.zip
+          fi
+          export PATH="/opt/dart-sdk/bin:$PATH"
+          dart --version
+          cargo build --release -p vertext-cli
+          cd bindings/dart
+          dart pub get
+          dart test
+          dart run tool/parity.dart
 
       # A red run on this instance says "red" and nothing else: `actions/runs`,
       # `actions/jobs` and `actions/workflows` all 404 on Forgejo 11.0.16, and
