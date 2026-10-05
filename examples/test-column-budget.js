@@ -110,6 +110,15 @@ const restated = cell ? (stylesheet.match(new RegExp(`(?<![\\d.])${cell}px`, 'g'
 check('the stylesheet never restates the cell', restated === 0, `${restated} restatement(s)`);
 const upright = /\.vertext-upright,\s*\.vertext-neutral\s*\{\s*font-size:\s*var\(--vertext-cell\);/.test(stylesheet);
 check('the upright glyph is set at the cell', upright);
+// Latin and Mongolian are sized against the cell too (MLReq 7.3.3, 7.3.4), so
+// a page that changes the cell keeps the three scripts in proportion. A px
+// literal here is a size that stays behind when the cell moves.
+for (const [slot, ratio] of [['latin', '14 / 18'], ['mongolian', '15 / 18']]) {
+  const block = new RegExp(`(?:^|\\n)\\.vertext-${slot}\\s*\\{([^}]*)\\}`).exec(stylesheet);
+  check(`a ${slot} slot is sized against the cell`,
+        !!block && block[1].includes(`font-size: calc(var(--vertext-cell) * ${ratio});`),
+        block ? (/font-size:[^;]*;/.exec(block[1]) || ['no font-size'])[0] : 'no rule');
+}
 for (const [copy, file] of FILTERS) {
   const lua = fs.readFileSync(file, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
   const bare = cell ? (lua.match(new RegExp(`(?<![\\d.])${cell}px`, 'g')) || []).length : -1;

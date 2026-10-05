@@ -112,7 +112,7 @@
 }
 .vertext-column-heading .vertext-latin,
 .vertext-column-heading .vertext-mongolian {
-  font-size: calc(14px * var(--vertext-heading-scale));
+  font-size: calc(var(--vertext-cell) * 14 / 18 * var(--vertext-heading-scale));
 }
 /* A heading opens a section, so it takes air on the side the columns advance
    from and a rule marking the section's start. */
@@ -220,7 +220,11 @@
   max-inline-size: var(--vertext-latin-cap-prose, 12ch);
   text-align: center;
   white-space: nowrap;
-  font-size: 14px;
+  /* Sized against the cell, so a page that changes the cell scales Latin,
+     Mongolian and CJK together (MLReq 7.3.3, 7.3.4: mixed scripts must stay
+     in proportion). 14 and 15 over 18 are the sizes the page was set at
+     against the default cell, so at that cell nothing moves. */
+  font-size: calc(var(--vertext-cell) * 14 / 18);
   line-height: 1;
 }
 .vertext-code .vertext-latin,
@@ -243,7 +247,7 @@
   max-height: none;
   font-feature-settings: "vert" 1, "vrt2" 1;
   font-family: "Noto Sans Mongolian", "Mongolian Baiti", serif;
-  font-size: 15px;
+  font-size: calc(var(--vertext-cell) * 15 / 18);
   line-height: 1;
 }
 /* Bichig inside a HORIZONTAL block — a Latin-majority paragraph, where the run

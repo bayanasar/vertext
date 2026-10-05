@@ -173,7 +173,7 @@ would eventually need its own measurement. See "Beyond both documents" below.
 | 7.1 Words not split | Conforms | A Mongolian run is never split by the engine and never wraps in the browser. Every golden run arrives on the page as one span, and the browser joins it. | gates `delivery-golden` and `browser-golden` |
 | 7.2 Alignment and justification | Partial | Each slot is centred across its column (the default MLReq names). Top-and-bottom justification, MLReq's default for multi-line text, is not done. | |
 | 7.3.1 Baseline position | Partial | Runs are `vertical-align: middle` and the font puts the baseline on the centre line. Not measured. | |
-| 7.3.2–7.3.3 Mixed with other scripts, numbers and Latin | Partial | Latin and digits are horizontal boxes centred in the column. No size compensation beyond fixed sizes (Latin 14px, Mongolian 15px, CJK 18px). Not measured. | |
+| 7.3.2–7.3.3 Mixed with other scripts, numbers and Latin | Partial | Latin and digits are horizontal boxes centred in the column. Latin and Mongolian are sized in proportion to the CJK cell (14 and 15 against 18), so changing the cell keeps the three in step. How their centre lines align is not measured. | `examples/test-column-budget.js` |
 | 7.3.4 Mixed with Chinese and Japanese | Partial | Han characters stay upright inside a `vertical-lr` column, as required. Their centre line against the Mongolian baseline is not measured. | |
 | 7.4 Lists and counters | Partial | An ordered item carries its number as text, and that number reads left to right as a horizontal slot. Not measured. | |
 | 8.1.1–8.1.2 Binding, page turning, paper | Not implemented | No pagination. | |
