@@ -219,6 +219,19 @@ local function document_style(mode)
     --vertext-column-height: min(calc(var(--vertext-column-chars, 34) * var(--vertext-cell, 18px)),
                                  var(--vertext-column-theme-height, calc(100vh - 12rem)));
   }
+  /* A line is a whole number of characters (CLReq 7.1.1.5), so the cap is
+     rounded down to the cell: a short window ends a column on a whole cell,
+     not halfway through one. Behind @supports because a browser without
+     round() would find the height invalid and stop wrapping columns at all,
+     which is worse than half a cell. */
+  @supports (height: round(down, 10px, 3px)) {
+    body {
+      --vertext-column-height: round(down,
+        min(calc(var(--vertext-column-chars, 34) * var(--vertext-cell, 18px)),
+            var(--vertext-column-theme-height, calc(100vh - 12rem))),
+        var(--vertext-cell, 18px));
+    }
+  }
   /* The content region becomes the vertical surface.
      `writing-mode: vertical-rl` is doing real work here, not decoration: a
      `flex-direction: row-reverse` strip overflows *leftward*, into negative
@@ -601,6 +614,15 @@ local function page_style(mode)
        past the bottom edge. */
     --vertext-column-height: min(calc(var(--vertext-column-chars, 34) * var(--vertext-cell, 18px)),
                                  var(--vertext-column-theme-height, calc(100vh - 3rem)));
+  }
+  /* Rounded down to a whole cell, as in document mode. */
+  @supports (height: round(down, 10px, 3px)) {
+    body {
+      --vertext-column-height: round(down,
+        min(calc(var(--vertext-column-chars, 34) * var(--vertext-cell, 18px)),
+            var(--vertext-column-theme-height, calc(100vh - 3rem))),
+        var(--vertext-cell, 18px));
+    }
   }
   /* Quarto's grid chrome assumes a horizontal axis. Collapse it to plain block
      flow so the page's writing mode, not a grid template, decides placement.

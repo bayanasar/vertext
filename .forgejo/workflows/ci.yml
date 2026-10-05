@@ -267,6 +267,23 @@ jobs:
           cargo build --release -p vertext-cli
           python3 tools/progression-scroll.py --chrome /opt/chrome/chrome-linux64/chrome
 
+      # What CLReq asks of a page that only a browser with a real CJK face can
+      # answer: whether a column is a whole number of characters long, and
+      # (as later checks join it) how the lines and marks sit. The faces are
+      # pinned by tag and sha256 and cached like the browser.
+      - name: The pinned CJK faces
+        uses: actions/cache@v4
+        with:
+          path: /opt/vertext-fonts
+          key: noto-cjk-Sans2.004-sc-tc
+
+      - name: The page keeps CLReq's geometry
+        id: page-geometry
+        run: |
+          cargo build --release -p vertext-cli
+          python3 tools/page-geometry.py --chrome /opt/chrome/chrome-linux64/chrome \
+            --fonts /opt/vertext-fonts
+
       # vertext-core stays free of I/O and DOM so a second host can share it
       # unchanged, and vertext-wasm is that host. Its claim is exact: for the
       # same input and flags the browser build returns the CLI's bytes. The

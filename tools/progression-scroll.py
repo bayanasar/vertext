@@ -109,7 +109,8 @@ def page(pandoc, progression, work):
             f'{body}</main>{MEASURE}</body>{tail}')
 
 
-def measure(chrome, work, name):
+def measure(chrome, work, name, window=WINDOW):
+    """Open `name` from `work` in headless Chrome and wait for its POST."""
     reports = queue.Queue()
 
     class Handler(http.server.SimpleHTTPRequestHandler):
@@ -128,7 +129,7 @@ def measure(chrome, work, name):
     profile = tempfile.mkdtemp(prefix="vertext-progression-profile-")
     browser = subprocess.Popen(
         [str(chrome), "--headless", "--no-sandbox", "--disable-gpu", "--hide-scrollbars",
-         f"--window-size={WINDOW[0]},{WINDOW[1]}", f"--user-data-dir={profile}",
+         f"--window-size={window[0]},{window[1]}", f"--user-data-dir={profile}",
          f"http://127.0.0.1:{server.server_address[1]}/{name}"],
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:

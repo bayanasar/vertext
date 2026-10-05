@@ -41,7 +41,7 @@ a verdict):
 
 | | Conforms | Partial | Not implemented | Informative |
 |---|---|---|---|---|
-| CLReq | 4 | 15 | 24 | 3 |
+| CLReq | 5 | 14 | 24 | 3 |
 | MLReq | 3 | 12 | 7 | 3 |
 
 The pattern is the same in both. Direction, orientation, keeping words whole
@@ -140,7 +140,7 @@ Three findings are worth reading before the tables:
 | Section | Status | Note | Evidence |
 |---|---|---|---|
 | 7.1.1.1–7.1.1.4 Page format and type area | Not implemented | No pages. Page mode makes the browser window the surface. | |
-| 7.1.1.5 Line length a multiple of the font size | Partial | A column is the declared number of 18px cells long, 34 by default, until the space runs out. Then it is capped at the space, which is not rounded to a whole cell, so a short window gives a column that ends mid-cell. Any count from 1 to 400 is accepted; CLReq's 10–55 range for vertical body text is not enforced. | gate `column-budget`, `tools/measure-column-budget.py` |
+| 7.1.1.5 Line length a multiple of the font size | Conforms | A column is the declared number of 18px cells long, 34 by default, until the space runs out; then the space is rounded down to a whole cell, so a short window shortens the column by whole characters. Any count from 1 to 400 is accepted: CLReq's 10–55 for vertical body text is a usual range, and the count is the author's. | gates `column-budget` and `page-geometry` |
 | 7.1.1.5 Line gap 50–100% of the frame | Partial | The gap between the lines of one paragraph is below CLReq's usual minimum of half the frame. `line-height: 1.05` plus the font's own metrics set it, so another font gives another gap. | Measured in headless Chrome, recorded in PROGRESS; not in CI |
 | 7.1.2 Widows and orphans | Not implemented | By design, as 6.2.2. | |
 | 7.1.3.1–7.1.3.2 Heading types, sizes and alignment | Partial | Six heading levels scale 1.75, 1.4, 1.2, 1.1, 1, 1 with weight 600, and start at the line start. CLReq suggests 10–20% larger than body text, and an indent that grows with the level. | `a_heading_segment_gets_its_level_on_the_column` |
