@@ -30,7 +30,7 @@ far.
 
 | Consumer | How it binds the engine | Exposure |
 |---|---|---|
-| lesson-notes site | pins one release: the binary from crates.io and the filter from that release's zip, checked against a pinned sha256 | one version for both halves; moving it is a one-line change |
+| lesson-notes site | pins one release: the binary from crates.io and the filter from that release's zip, checked against a pinned sha256 | one version for both halves; moving it is a bump of the pin and its sha256 |
 | documentation site | vendors `vertext.lua` **and** pins `VERTEXT_REF` for the binary | two independent pins, which can and did drift apart |
 
 ## Where it stands
@@ -49,8 +49,10 @@ What holds across commits:
   bytes; `examples/wasm/caret.html` is a demo, not a shipped host.
 - **The lesson-notes site takes both halves from one release; the documentation
   site still pins them separately.** Two independent pins have already drifted
-  apart once, and the handshake refuses such a pair rather than rendering it,
-  which turns a silent wrong page into a horizontal one with a warning.
+  apart once. For pairs from 0.2.0 on, the handshake refuses such a pair
+  rather than rendering it, which turns a silent wrong page into a horizontal
+  one with a warning. The documentation site's current pair predates the
+  handshake, so it stays unprotected until that site installs from a release.
 
 ## What is not proven
 

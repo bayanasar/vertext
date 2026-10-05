@@ -54,9 +54,10 @@ What it pins
      degrades horizontal instead of rendering a mismatched pair (#9, step 3).
      Nothing else checks that the two halves came from the same release, and a
      mismatched pair renders wrong with every other gate green.
-  6. The three hand-typed version declarations -- Cargo.toml, _extension.yml and
-     the filter's WIRE_VERSION -- are one version. A handshake resting on a
-     constant that can drift would refuse correct pairs.
+  6. The four hand-typed version declarations -- Cargo.toml, _extension.yml,
+     and VERSION in the filter and in the wasm glue -- are one version, as read
+     by tools/versions.py. A handshake resting on a constant that can drift
+     would refuse correct pairs.
   7. The filter's `wire_of` agrees with every pair in tools/wire-pairs.json,
      the table tools/versions.py and the wasm glue are held to as well. Item 5
      only ever sees main's pre-release; this puts each pair's versions on both

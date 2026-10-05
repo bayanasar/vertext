@@ -619,13 +619,13 @@ nothing in the core may foreclose it.
   which is a change in that repository.
 - **A mismatched pair is now refused, not rendered** (#9, step 3). The rule
   below was tightened for pre-releases and a fourth declaration; see "Main no
-  longer claims a released version". `vertext
-  --version` prints `vertext 0.2.0`, and the filter asks for it once per
-  document before it sends anything: if the binary does not speak the filter's
-  `WIRE_VERSION` — MAJOR.MINOR, because the protocol is what has to match and a
-  patch does not move it — the document is left horizontal with a warning
-  naming both versions. Degrade, never raise: the same path a missing binary
-  already took, for the same reason.
+  longer claims a released version". `vertext --version` printed `vertext
+  0.2.0` at the time, and the filter asks for it once per document before it
+  sends anything: if the binary does not speak the filter's `WIRE_VERSION` —
+  MAJOR.MINOR, because the protocol is what has to match and a patch does not
+  move it — the document is left horizontal with a warning naming both
+  versions. Degrade, never raise: the same path a missing binary already took,
+  for the same reason.
 
   `tools/filter-golden.py` presents two binaries it must refuse — one reporting
   another release, one too old to know `--version` at all, which reads the empty
