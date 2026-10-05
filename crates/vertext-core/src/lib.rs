@@ -419,10 +419,62 @@ pub fn layout_text(input: &str, config: &LayoutConfig) -> Layout {
     flush_pending(&mut columns, &mut pending_connectors);
     if !config.preserve_spaces {
         for column in &mut columns {
+            attach_affixes(&mut column.slots);
             combine_marks(&mut column.slots);
         }
     }
     Layout { columns, progression: config.progression }
+}
+
+/// A currency symbol, which may lead a number (`¥100`) or trail it (`100₫`).
+fn is_currency(ch: char) -> bool {
+    matches!(ch, '$' | '¢' | '£' | '¤' | '¥' | '\u{20A0}'..='\u{20CF}' | '฿' |
+        '﹩' | '＄' | '￠' | '￡' | '￥' | '￦')
+}
+
+/// Joins a number and the sign or unit that belongs to it into one slot.
+///
+/// CLReq 6.1.2.2: `%`, `‰`, the degree signs and a trailing currency symbol
+/// are not separated from the number before them, and `+`, `-`, `±` and a
+/// leading currency symbol are not separated from the number after them. Two
+/// slots are two boxes, and a browser measured breaking between them in all
+/// four cases tried, so the sign is joined to the number's own slot, where no
+/// line can fall between them. Only a slot that is a number on that side takes
+/// a sign: no new word is made, so the slot census `measure_slots` keeps is
+/// unchanged. Prose only, as the pairing of marks is.
+fn attach_affixes(slots: &mut Vec<Slot>) {
+    fn single(slot: &Slot) -> Option<char> {
+        match slot {
+            Slot::Neutral(s) | Slot::VerticalPunctuation(s) => {
+                let mut chars = s.chars();
+                chars.next().filter(|_| chars.next().is_none())
+            }
+            _ => None,
+        }
+    }
+    let prefix = |ch: char| matches!(ch, '+' | '-' | '±' | '−' | '＋' | '－') || is_currency(ch);
+    let suffix = |ch: char| matches!(ch, '%' | '％' | '‰' | '‱' | '°' | '℃' | '℉') || is_currency(ch);
+    let mut out: Vec<Slot> = Vec::with_capacity(slots.len());
+    for slot in std::mem::take(slots) {
+        match (&slot, out.last()) {
+            (Slot::LatinWord(word), Some(last))
+                if word.starts_with(|c: char| c.is_ascii_digit())
+                    && single(last).is_some_and(prefix) =>
+            {
+                let sign = out.pop().unwrap();
+                out.push(Slot::LatinWord(format!("{}{word}", sign.text())));
+            }
+            (_, Some(Slot::LatinWord(word)))
+                if word.ends_with(|c: char| c.is_ascii_digit())
+                    && single(&slot).is_some_and(suffix) =>
+            {
+                let Some(Slot::LatinWord(word)) = out.pop() else { unreachable!() };
+                out.push(Slot::LatinWord(format!("{word}{}", slot.text())));
+            }
+            _ => out.push(slot),
+        }
+    }
+    *slots = out;
 }
 
 /// Pairs adjacent question and exclamation marks into one slot.
@@ -759,6 +811,26 @@ mod tests {
         let code = LayoutConfig { preserve_spaces: true, ..LayoutConfig::default() };
         assert!(!layout_text("x！！y", &code).columns[0].slots
             .iter().any(|s| matches!(s, Slot::Combined(_))));
+    }
+
+    #[test]
+    fn a_number_keeps_its_sign_and_unit() {
+        let slots = |text: &str| layout_text(text, &LayoutConfig::default()).columns[0].slots.clone();
+        for (text, word) in [("涨50%了", "50%"), ("约30℃时", "30℃"), ("占5‰吧", "5‰"),
+                             ("价¥100元", "¥100"), ("降-5度", "-5"), ("差±2吧", "±2"),
+                             ("为−3时", "−3"), ("合100₫的", "100₫"), ("是+5%的", "+5%")] {
+            assert_eq!(slots(text)[1], Slot::LatinWord(word.into()), "{text}");
+        }
+        // A sign with no number beside it is punctuation as before.
+        assert_eq!(slots("好%好")[1], Slot::Neutral("%".into()));
+        assert_eq!(slots("好¥好")[1], Slot::Neutral("¥".into()));
+        // A word that is not a number on that side takes nothing.
+        assert_eq!(slots("用abc%表示")[1..3],
+                   [Slot::LatinWord("abc".into()), Slot::Neutral("%".into())]);
+        // In code the characters stay as the lexer would see them.
+        let code = LayoutConfig { preserve_spaces: true, ..LayoutConfig::default() };
+        assert!(layout_text("x%50", &code).columns[0].slots
+            .contains(&Slot::Neutral("%".into())));
     }
 
     #[test]

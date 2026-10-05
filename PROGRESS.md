@@ -622,7 +622,7 @@ nothing in the core may foreclose it.
   (shown with the binding set to `0.2.0`), and its wire rule is held to
   `tools/wire-pairs.json`.
 
-- **The page keeps CLReq's geometry** (#71, #72, #73, #74). `tools/page-geometry.py`,
+- **The page keeps CLReq's geometry** (#71, #72, #73, #74, #75). `tools/page-geometry.py`,
   CI gate `page-geometry`: documents through pandoc, the real filter and the
   binary, in headless Chrome 152 with Noto Sans SC pinned by tag and sha256.
   A short window ends a column on a whole cell: 504px (28 cells) in document
@@ -663,6 +663,15 @@ nothing in the core may foreclose it.
   36px with the property removed, and the core test red with the pairing pass
   skipped. The new kind reaches the Dart binding, and `dart-parity` holds it
   to the page's class (179 inputs, 1726 slots).
+
+  **A number keeps its sign and unit** (#75). Measured before changing
+  anything: each paragraph left the end of its first line room for `50` and
+  not `%` (and so on for `30℃`, `¥100`, `-5`), and Chrome split all four
+  across lines, because the number and the sign were two boxes. The core now
+  joins a sign or unit to the number's own slot (CLReq 6.1.2.2's list, and the
+  currency symbols either side). The same four cases in `page-geometry` now
+  keep each pair on one line. No word is created, so the slot census behind
+  the horizontal decision is unchanged and its invariant test stays green.
 
 ## Not sealed
 

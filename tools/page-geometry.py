@@ -74,6 +74,11 @@ document.fonts.ready.then(() => {
     cell,
     heights: columns.map(c => parseFloat(getComputedStyle(c).height)),
     centres,
+    // Each column's slots, as text and the centre of their line.
+    slots: columns.map(c => [...c.children].map(e => {
+      const r = e.getBoundingClientRect();
+      return [e.textContent, Math.round((r.left + r.right) / 2)];
+    })),
     combined: [...document.querySelectorAll('.vertext-combine')]
       .map(e => { const r = e.getBoundingClientRect(); return [r.width, r.height]; }),
     fonts: [...document.fonts].filter(f => f.status === 'loaded').map(f => f.family),
@@ -183,12 +188,43 @@ def marks_together(m, where):
 
 TOGETHER = "真的？！不会吧！！谁？？？"
 
+# Each paragraph leaves the end of its first line just room for the number and
+# not its suffix, or for the prefix and not its number, so the break has to go
+# somewhere: between the two, or before both.
+FILL = "永" * 27
+AFFIXED = [("50", "%"), ("30", "℃"), ("¥", "100"), ("-", "5")]
+AFFIXES = "\n\n".join(FILL + a + b + "永永" for a, b in AFFIXED)
+
+
+def numbers_keep_affixes(m, where):
+    """CLReq 6.1.2.2: a number and its prefix or suffix (`50%`, `¥100`, `30℃`)
+    are not separated across lines."""
+    fails = []
+    for (a, b), column in zip(AFFIXED, m["slots"]):
+        texts = [t for t, _ in column]
+        joined = a + b
+        lines = {}
+        for text, x in column:
+            lines.setdefault(x, "")
+            lines[x] += text
+        if any(joined in line for line in lines.values()):
+            continue
+        if not any(joined in "".join(texts[i:i + 2]) for i in range(len(texts))):
+            fails.append(f"{where}: `{joined}` is not in the column at all: {texts[-6:]}")
+            continue
+        fails.append(f"{where}: `{a}` and `{b}` sit on different lines: "
+                     + " / ".join(line[-4:] for line in lines.values()))
+    if not fails:
+        m["gap"] = (m.get("gap", "") + f"{len(AFFIXED)} affixed numbers whole").strip()
+    return fails
+
 CASES = [
     # name, text, metadata, window, the face, checks
     ("document-short", PROSE, {}, (900, 700), "Noto Sans SC", [whole_cells, line_gap]),
     ("page-short", PROSE, {"vertext-page": "true"}, (900, 500), "Noto Sans SC",
      [whole_cells, line_gap]),
     ("marks-together", TOGETHER, {}, (900, 700), "Noto Sans SC", [marks_together]),
+    ("number-affixes", AFFIXES, {}, (900, 700), "Noto Sans SC", [numbers_keep_affixes]),
 ]
 
 
@@ -229,8 +265,8 @@ def main():
     if fails:
         return 1
     print("PASS: every column on a short window is a whole number of cells long, "
-          "the lines of a paragraph sit within CLReq's usual gap, and marks used "
-          "together share a cell")
+          "the lines of a paragraph sit within CLReq's usual gap, marks used "
+          "together share a cell, and a number keeps its sign and unit")
     for line in lines:
         print("      " + line)
     return 0
