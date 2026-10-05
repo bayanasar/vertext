@@ -61,9 +61,14 @@ document.fonts.ready.then(() => {
     .getPropertyValue('--vertext-cell'));
   const columns = [...document.querySelectorAll('.vertext-column')]
     .filter(c => c.textContent.trim());
+  // The centre of every upright character in the first column, across the
+  // line axis: one distinct value per line of the paragraph.
+  const centres = [...(columns[0] ? columns[0].querySelectorAll('.vertext-upright') : [])]
+    .map(s => { const r = s.getBoundingClientRect(); return (r.left + r.right) / 2; });
   const result = {
     cell,
     heights: columns.map(c => parseFloat(getComputedStyle(c).height)),
+    centres,
     fonts: [...document.fonts].filter(f => f.status === 'loaded').map(f => f.family),
   };
   fetch('result', { method: 'POST', body: JSON.stringify(result) });
@@ -132,10 +137,30 @@ def whole_cells(m, where):
     return fails
 
 
+def line_gap(m, where):
+    """CLReq 7.1.1.5: the gap between the lines of a paragraph is commonly 50%
+    to 100% of the character frame, and does not exceed the font size. The
+    gap is the pitch between adjacent line centres less the frame (the cell).
+    A paragraph that does not wrap has no gap to measure, so that fails."""
+    cell = m["cell"]
+    lines = sorted({round(c * 2) / 2 for c in m["centres"]})
+    if len(lines) < 3:
+        return [f"{where}: the first paragraph has {len(lines)} line(s); "
+                f"the gap needs at least three"]
+    pitches = sorted(b - a for a, b in zip(lines, lines[1:]))
+    pitch = pitches[len(pitches) // 2]
+    gap = (pitch - cell) / cell
+    m["gap"] = f"lines {pitch:.1f}px apart, a gap of {gap:.0%} of the frame"
+    if not 0.5 - 0.01 <= gap <= 1.0 + 0.01:
+        return [f"{where}: lines {pitch:.1f}px apart, a gap of {gap:.0%} of the "
+                f"{cell}px frame; CLReq's usual range is 50% to 100%"]
+    return []
+
+
 CASES = [
     # name, metadata, window, the face, checks
-    ("document-short", {}, (900, 700), "Noto Sans SC", [whole_cells]),
-    ("page-short", {"vertext-page": "true"}, (900, 500), "Noto Sans SC", [whole_cells]),
+    ("document-short", {}, (900, 700), "Noto Sans SC", [whole_cells, line_gap]),
+    ("page-short", {"vertext-page": "true"}, (900, 500), "Noto Sans SC", [whole_cells, line_gap]),
 ]
 
 
@@ -168,13 +193,15 @@ def main():
         for check in checks:
             fails += check(m, name)
         lines.append(f"{name} at {window[0]}x{window[1]}: columns "
-                     f"{sorted(set(m['heights']))}px of a {m['cell']}px cell")
+                     f"{sorted(set(m['heights']))}px of a {m['cell']}px cell"
+                     + (f"; {m['gap']}" if "gap" in m else ""))
     shutil.rmtree(work, ignore_errors=True)
     for line in fails:
         print("FAIL: " + line)
     if fails:
         return 1
-    print("PASS: every column on a short window is a whole number of cells long")
+    print("PASS: every column on a short window is a whole number of cells long, "
+          "and the lines of a paragraph sit within CLReq's usual gap")
     for line in lines:
         print("      " + line)
     return 0

@@ -15,6 +15,13 @@
    element that declares it. */
 :root { --vertext-cell: 18px; }
 
+/* The gap between the lines of a paragraph, as a fraction of the cell.
+   CLReq 7.1.1.5: a type area's line gap is commonly 50% to 100% of the
+   character frame, and does not exceed the font size. Half is the low end of
+   that range, the tightest setting it still calls usual. A page may declare
+   another value inside the range. */
+:root { --vertext-line-gap: .5; }
+
 .vertext {
   display: flex;
   flex-direction: row-reverse;
@@ -55,7 +62,15 @@
   flex: 0 0 auto;
   block-size: auto;
   height: var(--vertext-column-height, calc(var(--vertext-column-chars, 34) * var(--vertext-cell)));
-  line-height: 1.05;
+  /* Every line of a column is one pitch apart: the cell plus the gap. The
+     slots carry it (below), not the column. Each slot is centred across its
+     line with `vertical-align: middle`, which puts its midpoint half an
+     x-height off the column's own baseline, so a column with a line height of
+     its own adds that offset to every line: a 27px line height measured 32.5px
+     apart. With the column's strut at zero, the slots alone size the line and
+     the pitch is what is declared. */
+  --vertext-line-pitch: calc(var(--vertext-cell) * (1 + var(--vertext-line-gap)));
+  line-height: 0;
 }
 .vertext[data-column-advance="right"] .vertext-column { writing-mode: vertical-lr; }
 /* A cell holds one short run and must never wrap. Under `vertical-rl` the
@@ -94,11 +109,21 @@
 .vertext-vform,
 .vertext-corner,
 .vertext-space { vertical-align: middle; }
+.vertext-upright,
+.vertext-neutral,
+.vertext-vform,
+.vertext-corner,
+.vertext-space { line-height: var(--vertext-line-pitch); }
 
 /* Headings. The level sets one scale factor and every glyph class multiplies
    the base size by it, so adding a level means adding one line here and the
    upright/Latin/neutral sizes stay in step by construction. */
-.vertext-column-heading { --vertext-heading-scale: 1; font-weight: 600; }
+.vertext-column-heading {
+  --vertext-heading-scale: 1;
+  --vertext-line-pitch: calc(var(--vertext-cell) * var(--vertext-heading-scale)
+                             * (1 + var(--vertext-line-gap)));
+  font-weight: 600;
+}
 .vertext-column-h1 { --vertext-heading-scale: 1.75; }
 .vertext-column-h2 { --vertext-heading-scale: 1.4; }
 .vertext-column-h3 { --vertext-heading-scale: 1.2; }

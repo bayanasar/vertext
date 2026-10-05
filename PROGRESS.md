@@ -546,7 +546,8 @@ nothing in the core may foreclose it.
   document-mode column is capped at 521px (713 − 12rem), which is not a whole
   number of 18px cells; and the lines of one wrapped paragraph sit 24.2px
   apart, a 6.2px gap, 34% of the 18px frame, against CLReq's usual 50–100%.
-  The last is not in CI.
+  The last is not in CI. Both have since been met, and a gate measures them:
+  see "The page keeps CLReq's geometry".
 
 - **Main no longer claims a released version** (#55). From `v0.2.0` until
   this change main still said 0.2.0, so a half built from a checkout and a half
@@ -620,6 +621,21 @@ nothing in the core may foreclose it.
   The binding refuses a library from another release, naming both versions
   (shown with the binding set to `0.2.0`), and its wire rule is held to
   `tools/wire-pairs.json`.
+
+- **The page keeps CLReq's geometry** (#71, #72). `tools/page-geometry.py`,
+  CI gate `page-geometry`: documents through pandoc, the real filter and the
+  binary, in headless Chrome 152 with Noto Sans SC pinned by tag and sha256.
+  A short window ends a column on a whole cell: 504px (28 cells) in document
+  mode at 900x700 and 450px (25) in page mode at 900x500, where the space is
+  508px and 452px; red with the rounding's `@supports` made unsatisfiable.
+  The lines of a paragraph sit 27.0px apart, a 50% gap of the 18px frame,
+  where they sat 24.0px apart (33%) before. Setting the line height alone gave
+  32.5px: every slot is centred with `vertical-align: middle`, half an
+  x-height off the column's own baseline, and the column's strut added that
+  to every line. The slots now carry the pitch and the strut is zero. The
+  browser gates (`browser-golden`, `progression-scroll`, `wasm-caret`) stay
+  green, and a mixed page screenshotted before and after differs only in the
+  spacing of its lines.
 
 ## Not sealed
 
