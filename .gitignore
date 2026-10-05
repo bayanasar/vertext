@@ -33,3 +33,8 @@
 # Python bytecode from the golden tools. tools/delivery-golden.py loads
 # tools/shaping-golden.py through importlib, which writes one of these.
 __pycache__/
+
+# The Dart binding's resolution and hook output. A library package leaves its
+# lock file to the application that depends on it.
+/bindings/dart/.dart_tool/
+/bindings/dart/pubspec.lock

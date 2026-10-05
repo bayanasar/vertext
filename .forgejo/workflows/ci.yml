@@ -56,8 +56,8 @@ jobs:
       - name: Fetch the release tags
         run: git fetch --tags --force --quiet origin
 
-      # Four files declare the version and the two handshakes compare it, so
-      # they must be one string -- and off a tag, the version must be a
+      # Several files declare the version (tools/versions.py lists them) and
+      # the handshakes compare it, so they must be one string -- and off a tag, the version must be a
       # pre-release no tag names. A release version is built only on its tag;
       # after a release main moves to the next minor's pre-release, or a
       # checkout's half and a release's half speak the same wire and the

@@ -1,5 +1,5 @@
 {
-  "about": "The wire rule as data. tools/versions.py, vertext.lua and vertext.mjs each implement it; version-gate.py, filter-golden.py and wasm-parity.mjs each assert their own implementation against every pair here, so the three cannot drift apart without one of them going red. `ours` is the half doing the checking (the filter or the glue), `theirs` the version the other half reports.",
+  "about": "The wire rule as data. tools/versions.py, vertext.lua, vertext.mjs and the Dart binding (bindings/dart) each implement it; version-gate.py, filter-golden.py, wasm-parity.mjs and the binding's own tests each assert their implementation against every pair here, so they cannot drift apart without one of them going red. `ours` is the half doing the checking (the filter or the glue), `theirs` the version the other half reports.",
   "pairs": [
     {"ours": "0.3.0", "theirs": "0.3.1", "agree": true,
      "why": "a patch release of the same minor"},

@@ -3,8 +3,8 @@
 
 Three checks from tools/versions.py:
 
-- the four declarations (Cargo.toml, _extension.yml, the filter's and the
-  glue's VERSION) are one version;
+- every declaration of the version (tools/versions.py lists them) says the
+  same thing;
 - off a tag, the version is a pre-release that no tag names. A release
   version is built only on its tag: an untagged `0.3.0` claims to be a release
   that may end up on another commit, and an untagged `0.3.1` passes the

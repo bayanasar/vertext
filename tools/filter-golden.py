@@ -54,10 +54,9 @@ What it pins
      degrades horizontal instead of rendering a mismatched pair (#9, step 3).
      Nothing else checks that the two halves came from the same release, and a
      mismatched pair renders wrong with every other gate green.
-  6. The four hand-typed version declarations -- Cargo.toml, _extension.yml,
-     and VERSION in the filter and in the wasm glue -- are one version, as read
-     by tools/versions.py. A handshake resting on a constant that can drift
-     would refuse correct pairs.
+  6. The hand-typed version declarations tools/versions.py lists, the
+     filter's VERSION among them, are one version. A handshake resting on a
+     constant that can drift would refuse correct pairs.
   7. The filter's `wire_of` agrees with every pair in tools/wire-pairs.json,
      the table tools/versions.py and the wasm glue are held to as well. Item 5
      only ever sees main's pre-release; this puts each pair's versions on both
@@ -258,11 +257,11 @@ HEADING_FOR = ("the release a pre-release is heading for",
 
 
 def versions_agree():
-    """The four hand-typed version declarations must be one version.
+    """The hand-typed version declarations must be one version.
 
     `Cargo.toml` is what the binary prints; `_extension.yml` is what Quarto
-    installs by; `VERSION` in the filter and in the wasm glue is what each
-    handshake compares. A handshake built on a constant that can drift from the
+    installs by; `VERSION` in the filter is what this handshake compares, and
+    the other bindings declare theirs (tools/versions.py lists them all). A handshake built on a constant that can drift from the
     version it claims to speak would refuse correct pairs. The reading and the
     comparison live in tools/versions.py, shared with both release archives.
     """

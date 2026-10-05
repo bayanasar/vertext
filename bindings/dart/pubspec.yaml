@@ -1,0 +1,17 @@
+name: vertext
+description: >-
+  Vertical text layout for Dart and Flutter hosts: the slots vertext lays out,
+  over FFI, for a host that shapes and paints them itself.
+version: 0.3.0-dev
+publish_to: none
+
+environment:
+  sdk: ">=3.10.0 <4.0.0"
+
+dependencies:
+  code_assets: ^2.1.0
+  ffi: ^2.1.0
+  hooks: ^2.2.0
+
+dev_dependencies:
+  test: ^1.25.0

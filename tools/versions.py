@@ -1,13 +1,18 @@
 """The version declarations, read once, and the rules that compare them.
 
-Four files declare a version, and a filter or glue built from one checkout
-must refuse a binary or module built from another:
+Six files declare a version, and a filter, glue or binding built from one
+checkout must refuse a binary or library built from another:
 
-    Cargo.toml             [workspace.package] version -- what the binary and
-                           the wasm module report
+    Cargo.toml             [workspace.package] version -- what the binary, the
+                           wasm module and the native library report
     _extension.yml         what Quarto installs the filter by
     vertext.lua            VERSION, what the filter compares against
     vertext.mjs            VERSION, what the glue compares against
+    pubspec.yaml           what the Dart binding is resolved by
+    vertext.dart           version, what the Dart binding compares against
+
+Everything else that talks about the declarations points here rather than
+listing them, so adding one is a change to this file.
 
 They are typed by hand and must be one string; `check()` says where they
 disagree. Every tool reads them here, so there is one parser per file and a
@@ -59,6 +64,8 @@ def declared():
         "_extension.yml": _read("extensions/vertext/_extension.yml", r"^version:\s*(\S+)\s*$"),
         "vertext.lua": _read("extensions/vertext/vertext.lua", r'^local VERSION = "([^"]+)"'),
         "vertext.mjs": _read("examples/wasm/vertext.mjs", r"^export const VERSION = '([^']+)';$"),
+        "pubspec.yaml": _read("bindings/dart/pubspec.yaml", r"^version:\s*(\S+)\s*$"),
+        "vertext.dart": _read("bindings/dart/lib/vertext.dart", r"^const version = '([^']+)';$"),
     }
 
 

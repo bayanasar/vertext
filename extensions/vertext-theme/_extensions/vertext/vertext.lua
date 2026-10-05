@@ -88,10 +88,10 @@ end
 -- including the release of the minor it is heading for -- and the reverse.
 -- Two checkouts of main between the same tags still accept each other.
 --
--- Four places declare the version: this one, `Cargo.toml`, `_extension.yml`
--- and the wasm glue. `tools/versions.py` reads all four and CI requires them to
--- be one string, because a handshake built on a constant that drifted from the
--- version it claims would refuse correct pairs.
+-- Several places declare the version, this one among them; `tools/versions.py`
+-- lists and reads them all, and CI requires them to be one string, because a
+-- handshake built on a constant that drifted from the version it claims would
+-- refuse correct pairs.
 local VERSION = "0.3.0-dev"
 
 local function wire_of(version)

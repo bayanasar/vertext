@@ -214,8 +214,9 @@ the document horizontal with a warning naming both versions, and the glue
 throws `VersionMismatch`.
 
 The wire version follows one rule, written down as pairs in
-`tools/wire-pairs.json`. `tools/versions.py`, `vertext.lua` and `vertext.mjs`
-each implement it, and CI holds each of the three to every pair:
+`tools/wire-pairs.json`. `tools/versions.py`, `vertext.lua`, `vertext.mjs`
+and the Dart binding each implement it, and CI holds each of them to every
+pair:
 
 | Version | Wire version | Accepts |
 |---|---|---|
@@ -224,9 +225,8 @@ each implement it, and CI holds each of the three to every pair:
 
 Main carries the next minor's pre-release from the day after a tag, so a half
 built from a checkout refuses every released half and the reverse. The
-`version` gate in CI checks what makes that true: the four declarations
-(`Cargo.toml`, `_extension.yml`, and `VERSION` in the filter and the glue) are
-one string, and off a tag the version is a pre-release that no tag names. A
+`version` gate in CI checks what makes that true: every declaration of the
+version (`tools/versions.py` lists them) is one string, and off a tag the version is a pre-release that no tag names. A
 release version is built only on its tag: an untagged `0.3.0` would claim to
 be a release whose tag may land on another commit, and an untagged `0.3.1`
 would pair with `v0.3.0`. So a release commit, new minor or patch, is pushed
