@@ -41,7 +41,7 @@ a verdict):
 
 | | Conforms | Partial | Not implemented | Informative |
 |---|---|---|---|---|
-| CLReq | 6 | 13 | 24 | 3 |
+| CLReq | 7 | 12 | 24 | 3 |
 | MLReq | 3 | 12 | 7 | 3 |
 
 The pattern is the same in both. Direction, orientation, keeping words whole
@@ -53,13 +53,16 @@ page numbers) is not met.
 
 Three findings are worth reading before the tables:
 
-- **Punctuation follows one regional style.** Commas, stops and semicolons are
-  moved to the upper-right corner, the Mainland convention. No `lang` is read
-  anywhere, so Traditional Chinese text from Taiwan or Hong Kong, which centres
-  these marks, gets the Mainland placement. The fullwidth colon is handed to the
-  font's `vert` feature, and the classifier's own test asserts that it turns.
-  CLReq appendix A.1 says pause and stop marks are not rotated in either
-  direction.
+- **Punctuation placement is the face's.** The pause and stop marks, the
+  fullwidth colon among them, never turn. Where they sit is regional, and a
+  CJK face's vertical forms already place them by region, so vertext moves
+  nothing: a Mainland face puts them in the corner, a Taiwan face centres
+  them. Until October 2026 vertext translated them again over the face, which
+  pushed a comma past the top of its frame and gave Taiwan text the Mainland
+  position, and it classed the colon with the marks that turn. One limit is a
+  face's, not vertext's: a face that serves every region may not switch its
+  vertical forms with the language (Noto Sans CJK SC under `zh-TW` switches
+  `！？` and not `、，。．；：`), so a Taiwan page wants a Taiwan face.
 - **Every Latin run is set horizontally in the column.** That includes acronyms,
   words and digits. CLReq describes three treatments by kind: acronyms upright
   letter by letter, words rotated 90° clockwise, and 2–3 digit numbers
@@ -77,7 +80,7 @@ Three findings are worth reading before the tables:
 |---|---|---|---|
 | 2.1.1 Writing modes in Chinese | Informative | Both modes exist: vertical columns, with horizontal blocks for Latin-majority prose, code and tables. | |
 | 2.1.2 Arrangement of characters and lines | Conforms | Characters run top to bottom and columns advance right to left. Progression is data, not a constant. | `a_newline_creates_the_column_to_the_left`, `progression_reaches_the_dom_as_data`, gate `progression-scroll` |
-| 2.1.2 Punctuation position | Partial | `，、。．；` go to the upper-right corner (Mainland). `：` takes the font's `vert` form, so it rotates where the font says; A.1 says it should not rotate. `！？` stay upright where the font puts them, not moved to the corner. There is no Taiwan/Hong Kong centred style: no `lang` is read. | `the_punctuation_contract`, `stops_go_to_the_corner_and_dashes_turn` |
+| 2.1.2 Punctuation position | Conforms | `、，。．；：` and `！？` never turn. They are placed by the face's vertical forms: in Noto Sans SC to the right and, for the short marks, in the upper half (Mainland); in Noto Sans TC at the centre, under `zh-TW`, `zh-HK` and `zh-Hant`. A face that does not switch its forms with the language keeps its own region's placement. | `the_punctuation_contract`, gate `punctuation-ink` |
 | 2.1.2 Western text in vertical | Partial | Only horizontal-in-vertical is used, for every Latin or digit run. No upright acronyms, no rotation. Runs longer than 12 characters break with a visible hyphen. | `long_latin_words_are_bounded`, `a_long_word_breaks_at_the_hyphen_it_already_has` |
 | 2.1.2 Table captions | Not implemented | The wire protocol carries no caption. | |
 | 2.1.2 Table header row on the right | Partial | Header cells are real `<th>` and the table is `vertical-rl`, so the header row falls on the right. Nothing measures where it lands. | `a_table_keeps_its_cells_apart` |

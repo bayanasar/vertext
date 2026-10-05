@@ -50,6 +50,11 @@ FONTS = {
                      "faa6c9df652116dde789d351359f3d7e5d2285a2b2a1f04a2d7244df706d5ea9"),
     "Noto Sans TC": (f"{NOTO}/TC/NotoSansTC-Regular.otf",
                      "5bab0cb3c1cf89dde07c4a95a4054b195afbcfe784d69d75c340780712237537"),
+    # One face for every region, choosing its forms by the text's language.
+    "Noto Sans CJK SC": (
+        "https://github.com/notofonts/noto-cjk/raw/Sans2.004/Sans/OTF/"
+        "SimplifiedChinese/NotoSansCJKsc-Regular.otf",
+        "2c76254f6fc379fddfce0a7e84fb5385bb135d3e399294f6eeb6680d0365b74b"),
 }
 
 PROSE = "山川异域，风月同天。寄诸佛子，共结来缘。" * 12

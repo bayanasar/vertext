@@ -622,7 +622,7 @@ nothing in the core may foreclose it.
   (shown with the binding set to `0.2.0`), and its wire rule is held to
   `tools/wire-pairs.json`.
 
-- **The page keeps CLReq's geometry** (#71, #72). `tools/page-geometry.py`,
+- **The page keeps CLReq's geometry** (#71, #72, #73). `tools/page-geometry.py`,
   CI gate `page-geometry`: documents through pandoc, the real filter and the
   binary, in headless Chrome 152 with Noto Sans SC pinned by tag and sha256.
   A short window ends a column on a whole cell: 504px (28 cells) in document
@@ -636,6 +636,24 @@ nothing in the core may foreclose it.
   browser gates (`browser-golden`, `progression-scroll`, `wasm-caret`) stay
   green, and a mixed page screenshotted before and after differs only in the
   spacing of its lines.
+
+  **The pause and stop marks never turn, and sit where the face puts them**
+  (#73). `tools/punctuation-ink.py`, CI gate `punctuation-ink`: `口<mark>口`
+  for each of `、，。．；：！？`, as the binary renders it, at a 96px cell,
+  screenshotted twice, once with the mark hidden, so the difference is the
+  mark's ink alone. Measured before changing anything: Noto Sans SC's vertical
+  forms already place the short marks at (0.80, 0.19) of the frame, the
+  Mainland corner, and `；：！？` to the right; Noto Sans TC's centre all of
+  them. The stylesheet's `translate(.32em, -.34em)` then moved them again,
+  to (0.93, -0.15) in SC, past the top of the frame, and to (0.82, 0.17) in TC,
+  the Mainland corner on Taiwan text. The translate is gone and the colon is a
+  pause mark in the core. Green in 5 language settings (no `lang` and `zh-CN`
+  on SC faces, `zh-TW`, `zh-HK`, `zh-Hant` on TC); red on 18 with the translate
+  put back, on 5 with the marks rotated, and `the_punctuation_contract` red
+  with the colon reclassified as turning. Two things measured and not gated:
+  Noto Sans CJK SC under `zh-TW` centres `！？` but not `、，。．；：`, a gap in
+  that face's `locl`; and turning `vert` off to force the centre makes Chrome
+  draw the vertical presentation forms, which sit in the corner regardless.
 
 ## Not sealed
 

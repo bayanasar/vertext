@@ -227,13 +227,21 @@
   font-size: var(--vertext-cell);
   text-orientation: mixed;
 }
-/* Stops and commas do not turn — they sit in the upper-right corner of their
-   em square. The box keeps its size so the column rhythm is unchanged; only
-   the glyph moves. */
+/* The pause and stop marks (、，。．；：) never turn (CLReq 2.1.2, appendix A).
+   Where they sit is regional: the upper-right corner of the frame in the
+   Mainland style, its centre in Taiwan and Hong Kong. A CJK face already
+   carries that placement in its vertical forms (`vert`), chosen by the
+   text's language, so this rule moves nothing: a Mainland face puts them in
+   the corner, a Taiwan or Hong Kong face in the centre. It used to translate
+   the glyph by (.32em, -.34em) on top of the face's own placement; measured
+   in Noto Sans SC that pushed a comma out past the top of its frame, and it
+   gave Taiwan text the Mainland position. Turning `vert` off to force the
+   centred style does not work either: Chrome then draws the vertical
+   presentation forms, which sit in the corner whatever the language. So the
+   regional style is the face's, and a Taiwan page wants a Taiwan face. */
 .vertext-corner {
   display: inline-block;
   font-size: var(--vertext-cell);
-  transform: translate(.32em, -.34em);
 }
 /* A Latin word reads horizontally inside the vertical flow. `inline-block`
    rather than `block`: an inline-level box keeps the selection continuous. */

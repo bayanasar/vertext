@@ -222,7 +222,7 @@ pub enum Slot {
     /// paragraph matches what was written.
     Space(String),
     /// Punctuation that turns a quarter-circle in vertical text: brackets,
-    /// quotes, colons, dashes, ellipses, slashes.
+    /// quotes, dashes, ellipses.
     ///
     /// The host rotates the *view*. It must never swap the character for a
     /// vertical presentation form (U+FE10–FE4F): those look correct and
@@ -231,8 +231,11 @@ pub enum Slot {
     /// renderer may decide how text appears; the text itself is content, and
     /// content is not ours to edit.
     VerticalPunctuation(String),
-    /// A stop or comma. These do not turn in vertical text — they move to the
-    /// upper-right corner of their em square. Again a view-only change.
+    /// A pause or stop mark: a stop, a comma, a semicolon or a colon. These
+    /// never turn in vertical text (CLReq 2.1.2, appendix A). They sit in the
+    /// upper-right corner of their frame in the Mainland style and in its
+    /// centre in Taiwan and Hong Kong; a CJK face's vertical forms already
+    /// do that by region. Again a view-only change.
     CornerPunctuation(String),
     /// Punctuation and other unsupported scripts remain upright for now.
     Neutral(String),
@@ -579,20 +582,21 @@ fn is_word_connector(ch: char) -> bool {
 /// in U+FE30–FE44; CJK commas, stops, colons, dashes, and ellipses have
 /// presentation forms in U+FE10–FE19. Both are reached the same way — a
 /// vertical writing mode plus the font's `vert`/`vrt2` feature — so both are
-/// classified together and the font decides. A stop is repositioned into the
-/// corner of its em square; a dash and a colon genuinely rotate. Which of
-/// those happens is the font's business, not ours.
+/// classified together and the font decides. A dash genuinely rotates; a
+/// stop, a comma or a colon is repositioned and never turned (see
+/// `is_corner_punctuation`). Which of those happens is the font's business,
+/// not ours.
 ///
-/// Bare ASCII stays out. A colon in `a:b` must not rotate, and code and
-/// romanization are full of them; the fullwidth `：` in Chinese prose is a
-/// different character with different typography, and it is the one that
-/// wants the vertical form.
-/// Stops and commas, which reposition rather than rotate.
+/// The pause and stop marks, which reposition rather than rotate.
 fn is_corner_punctuation(ch: char) -> bool {
-    // The semicolon sits with the comma and the stop: they are all clause
-    // separators and behave as a family, so treating one of them differently
-    // makes a sentence look mis-set.
-    matches!(ch, '，' | '、' | '。' | '．' | '｡' | '､' | '；' | ';')
+    // CLReq 2.1.2 and appendix A: the pause and stop marks keep the direction
+    // of a character in vertical writing, and none of them is rotated (A.5
+    // ticks no rotation for any of them). The fullwidth colon is one of them.
+    // It was once classed with the marks that turn, which a browser survived
+    // only because the font's vertical colon happens to be upright; a host
+    // that draws slots itself would have turned it. `！` and `？` stay
+    // `Neutral`: they are full-height and upright, and the font places them.
+    matches!(ch, '，' | '、' | '。' | '．' | '｡' | '､' | '；' | ';' | '：')
 }
 
 fn has_vertical_form(ch: char) -> bool {
@@ -612,9 +616,8 @@ fn has_vertical_form(ch: char) -> bool {
         '（' | '）' | '［' | '］' | '｛' | '｝' |
         '〈' | '〉' | '《' | '》' | '「' | '」' | '『' | '』' |
         '【' | '】' | '〔' | '〕' | '“' | '”' | '‘' | '’' |
-        // Separators that genuinely turn. Stops, commas, and semicolons are
+        // The pause and stop marks, the fullwidth colon among them, are
         // handled by `is_corner_punctuation`; `！` and `？` stay upright.
-        '：' |
         // Dashes, ellipses, and connectors that run along the column.
         // The whole dash family, not just the em dash: a range written `᠑–᠕`
         // reached here on an en dash, missed this list, and fell through to
@@ -673,7 +676,7 @@ mod tests {
                      '=', '|',
                      '（', '）', '［', '］', '｛', '｝', '〈', '〉', '《', '》',
                      '「', '」', '『', '』', '【', '】', '〔', '〕',
-                     '“', '”', '‘', '’', '：',
+                     '“', '”', '‘', '’',
                      '—', '―', '－', '…', '‥', '〜', '～', '｜', '‖',
                      // The rest of the dash family. The em dash was here from
                      // the start and its siblings were not, so `᠑–᠕` came out
@@ -686,9 +689,10 @@ mod tests {
                 Slot::VerticalPunctuation(mark.to_string()),
                 "{mark:?} must turn");
         }
-        // Sits in the corner of its em square. Clause separators travel as a
-        // family; splitting one off makes a sentence look mis-set.
-        for mark in ['，', '、', '。', '．', '｡', '､', '；', ';'] {
+        // The pause and stop marks: never turned, placed by region (CLReq
+        // 2.1.2, appendix A). They travel as a family; splitting one off
+        // makes a sentence look mis-set.
+        for mark in ['，', '、', '。', '．', '｡', '､', '；', ';', '：'] {
             let layout = layout_text(&format!("好{mark}好"), &LayoutConfig::default());
             assert_eq!(layout.columns[0].slots[1],
                 Slot::CornerPunctuation(mark.to_string()),

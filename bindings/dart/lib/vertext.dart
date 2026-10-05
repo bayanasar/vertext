@@ -59,10 +59,13 @@ enum SlotKind {
   space,
 
   /// Punctuation that turns a quarter in vertical text: brackets, quotes,
-  /// colons, dashes, ellipses.
+  /// dashes, ellipses.
   vform,
 
-  /// A stop or comma, which moves to the upper-right corner of its square.
+  /// A pause or stop mark (、，。．；：), which never turns. It sits in the
+  /// upper-right corner of its square in the Mainland style and in the centre
+  /// in Taiwan and Hong Kong. A host that shapes vertically gets that from the
+  /// face's vertical forms; one that shapes horizontally places it itself.
   corner,
 
   /// Anything else, upright.
