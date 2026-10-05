@@ -713,6 +713,18 @@ nothing in the core may foreclose it.
   keep their vertical forms and the arrows still turn, and a two-em dash that
   was split across two lines now moves whole.
 
+- **Every upright CJK block counts as CJK** (#68). Found through the Dart
+  binding: `𠀋` (extension B) came back `neutral`, because the core's CJK
+  test stopped at U+9FFF. It now takes planes 2 and 3 whole (extensions B to I
+  and the compatibility supplement), bopomofo, the radicals, the description
+  characters, the strokes, hangul jamo and the kana supplements, each checked
+  against `VerticalOrientation.txt` from Unicode 18.0: all `U` or `Tu`, but for
+  the 4 plane-end noncharacters, which are left out. The page drew them the
+  same either way (the two classes share a style); what changed is the vote.
+  `佢哋𠵱家 use the new app`, written Cantonese, was 3 vertical slots against
+  4 Latin words and went horizontal; it is 4 against 4 now and stays vertical.
+  Both new tests red with the old ranges.
+
 ## Not sealed
 
 
