@@ -44,7 +44,9 @@ entry.
 What holds across commits:
 
 - **Quarto is the only shipped host.** Seven more adapters have been designed
-  and none written; the designs are indexed in [`ROADMAP.md`](ROADMAP.md).
+  and none has its host written; chaji, the Flutter theme, has its vertext side
+  (`crates/vertext-ffi` and the Dart binding). The designs are indexed in
+  [`ROADMAP.md`](ROADMAP.md).
   `vertext-wasm` is the second consumer of the core, and renders the CLI's
   bytes; `examples/wasm/caret.html` is a demo, not a shipped host.
 - **The lesson-notes site takes both halves from one release; the documentation

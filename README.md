@@ -303,6 +303,7 @@ it is the narrow space its name describes and keeps its own slot.
 | `vertext-html` | Shared `Layout` → HTML renderer and the mode protocol. Every HTML host goes through it, so the slot-to-class mapping exists once. |
 | `vertext-cli` | Thin stdin-to-stdout shell over `vertext-html`. |
 | `vertext-wasm` | The same renderer for the browser, through a plain C ABI with no imports: byte-identical HTML to the CLI, and the source map for carets. Glue and a caret demo in `examples/wasm/`. |
+| `vertext-ffi` | For a native host that draws slots itself: each slot's kind, text and source range as JSON over a C ABI. `bindings/dart` binds it for Dart and Flutter. |
 
 **One host ships.** The Markdown/Quarto extension in `extensions/vertext` is
 in production. Every other adapter is a design document and no code — they are
@@ -312,7 +313,7 @@ indexed in [`docs/ROADMAP.md`](docs/ROADMAP.md), with what each is waiting on:
 |---|---|
 | Markdown / Quarto extension (`extensions/vertext`) | **Done** — shipping in production |
 | [Quarto theme](docs/roadmap/quarto-theme.md) | Partly real — `extensions/vertext-theme/` ships the SCSS and the nav collapse; the design describes more |
-| [chaji 侘寂 (Flutter)](docs/roadmap/chaji.md) | Design only — layout theme over `vertext-core`, sibling to the wabisabi widget kit |
+| [chaji 侘寂 (Flutter)](docs/roadmap/chaji.md) | Backend exists — `vertext-ffi` and the Dart binding; the optional layout theme in the wabisabi widget kit is not started |
 | [Browser extension](docs/roadmap/browser-extension.md) | Design only — `vertext-wasm` now exists |
 | [Notes](docs/roadmap/notes.md) | Design only — `vertext-wasm` and slot geometry now exist |
 | [Neovim plugin](docs/roadmap/nvim.md) | Design only — an honest lossy projection onto the terminal grid |

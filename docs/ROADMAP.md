@@ -1,8 +1,9 @@
 # Roadmap — the hosts that do not exist yet
 
-Seven adapters have been designed and none of them has been written. This file
-is the index of that design work; the documents themselves are in
-[`roadmap/`](roadmap/), unchanged from where they used to live under `apps/`.
+Seven adapters have been designed. One has its engine side written (chaji's);
+none has its host. This file is the index of that design work; the documents
+themselves are in [`roadmap/`](roadmap/), moved there from where they used to
+live under `apps/`.
 
 They were moved because the directory layout was making a claim the code did
 not support. A stranger cloning the repository saw seven project directories
@@ -16,7 +17,7 @@ The designs are real work and are kept in full. Only their shelf changed.
 | Host | State | Blocked on |
 |---|---|---|
 | [Quarto theme](roadmap/quarto-theme.md) | Partly real: `extensions/vertext-theme/` ships the SCSS and the nav collapse. The document describes more than exists. | — |
-| [chaji 侘寂 (Flutter)](roadmap/chaji.md) | Design only | — |
+| [chaji 侘寂 (Flutter)](roadmap/chaji.md) | The vertext side exists: `crates/vertext-ffi` and the Dart binding in `bindings/dart`. The theme, in the wabisabi kit, is not started. | — |
 | [Browser extension](roadmap/browser-extension.md) | Design only | — |
 | [Notes](roadmap/notes.md) | Design only | — |
 | [Neovim plugin](roadmap/nvim.md) | Design only | — |

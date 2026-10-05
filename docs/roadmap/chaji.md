@@ -1,29 +1,36 @@
 # chaji 侘寂 — a Flutter layout theme
 
-The theme layer that connects `vertext-core` to Flutter, sitting alongside the
-[wabisabi](https://github.com/bayanasar/wabisabi) widget kit.
+An optional vertical-text theme in the
+[wabisabi](https://github.com/bayanasar/wabisabi) widget kit, backed by
+vertext.
 
 ```
 wabisabi  — the widget kit (tokens → theme → components)
-chaji     — the layout theme (Material + Cupertino), backed by vertext-core
+chaji     — its optional layout theme (Material + Cupertino)
+vertext   — what chaji depends on: the slots, through the Dart binding
 ```
 
 Wabisabi answers *what a widget looks like*. chaji answers *which way the text
-runs and where it goes on the screen*. They are separate concerns and stay
-separate packages.
+runs and where it goes on the screen*. vertext answers *how the text is cut
+into slots and which way each one stands*, the same answer the web page gets.
 
-## Why this cannot live inside wabisabi
+## Where it lives, and why it stays optional
 
-Wabisabi is pure Dart with a strict `tokens/ → theme/ → components/` hierarchy
-and a single barrel. chaji breaks two of its rules by nature:
+chaji lives in the wabisabi repository, as an optional theme. What makes it
+optional is the dependency it brings: the Dart binding in this repository
+(`bindings/dart`) and the native library its build hook compiles from
+`crates/vertext-ffi`. Wabisabi's runtime depends on the Flutter SDK alone, so
+an app that does not use chaji must not carry a native library for it. How
+chaji is packaged inside wabisabi to keep that true is wabisabi's decision.
 
-- It needs `vertext-core` over FFI, so it ships a native library per platform.
-  Folding that into wabisabi would make every consuming app carry native
-  binaries for a font-layout concern it may not use.
-- It is not a themed widget. It is a layout engine with a theme-shaped surface.
+The split between the two repositories:
 
-So chaji is its own package that *depends on* wabisabi, or that an app uses
-beside it. Wabisabi keeps its pinned-tag discipline and stays pure Dart.
+- **vertext** (`crates/vertext-ffi`, `bindings/dart`): the slots, their kinds,
+  their source ranges, the progression, and a gate that holds the binding to
+  the slots the page draws.
+- **wabisabi** (chaji): everything that needs a font or a widget tree:
+  shaping, metrics, painting, line breaking, hit-testing, the theme tokens and
+  the pairing with `WabTheme`.
 
 ## Why Flutter needs it at all
 
@@ -60,30 +67,36 @@ differently, and the core has no font metrics to break with honestly."
 - painting and compositing
 - hit-testing and gesture handling
 
-chaji is the seam: it takes `Vec<Column>` of `Slot`s across FFI and places them
-with `dart:ui`. It adds no layout policy of its own — a slot classified as
-cornering here must corner exactly as it does in the CLI and the browser.
+chaji is the seam: it takes the columns of slots from the binding's `layout()`
+and places them with `dart:ui`. It adds no layout policy of its own: a slot
+classified as cornering here must corner exactly as it does in the CLI and the
+browser. The binding makes that checkable: its kinds are the page's class
+names, and `bindings/dart/tool/parity.dart` holds its slots to the CLI's.
 
 ## Shape
 
+On the vertext side, which exists:
+
 ```
-chaji/
-  lib/
-    tokens/       # vertical rhythm: column length, gutter, slot advance
-    theme/        # ChajiTheme — materialTheme() / cupertinoTheme()
-    components/   # ChajiColumn, ChajiText, ChajiVerticalScroll
-    ffi/          # vertext-core bindings
-  rust/           # cdylib wrapper over vertext-core
+crates/vertext-ffi/   # cdylib: layout as JSON over a plain C ABI
+bindings/dart/        # package:vertext: dart:ffi, a build hook, layout()
 ```
 
-Mirroring wabisabi's three layers deliberately, so the two read as siblings.
-`ChajiTheme` pairs with `WabTheme` and exposes the same two builders —
-`materialTheme()` and `cupertinoTheme()` — because an app already switching on
+On the wabisabi side, a sketch for its owner to change:
+
+```
+tokens/       # vertical rhythm: column length, gutter, slot advance
+theme/        # ChajiTheme — materialTheme() / cupertinoTheme()
+components/   # ChajiText, ChajiColumn, ChajiVerticalScroll
+```
+
+`ChajiTheme` pairs with `WabTheme` and exposes the same two builders,
+`materialTheme()` and `cupertinoTheme()`, because an app already switching on
 platform through `WabWidget<C, M>` should not learn a second pattern.
 
-Binding via `flutter_rust_bridge` or a plain C ABI. No wasm on mobile: the same
-crate compiles to a native library, so this is the third host after the CLI and
-`vertext-wasm`, and it costs the core nothing new.
+The binding is a plain C ABI, with no code generator in between. No wasm on
+mobile: the same crates compile to a native library, so this is the third host
+after the CLI and `vertext-wasm`, and it costs the core nothing new.
 
 ## Constraints worth stating early
 
@@ -94,28 +107,24 @@ crate compiles to a native library, so this is the third host after the CLI and
   renderer holds, and it must hold across FFI too.
 - **Progression is data.** Read it from the document; never hardcode CJK.
 - **Byte-identical slotting.** The same input must produce the same slots here
-  as in the CLI. Worth a test that asserts it against the shared goldens, the
-  same way the browser extension plans to.
+  as in the CLI. `bindings/dart/tool/parity.dart` asserts it in CI over the
+  shaping golden's corpus.
 - **Fonts.** Where no vertical-capable Mongolian font is available, say so
   rather than render a rumor of the script.
 
-## The blocking dependency for editing
+## Editing
 
-Display works with what `vertext-core` produces today. **Editing does not.**
-
-Selection, caret placement, and hit-testing all need the inverse map — from a
-tap at (x, y) back to an offset in the source. `layout_text` currently returns
-slots with no positions, and the renderer computes placement and discards it.
-That is the same slot-geometry work [Notes](../notes/README.md) is blocked on,
-and Flutter needs it for exactly the same reason.
-
-So: read-only vertical text on Flutter is cheap and available now. Editable
-vertical text is downstream of a real change to `vertext-core`, shared with
-Notes, the Web IDE, and the Neovim cursor mapping.
+Display works with what `vertext-core` produces today, and so, on the core
+side, does editing. Selection, caret placement and hit-testing need the
+inverse map, from a tap back to an offset in the source. That map exists:
+`vertext_core::SourceMap` turns a source offset into a caret (column, slot,
+grapheme) and back, and `examples/wasm/caret.html` drives it in a browser.
+Each slot the binding returns already carries its source range; the caret
+calls are not bound yet. What remains for editing is Flutter's half, hit
+testing against the slots chaji placed.
 
 ## Status
 
-Not started. Planned next, after the Quarto work.
-
-Read-only display is unblocked — it needs the FFI wrapper and nothing else new
-from the core. Editing is blocked on slot geometry.
+The vertext side of read-only display exists: `crates/vertext-ffi` and the
+Dart binding, held by CI to the page's slots. The theme itself, in wabisabi,
+has not been started. Editing comes after read-only display.

@@ -598,6 +598,29 @@ nothing in the core may foreclose it.
   pages were byte-identical to the build from the 0.2.0 source, and a tampered
   zip and a 0.1 binary were both refused. It no longer reads a sibling checkout.
 
+- **A native host gets the slots the page draws** (#62, #63, #64). The
+  backend of chaji, the Flutter theme: `crates/vertext-ffi` hands each slot's
+  kind, text and source range over a C ABI, and `bindings/dart` binds it, with
+  a build hook that compiles the library, so a consumer places no file by
+  hand. The strip and the kinds come from `vertext-html` itself
+  (`strip_layout`, `slot_kind`), shared with the wasm host and the renderer.
+  `cargo test -p vertext-ffi` 8 green, including the slots against the spans
+  `render_document` emits; `dart test` 7 green; an empty project outside the
+  repository depending on the binding by path builds and lays text out. The
+  CI gate `dart-parity` (`bindings/dart/tool/parity.dart`) lays out 178
+  inputs, the shaping golden's corpus plus edge cases, under 3 flag sets
+  through the binding and through the release CLI: 530 vertical layouts give
+  the page's 1693 slots in order, each slot's UTF-16 range is its own text,
+  and the 4 horizontal ones have no column on the page either. Green in CI on
+  `eaf11c5`, where the image keeps rustup outside $HOME, so the hook found the
+  toolchain from PATH alone. Shown red three ways: U+180E dropped in the Dart
+  decoding, 222 findings with `cargo test` all green; a code point above
+  U+FFFF counted as one UTF-16 unit, caught on `𠀋` by the range check; U+180E
+  dropped in the FFI serialization, red here and in the crate's own tests.
+  The binding refuses a library from another release, naming both versions
+  (shown with the binding set to `0.2.0`), and its wire rule is held to
+  `tools/wire-pairs.json`.
+
 ## Not sealed
 
 
@@ -668,6 +691,11 @@ nothing in the core may foreclose it.
 - **No release carries the wasm archive yet** (#46). The `v0.2.0` tag
   predates it; the next tag should attach `vertext-wasm-<version>.zip` beside
   the filter's zip, and until then a browser host has only a build from source.
+
+- **The Dart binding builds for Linux only.** Its build hook refuses other
+  targets with a message. Android, iOS, macOS and Windows each need a Rust
+  target and a test on that platform. The theme itself, in the wabisabi kit,
+  has not been started (#67).
 
 ## Decisions
 
