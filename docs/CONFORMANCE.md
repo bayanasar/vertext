@@ -45,7 +45,10 @@ a verdict):
 | MLReq | 3 | 12 | 7 | 3 |
 
 The pattern is the same in both. Direction, orientation, keeping words whole
-and preserving the text are met and tested. Anything that needs the engine to
+and preserving the text are met and tested, and so are the page measurements
+CLReq gives numbers for (a line in whole characters, the line gap, where the
+pause marks sit, marks used together, a number with its sign), which are
+measured in a browser with a real CJK face. Anything that needs the engine to
 measure (justification, punctuation compression, widows, hanging punctuation),
 anything that needs markup vertext does not carry (ruby, emphasis marks,
 interlinear lines, decoration), and anything print-only (pages, running heads,
@@ -66,11 +69,18 @@ Three findings are worth reading before the tables:
 - **Every Latin run is set horizontally in the column.** That includes acronyms,
   words and digits. CLReq describes three treatments by kind: acronyms upright
   letter by letter, words rotated 90° clockwise, and 2–3 digit numbers
-  horizontal-in-vertical. vertext uses only the third, for all of them.
+  horizontal-in-vertical. vertext uses only the third, for all of them, and
+  keeps it by decision. Rotating words would end what the 12-character cap
+  means (a rotated word runs along the column instead of widening it) and
+  would reset every page that carries Latin; the documents this was built for
+  are dense with short romanized forms, which read without turning the head.
 - **In the Mongolian golden font, U+202F is as wide as a space.** The engine
   keeps the suffix joint inside its word, as MLReq requires. But MLReq 6.2.2 also
   asks for the gap before a suffix to differ from the gap between words, and the
-  shaping golden records `nnbsp` and `space` at the same advance.
+  shaping golden records `nnbsp` and `space` at the same advance. This is kept
+  by decision: the joint sits inside the word's run, and narrowing it alone
+  would mean cutting the run into separate elements, which risks the joining
+  the whole run exists to protect. The width is the face's to set.
 
 ## CLReq
 
@@ -81,7 +91,7 @@ Three findings are worth reading before the tables:
 | 2.1.1 Writing modes in Chinese | Informative | Both modes exist: vertical columns, with horizontal blocks for Latin-majority prose, code and tables. | |
 | 2.1.2 Arrangement of characters and lines | Conforms | Characters run top to bottom and columns advance right to left. Progression is data, not a constant. | `a_newline_creates_the_column_to_the_left`, `progression_reaches_the_dom_as_data`, gate `progression-scroll` |
 | 2.1.2 Punctuation position | Conforms | `、，。．；：` and `！？` never turn. They are placed by the face's vertical forms: in Noto Sans SC to the right and, for the short marks, in the upper half (Mainland); in Noto Sans TC at the centre, under `zh-TW`, `zh-HK` and `zh-Hant`. A face that does not switch its forms with the language keeps its own region's placement. | `the_punctuation_contract`, gate `punctuation-ink` |
-| 2.1.2 Western text in vertical | Partial | Only horizontal-in-vertical is used, for every Latin or digit run. No upright acronyms, no rotation. Runs longer than 12 characters break with a visible hyphen. | `long_latin_words_are_bounded`, `a_long_word_breaks_at_the_hyphen_it_already_has` |
+| 2.1.2 Western text in vertical | Partial | Only horizontal-in-vertical is used, for every Latin or digit run. No upright acronyms, no rotation, by decision (see the findings above). Runs longer than 12 characters break with a visible hyphen. | `long_latin_words_are_bounded`, `a_long_word_breaks_at_the_hyphen_it_already_has` |
 | 2.1.2 Table captions | Not implemented | The wire protocol carries no caption. | |
 | 2.1.2 Table header row on the right | Partial | Header cells are real `<th>` and the table is `vertical-rl`, so the header row falls on the right. Nothing measures where it lands. | `a_table_keeps_its_cells_apart` |
 | 2.1.2 Incomplete lines on multi-column pages | Not implemented | No pagination. | |
@@ -171,7 +181,7 @@ would eventually need its own measurement. See "Beyond both documents" below.
 | 5.1.4 Mouse pointer and wheel | Partial | A click inside a Mongolian run lands between the letters clicked. The filter ships a wheel handler that scrolls the vertical page sideways, in the direction the progression gives. The wheel is not tested in CI, and the caret shape is the browser's. | gate `wasm-caret` |
 | 6.1.1 Punctuation rules | Partial | `᠂` and `᠃` stay inside the word's run, so they never start a line; golden runs contain both. Brackets and colon pairing across lines are the browser's. Centring comes from the font and is not measured. | gate `delivery-golden` |
 | 6.2.1 Right line, left line, strikethrough | Not implemented | No decoration markup: links and emphasis are flattened. | |
-| 6.2.2 Width, height and spacing | Partial | The run is shaped whole, so letter heights balance as the font designed. The gap before a suffix is not distinct from a word space: in Noto Sans Mongolian, `nnbsp` and `space` have the same advance, and vertext adjusts neither. | `tools/shaping-golden.py` records both advances |
+| 6.2.2 Width, height and spacing | Partial | The run is shaped whole, so letter heights balance as the font designed. The gap before a suffix is not distinct from a word space: in Noto Sans Mongolian, `nnbsp` and `space` have the same advance, and vertext adjusts neither, by decision (see the findings above). | `tools/shaping-golden.py` records both advances |
 | 6.3 Emphasis | Not implemented | Emphasis is flattened. | |
 | 7.1 Words not split | Conforms | A Mongolian run is never split by the engine and never wraps in the browser. Every golden run arrives on the page as one span, and the browser joins it. | gates `delivery-golden` and `browser-golden` |
 | 7.2 Alignment and justification | Partial | Each slot is centred across its column (the default MLReq names). Top-and-bottom justification, MLReq's default for multi-line text, is not done. | |
