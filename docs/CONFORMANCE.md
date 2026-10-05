@@ -41,7 +41,7 @@ a verdict):
 
 | | Conforms | Partial | Not implemented | Informative |
 |---|---|---|---|---|
-| CLReq | 9 | 12 | 22 | 3 |
+| CLReq | 10 | 12 | 21 | 3 |
 | MLReq | 3 | 12 | 7 | 3 |
 
 The pattern is the same in both. Direction, orientation, keeping words whole
@@ -130,7 +130,7 @@ Three findings are worth reading before the tables:
 
 | Section | Status | Note | Evidence |
 |---|---|---|---|
-| 6.1.1 Line start and line end prohibition | Not implemented | By design: line breaking is the browser's (UAX #14 and CSS `line-break`). The engine does not measure, so it cannot own a break. | README, "What the engine does not decide" |
+| 6.1.1 Line start and line end prohibition | Conforms | Line breaking is the browser's (UAX #14 and CSS `line-break`), by design: the engine does not measure, so it cannot own a break. The marks are plain inline text, so the browser's rules reach them: no closing or pause mark of `、，。．；：！？）」』》` begins a line and no opening mark of `（「『《` ends one. They were inline-block until October 2026, which let 14 of those 16 cases through. | gate `page-geometry` |
 | 6.1.2.1 Two-em dash and ellipsis unbroken | Partial | Each is one or two vertical-form slots; whether they stay together is the browser's. | |
 | 6.1.2.2 Digits and their prefixes and suffixes | Conforms | A digit run is one slot and never splits. `%`, `‰`, `‱`, the degree signs and a trailing currency symbol join the number before them, and `+`, `-`, `±`, `−` and a leading currency symbol the number after them, so no line falls between them. Measured first: as separate slots, Chrome broke between them in all four cases tried. Prose only. | `a_number_keeps_its_sign_and_unit`, gate `page-geometry` |
 | 6.1.2.3 Annotation marks | Not implemented | No superscript or note markup. | |

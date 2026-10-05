@@ -622,7 +622,7 @@ nothing in the core may foreclose it.
   (shown with the binding set to `0.2.0`), and its wire rule is held to
   `tools/wire-pairs.json`.
 
-- **The page keeps CLReq's geometry** (#71, #72, #73, #74, #75). `tools/page-geometry.py`,
+- **The page keeps CLReq's geometry** (#71, #72, #73, #74, #75, #77). `tools/page-geometry.py`,
   CI gate `page-geometry`: documents through pandoc, the real filter and the
   binary, in headless Chrome 152 with Noto Sans SC pinned by tag and sha256.
   A short window ends a column on a whole cell: 504px (28 cells) in document
@@ -672,6 +672,17 @@ nothing in the core may foreclose it.
   currency symbols either side). The same four cases in `page-geometry` now
   keep each pair on one line. No word is created, so the slot census behind
   the horizontal decision is unchanged and its invariant test stays green.
+
+  **No closing mark starts a line, no opening mark ends one** (#77). Found in
+  a screenshot taken for #73: `。` at the top of a column. Each paragraph in
+  `page-geometry` fills a line and puts one mark where the next begins (or an
+  opening mark in the last cell): with the pause marks and brackets as
+  `inline-block`, 10 of `、，。．；：！？）」』》` began a line and all 4 of `（「『《`
+  ended one; only `！？`, already plain inline, held. An atomic inline box may
+  break on either side, so the browser's rules never saw those characters. As
+  plain inline text, all 16 hold. Screenshots before and after: the brackets
+  keep their vertical forms and the arrows still turn, and a two-em dash that
+  was split across two lines now moves whole.
 
 ## Not sealed
 

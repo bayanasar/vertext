@@ -218,6 +218,48 @@ def numbers_keep_affixes(m, where):
         m["gap"] = (m.get("gap", "") + f"{len(AFFIXED)} affixed numbers whole").strip()
     return fails
 
+# A full first line, then marks that may not start a line: each paragraph puts
+# one of them exactly where the second line begins.
+PROHIBITED = "、，。．；：！？）」』》"
+LINE_START = "\n\n".join("永" * 28 + mark + "永永" for mark in PROHIBITED)
+
+
+def no_mark_starts_a_line(m, where):
+    """CLReq 6.1.1: a closing or pause mark does not begin a line."""
+    fails = []
+    for mark, column in zip(PROHIBITED, m["slots"]):
+        lines = {}
+        for text, x in column:
+            lines.setdefault(x, []).append(text)
+        for x, line in lines.items():
+            if line and line[0] in PROHIBITED:
+                fails.append(f"{where}: a line begins with `{line[0]}`")
+    if not fails:
+        m["gap"] = (m.get("gap", "") + f"no line begins with any of {PROHIBITED}").strip()
+    return fails
+
+
+# And the other end: an opening mark placed in the last cell of the first line.
+OPENING = "（「『《"
+LINE_END = "\n\n".join("永" * 27 + mark + "永永永" for mark in OPENING)
+
+
+def no_mark_ends_a_line(m, where):
+    """CLReq 6.1.1: an opening bracket or quotation mark does not end a line."""
+    fails = []
+    for column in m["slots"]:
+        lines = {}
+        for text, x in column:
+            lines.setdefault(x, []).append(text)
+        ordered = [lines[x] for x in sorted(lines, reverse=True)]
+        for line in ordered[:-1]:
+            if line and line[-1] in OPENING:
+                fails.append(f"{where}: a line ends with `{line[-1]}`")
+    if not fails:
+        m["gap"] = (m.get("gap", "") + f"no line ends with any of {OPENING}").strip()
+    return fails
+
+
 CASES = [
     # name, text, metadata, window, the face, checks
     ("document-short", PROSE, {}, (900, 700), "Noto Sans SC", [whole_cells, line_gap]),
@@ -225,6 +267,8 @@ CASES = [
      [whole_cells, line_gap]),
     ("marks-together", TOGETHER, {}, (900, 700), "Noto Sans SC", [marks_together]),
     ("number-affixes", AFFIXES, {}, (900, 700), "Noto Sans SC", [numbers_keep_affixes]),
+    ("line-start", LINE_START, {}, (900, 700), "Noto Sans SC", [no_mark_starts_a_line]),
+    ("line-end", LINE_END, {}, (900, 700), "Noto Sans SC", [no_mark_ends_a_line]),
 ]
 
 
@@ -266,7 +310,8 @@ def main():
         return 1
     print("PASS: every column on a short window is a whole number of cells long, "
           "the lines of a paragraph sit within CLReq's usual gap, marks used "
-          "together share a cell, and a number keeps its sign and unit")
+          "together share a cell, a number keeps its sign and unit, and no "
+          "closing mark starts a line or opening mark ends one")
     for line in lines:
         print("      " + line)
     return 0

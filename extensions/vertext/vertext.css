@@ -224,9 +224,15 @@
    spelling of "the font decides": vo=Tu marks (the fullwidth set) take the
    font's vertical glyph, vo=R marks (ASCII, arrows, dashes) rotate. One
    declaration covers both classes, which is why this is not a return to the
-   blanket `transform` -- that turned the fullwidth marks a second time. */
+   blanket `transform` -- that turned the fullwidth marks a second time.
+
+   Plain inline, not inline-block, and the same for the pause marks below. An
+   atomic inline box may start or end a line wherever it falls, so the
+   browser's line-start and line-end rules (CLReq 6.1.1) never applied to
+   these marks: measured, 10 of 12 closing and pause marks began a line and
+   all 4 opening marks tried ended one. As inline text the browser sees the
+   characters and keeps them in place. */
 .vertext-vform {
-  display: inline-block;
   font-size: var(--vertext-cell);
   text-orientation: mixed;
 }
@@ -243,7 +249,6 @@
    presentation forms, which sit in the corner whatever the language. So the
    regional style is the face's, and a Taiwan page wants a Taiwan face. */
 .vertext-corner {
-  display: inline-block;
   font-size: var(--vertext-cell);
 }
 /* Two question or exclamation marks used together share one character's
