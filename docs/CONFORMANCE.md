@@ -41,7 +41,7 @@ a verdict):
 
 | | Conforms | Partial | Not implemented | Informative |
 |---|---|---|---|---|
-| CLReq | 7 | 12 | 24 | 3 |
+| CLReq | 8 | 13 | 22 | 3 |
 | MLReq | 3 | 12 | 7 | 3 |
 
 The pattern is the same in both. Direction, orientation, keeping words whole
@@ -106,8 +106,8 @@ Three findings are worth reading before the tables:
 |---|---|---|---|
 | 5.1 Phrase and section boundaries | Partial | Dashes (`—`, `⸺` and the rest of the family), ellipses and connectors take the vertical form. `·` and `/` stay upright. Keeping a two-em dash on one line is left to the browser's line breaker. Interpunct width by region is not handled. | `the_punctuation_contract`, `separators_and_arrows_are_classified_by_behaviour` |
 | 5.1.1.1 Fullwidth full stop | Conforms | `．` joins the corner family with `。`. | `the_punctuation_contract` |
-| 5.1.1.2 Taiwan/Hong Kong special cases | Not implemented | No regional style (see 2.1.2). | |
-| 5.1.1.3 `?!` and repeated marks | Not implemented | Each mark takes its own 1 em slot. GB/T 15834 wants `?!` in one em, and three marks in two. | |
+| 5.1.1.2 Taiwan/Hong Kong special cases | Partial | The placement is the face's (see 2.1.2), so a Taiwan or Hong Kong publication that wants the Mainland placement gets it from a Mainland face or `lang`, for the whole page. Nothing chooses it for one passage. | gate `punctuation-ink` |
+| 5.1.1.3 `?!` and repeated marks | Conforms | Two of `？！` used together, in either order or of one kind, become one slot set side by side in one cell (`text-combine-upright: all`); three take two cells, a pair and a single. Prose only: in code they are operators and stay as written. | `question_and_exclamation_marks_used_together_share_a_space`, gate `page-geometry` |
 | 5.1.1.4 Death-indication mark | Not implemented | No markup for it. | |
 | 5.2 Quotations and citations | Partial | Corner brackets and book title brackets `《》〈〉` take the vertical form from the font. Vertical presentation forms are never written into the text, as CLReq's note asks. Wavy book-title marks and proper-noun marks are interlinear and not implemented (see 5.6.1). | `the_punctuation_contract`, `punctuation_is_never_substituted` |
 | 5.3.1 Emphasis marks | Not implemented | Markdown emphasis is flattened to plain text before layout. | |

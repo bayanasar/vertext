@@ -239,6 +239,10 @@ pub enum Slot {
     CornerPunctuation(String),
     /// Punctuation and other unsupported scripts remain upright for now.
     Neutral(String),
+    /// Two question or exclamation marks used together (`？！`, `！？`, `？？`,
+    /// `！！`), set side by side in one character's space (CLReq 5.1.1.3, after
+    /// GB/T 15834). Three take two spaces: a pair and a single mark.
+    Combined(String),
 }
 
 impl Slot {
@@ -247,7 +251,8 @@ impl Slot {
     pub fn text(&self) -> &str {
         match self {
             Slot::Upright(s) | Slot::LatinWord(s) | Slot::MongolianRun(s) | Slot::Space(s)
-            | Slot::VerticalPunctuation(s) | Slot::CornerPunctuation(s) | Slot::Neutral(s) => s,
+            | Slot::VerticalPunctuation(s) | Slot::CornerPunctuation(s) | Slot::Neutral(s)
+            | Slot::Combined(s) => s,
         }
     }
 }
@@ -412,7 +417,34 @@ pub fn layout_text(input: &str, config: &LayoutConfig) -> Layout {
         columns.last_mut().unwrap().slots.push(Slot::Space(pending_separator));
     }
     flush_pending(&mut columns, &mut pending_connectors);
+    if !config.preserve_spaces {
+        for column in &mut columns {
+            combine_marks(&mut column.slots);
+        }
+    }
     Layout { columns, progression: config.progression }
+}
+
+/// Pairs adjacent question and exclamation marks into one slot.
+///
+/// GB/T 15834, which CLReq 5.1.1.3 follows: a question mark and an exclamation
+/// mark used together take one character's space, two of the same take one,
+/// and three take two. Pairing from the start gives exactly that: `？？？` is a
+/// pair and a single. Prose only. In code, `!!` and `?!` are operators, and
+/// setting them side by side would misquote the program.
+fn combine_marks(slots: &mut Vec<Slot>) {
+    let is_mark = |slot: &Slot| matches!(slot, Slot::Neutral(s) if s == "！" || s == "？");
+    let mut out = Vec::with_capacity(slots.len());
+    let mut rest = std::mem::take(slots).into_iter().peekable();
+    while let Some(slot) = rest.next() {
+        if is_mark(&slot) && rest.peek().is_some_and(is_mark) {
+            let next = rest.next().unwrap();
+            out.push(Slot::Combined(format!("{}{}", slot.text(), next.text())));
+        } else {
+            out.push(slot);
+        }
+    }
+    *slots = out;
 }
 
 /// Whether a closing mark completes a bracket the word already holds open.
@@ -709,6 +741,27 @@ mod tests {
     }
 
     #[test]
+    fn question_and_exclamation_marks_used_together_share_a_space() {
+        let slots = |text: &str| layout_text(text, &LayoutConfig::default()).columns[0].slots.clone();
+        // A pair in either order, or two of a kind: one slot.
+        for pair in ["？！", "！？", "？？", "！！"] {
+            assert_eq!(slots(&format!("好{pair}好"))[1], Slot::Combined(pair.into()), "{pair}");
+        }
+        // Three take two spaces: a pair, then a single mark.
+        assert_eq!(slots("好？？？好")[1..3],
+                   [Slot::Combined("？？".into()), Slot::Neutral("？".into())]);
+        assert_eq!(slots("好！？！？好")[1..3],
+                   [Slot::Combined("！？".into()), Slot::Combined("！？".into())]);
+        // One alone is a mark like any other, and so are marks apart.
+        assert_eq!(slots("好？好")[1], Slot::Neutral("？".into()));
+        assert_eq!(slots("好？好！好")[1], Slot::Neutral("？".into()));
+        // In code they are operators, and are left exactly as written.
+        let code = LayoutConfig { preserve_spaces: true, ..LayoutConfig::default() };
+        assert!(!layout_text("x！！y", &code).columns[0].slots
+            .iter().any(|s| matches!(s, Slot::Combined(_))));
+    }
+
+    #[test]
     fn separators_and_arrows_are_classified_by_behaviour() {
         let layout = layout_text("好；天→月↓日/水", &LayoutConfig::default());
         assert_eq!(layout.columns[0].slots, vec![
@@ -968,7 +1021,7 @@ mod tests {
                 match slot {
                     Slot::Upright(s) | Slot::LatinWord(s) | Slot::MongolianRun(s)
                     | Slot::VerticalPunctuation(s) | Slot::CornerPunctuation(s)
-                    | Slot::Neutral(s) | Slot::Space(s) => rebuilt.push_str(s),
+                    | Slot::Neutral(s) | Slot::Space(s) | Slot::Combined(s) => rebuilt.push_str(s),
                 }
             }
         }
@@ -994,7 +1047,7 @@ mod tests {
                 match slot {
                     Slot::Upright(s) | Slot::LatinWord(s) | Slot::MongolianRun(s)
                     | Slot::VerticalPunctuation(s) | Slot::CornerPunctuation(s)
-                    | Slot::Neutral(s) | Slot::Space(s) => rebuilt.push_str(s),
+                    | Slot::Neutral(s) | Slot::Space(s) | Slot::Combined(s) => rebuilt.push_str(s),
                 }
             }
         }
@@ -1160,7 +1213,7 @@ mod tests {
                 match slot {
                     Slot::Upright(s) | Slot::LatinWord(s) | Slot::MongolianRun(s)
                     | Slot::VerticalPunctuation(s) | Slot::CornerPunctuation(s)
-                    | Slot::Neutral(s) | Slot::Space(s) => rebuilt.push_str(s),
+                    | Slot::Neutral(s) | Slot::Space(s) | Slot::Combined(s) => rebuilt.push_str(s),
                 }
             }
         }

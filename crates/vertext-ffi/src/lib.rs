@@ -34,7 +34,7 @@ pub const LEFT_TO_RIGHT: u32 = 4;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct HostSlot {
     /// The suffix of the slot's class on the page: `upright`, `latin`,
-    /// `mongolian`, `space`, `vform`, `corner` or `neutral`.
+    /// `mongolian`, `space`, `vform`, `corner`, `neutral` or `combine`.
     pub kind: &'static str,
     /// What the slot shows, including an inserted hyphen.
     pub text: String,

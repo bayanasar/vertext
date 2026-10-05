@@ -11,7 +11,8 @@ switch (layout('山川异域，风月同天')) {
   case Vertical(:final progression, :final columns):
     // Columns in source order; `progression` says which side the first is on.
     // Each slot has a kind (upright, latin, mongolian, space, vform, corner,
-    // neutral), the text it shows, and its range in the string, in UTF-16.
+    // neutral, combine), the text it shows, and its range in the string, in
+    // UTF-16.
   case Horizontal():
     // vertext would set this text horizontally: draw it as ordinary text.
 }

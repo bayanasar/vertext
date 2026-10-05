@@ -72,6 +72,7 @@ Future<void> main(List<String> args) async {
     '第一行\r\n\r\n第三行\n\n',
     'ᠮᠣᠩᠭᠣᠯ\u{202f}ᠤᠨ (mongɣol-un) ᠨᠣᠮ᠃',
     '山 internationalization 川，𠀋字「引文」',
+    '真的？！不会吧！！谁？？？',
     // Latin-majority: the page sets these horizontally, and so must a host.
     'this paragraph is plainly English and goes horizontal',
     'the word ᠮᠣᠩᠭᠣᠯ is written in bichig and read here in English',

@@ -70,6 +70,10 @@ enum SlotKind {
 
   /// Anything else, upright.
   neutral,
+
+  /// Two question or exclamation marks used together (`？！`), set side by
+  /// side in one character's space.
+  combine,
 }
 
 /// One slot of a column.

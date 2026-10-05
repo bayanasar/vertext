@@ -108,11 +108,13 @@
 .vertext-mongolian,
 .vertext-vform,
 .vertext-corner,
+.vertext-combine,
 .vertext-space { vertical-align: middle; }
 .vertext-upright,
 .vertext-neutral,
 .vertext-vform,
 .vertext-corner,
+.vertext-combine,
 .vertext-space { line-height: var(--vertext-line-pitch); }
 
 /* Headings. The level sets one scale factor and every glyph class multiplies
@@ -132,7 +134,8 @@
 .vertext-column-heading .vertext-upright,
 .vertext-column-heading .vertext-neutral,
 .vertext-column-heading .vertext-vform,
-.vertext-column-heading .vertext-corner {
+.vertext-column-heading .vertext-corner,
+.vertext-column-heading .vertext-combine {
   font-size: calc(var(--vertext-cell) * var(--vertext-heading-scale));
 }
 .vertext-column-heading .vertext-latin,
@@ -242,6 +245,13 @@
 .vertext-corner {
   display: inline-block;
   font-size: var(--vertext-cell);
+}
+/* Two question or exclamation marks used together share one character's
+   space, side by side (CLReq 5.1.1.3, after GB/T 15834): the engine pairs
+   them into one slot and the browser sets the pair across the column. */
+.vertext-combine {
+  font-size: var(--vertext-cell);
+  text-combine-upright: all;
 }
 /* A Latin word reads horizontally inside the vertical flow. `inline-block`
    rather than `block`: an inline-level box keeps the selection continuous. */

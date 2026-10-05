@@ -486,6 +486,7 @@ pub fn slot_kind(slot: &Slot) -> &'static str {
         Slot::VerticalPunctuation(_) => "vform",
         Slot::CornerPunctuation(_) => "corner",
         Slot::Neutral(_) => "neutral",
+        Slot::Combined(_) => "combine",
     }
 }
 

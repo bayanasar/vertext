@@ -74,6 +74,8 @@ document.fonts.ready.then(() => {
     cell,
     heights: columns.map(c => parseFloat(getComputedStyle(c).height)),
     centres,
+    combined: [...document.querySelectorAll('.vertext-combine')]
+      .map(e => { const r = e.getBoundingClientRect(); return [r.width, r.height]; }),
     fonts: [...document.fonts].filter(f => f.status === 'loaded').map(f => f.family),
   };
   fetch('result', { method: 'POST', body: JSON.stringify(result) });
@@ -162,10 +164,31 @@ def line_gap(m, where):
     return []
 
 
+def marks_together(m, where):
+    """CLReq 5.1.1.3: two question or exclamation marks used together take one
+    character's space. Along the line that is one cell; across it, no wider
+    than the line."""
+    cell, pitch = m["cell"], m["cell"] * 1.5
+    fails = []
+    if len(m["combined"]) != 3:
+        fails.append(f"{where}: {len(m['combined'])} paired marks, expected 3")
+    for width, height in m["combined"]:
+        if abs(height - cell) > 0.5 or width > pitch + 0.5:
+            fails.append(f"{where}: a pair takes {width:.1f}x{height:.1f}px, "
+                         f"not one {cell}px cell")
+    if not fails:
+        m["gap"] = (m.get("gap", "") + f"{len(m['combined'])} pairs one cell each").strip()
+    return fails
+
+
+TOGETHER = "真的？！不会吧！！谁？？？"
+
 CASES = [
-    # name, metadata, window, the face, checks
-    ("document-short", {}, (900, 700), "Noto Sans SC", [whole_cells, line_gap]),
-    ("page-short", {"vertext-page": "true"}, (900, 500), "Noto Sans SC", [whole_cells, line_gap]),
+    # name, text, metadata, window, the face, checks
+    ("document-short", PROSE, {}, (900, 700), "Noto Sans SC", [whole_cells, line_gap]),
+    ("page-short", PROSE, {"vertext-page": "true"}, (900, 500), "Noto Sans SC",
+     [whole_cells, line_gap]),
+    ("marks-together", TOGETHER, {}, (900, 700), "Noto Sans SC", [marks_together]),
 ]
 
 
@@ -186,8 +209,8 @@ def main():
         shutil.copy(path, work / path.name)
         FONTS_IN_WORK[family] = path
     fails, lines = [], []
-    for name, meta, window, family, checks in CASES:
-        m = _ps.measure(chrome, work, page(args.pandoc, work, name, PROSE, meta, family), window)
+    for name, text, meta, window, family, checks in CASES:
+        m = _ps.measure(chrome, work, page(args.pandoc, work, name, text, meta, family), window)
         if m is None:
             fails.append(f"{name}: the page reported nothing within 120s")
             continue
@@ -206,7 +229,8 @@ def main():
     if fails:
         return 1
     print("PASS: every column on a short window is a whole number of cells long, "
-          "and the lines of a paragraph sit within CLReq's usual gap")
+          "the lines of a paragraph sit within CLReq's usual gap, and marks used "
+          "together share a cell")
     for line in lines:
         print("      " + line)
     return 0

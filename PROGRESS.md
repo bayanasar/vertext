@@ -622,7 +622,7 @@ nothing in the core may foreclose it.
   (shown with the binding set to `0.2.0`), and its wire rule is held to
   `tools/wire-pairs.json`.
 
-- **The page keeps CLReq's geometry** (#71, #72, #73). `tools/page-geometry.py`,
+- **The page keeps CLReq's geometry** (#71, #72, #73, #74). `tools/page-geometry.py`,
   CI gate `page-geometry`: documents through pandoc, the real filter and the
   binary, in headless Chrome 152 with Noto Sans SC pinned by tag and sha256.
   A short window ends a column on a whole cell: 504px (28 cells) in document
@@ -654,6 +654,15 @@ nothing in the core may foreclose it.
   Noto Sans CJK SC under `zh-TW` centres `！？` but not `、，。．；：`, a gap in
   that face's `locl`; and turning `vert` off to force the centre makes Chrome
   draw the vertical presentation forms, which sit in the corner regardless.
+
+  **Question and exclamation marks used together share a cell** (#74). The
+  core pairs `？！`, `！？`, `？？` and `！！` into one slot, `combine`, and the
+  page sets it with `text-combine-upright: all`; three marks are a pair and a
+  single, so they take two cells as GB/T 15834 asks. Prose only. In the
+  `page-geometry` gate each of 3 pairs is one 18px cell along the line; red at
+  36px with the property removed, and the core test red with the pairing pass
+  skipped. The new kind reaches the Dart binding, and `dart-parity` holds it
+  to the page's class (179 inputs, 1726 slots).
 
 ## Not sealed
 
