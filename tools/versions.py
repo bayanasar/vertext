@@ -27,13 +27,14 @@ wasm-parity.mjs check the other two:
   same minor it is heading for. The cost: two checkouts of main between the
   same two tags both say `0.4.0-dev` and accept each other.
 
-A release version is only honest on its tag. Off a tag, `release_problem()`
-refuses any version whose wire an existing tag already speaks: after `v0.3.0`
-is cut, main must move to a pre-release (`0.4.0-dev`), since `0.3.0` would
-claim to be the release and `0.3.1` would pair with it. The release commit of
-a new minor passes before its tag exists, because nothing speaks that wire yet.
-A patch release is pushed together with its tag (`git push --atomic origin
-main v0.3.1`), so CI sees HEAD on the tag.
+A release version is only honest on its tag, so off a tag `release_problem()`
+refuses every release version, a new minor's included: between setting
+`0.3.0` and cutting `v0.3.0`, every commit that lands builds halves claiming
+to be 0.3.0, and if the tag goes on a later commit they pair with the release.
+A release commit is therefore pushed together with its tag (`git push --atomic
+origin <branch> v0.3.0`), so CI sees HEAD on the tag. Off a tag a pre-release
+passes unless a tag already names it (`v0.3.0-rc.1`), which is the same wire
+comparison: a pre-release speaks only its whole version.
 """
 
 import json
@@ -111,13 +112,20 @@ def release_problem(v):
     tags = _git("tag", "--list", "v*")
     if not tags:
         return "no v* tags are visible, so nothing can be checked: fetch the tags"
-    if f"v{v}" in _git("tag", "--points-at", "HEAD"):
+    return release_refusal(v, tags, _git("tag", "--points-at", "HEAD"))
+
+
+def release_refusal(v, tags, at_head):
+    """`release_problem()` without git: `tags` are the v* tags, `at_head`
+    those on HEAD. version-gate.py runs its cases through this."""
+    if f"v{v}" in at_head:
         return None
+    if "-" not in v:
+        return (f"version {v} is a release and HEAD is not tagged v{v}: a "
+                f"release version is built only on its tag. Push the release "
+                f"commit together with its tag, or move to a pre-release")
     speaking = [t for t in tags if wire(t[1:]) == wire(v)]
     if speaking:
-        return (f"version {v} speaks wire version {wire(v)}, as "
-                f"{', '.join(speaking)} already does, and HEAD is not tagged "
-                f"v{v}: a build from here would pair with that release. Move "
-                f"main to a pre-release, or push a patch release together "
-                f"with its tag")
+        return (f"version {v} is already tagged {', '.join(speaking)}, and "
+                f"HEAD is not that tag: move to the next pre-release")
     return None

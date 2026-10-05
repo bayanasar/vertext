@@ -1,7 +1,7 @@
 # PROGRESS — vertext
 
 <!-- progress -->
-updated: 2026-09-25
+updated: 2026-10-04
 owner: maintainer
 stage: Quarto path works end to end; Mongolian joining proven in the font, proven to reach the page in one piece, and proven by CI to be applied by a real browser — no reader has looked at a page yet
 <!-- /progress -->
@@ -580,6 +580,16 @@ nothing in the core may foreclose it.
   and paired with `v0.2.0`. Off a tag it now refuses any version whose wire a
   tag already speaks: red with all four at `0.2.1` and at `0.2.0`, green at
   `0.3.0` (no tag speaks 0.3 yet) and `0.3.0-dev`.
+
+  That green at `0.3.0` was the last hole: between setting a new minor and
+  cutting its tag, every commit that lands builds halves claiming the release.
+  Off a tag the gate now refuses every release version, and a release commit
+  is pushed together with its tag. The rule's 7 cases run in the gate itself
+  (`RELEASE_CASES` in `tools/version-gate.py`), so the cases are red whatever
+  version main carries: with the release branch removed, the gate fails on
+  exactly the untagged `0.3.0`. In a scratch clone with all four declarations
+  set: `0.3.0` untagged red, `0.3.0` with `v0.3.0` on HEAD green, `0.3.1`
+  untagged red.
 
 - **The lesson site builds from the 0.2.0 release** (#9, step 2). Merged in
   that site's repository: `build.py` pins `VERTEXT_VERSION = "0.2.0"`, and its

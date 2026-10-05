@@ -220,13 +220,14 @@ Main carries the next minor's pre-release from the day after a tag, so a half
 built from a checkout refuses every released half and the reverse. The
 `version` gate in CI checks what makes that true: the four declarations
 (`Cargo.toml`, `_extension.yml`, and `VERSION` in the filter and the glue) are
-one string, and off a tag the version speaks no wire version an existing tag
-speaks. After `v0.3.0`, neither `0.3.0` nor `0.3.1` can sit on main untagged.
-The gate does not check that the pre-release is the *next* minor's: any
-pre-release refuses every release, which is the property the handshake needs.
-A patch release is pushed together with its tag (`git push --atomic origin
-main v0.3.1`), so CI sees HEAD on the tag. Both release archives refuse on the
-same condition.
+one string, and off a tag the version is a pre-release that no tag names. A
+release version is built only on its tag: an untagged `0.3.0` would claim to
+be a release whose tag may land on another commit, and an untagged `0.3.1`
+would pair with `v0.3.0`. So a release commit, new minor or patch, is pushed
+together with its tag (`git push --atomic origin <branch> v0.3.0`), and CI
+sees HEAD on the tag. The gate does not check that the pre-release is the
+*next* minor's: any pre-release refuses every release, which is the property
+the handshake needs. Both release archives refuse on the same condition.
 
 What the handshake cannot do:
 

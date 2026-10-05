@@ -57,10 +57,11 @@ jobs:
         run: git fetch --tags --force --quiet origin
 
       # Four files declare the version and the two handshakes compare it, so
-      # they must be one string -- and off a tag, the version may not speak a
-      # wire version an existing tag speaks. After a release main moves to the
-      # next minor's pre-release, or a checkout's half and a release's half
-      # speak the same wire and the handshakes let them pair.
+      # they must be one string -- and off a tag, the version must be a
+      # pre-release no tag names. A release version is built only on its tag;
+      # after a release main moves to the next minor's pre-release, or a
+      # checkout's half and a release's half speak the same wire and the
+      # handshakes let them pair.
       - name: The version is declared once and names no other commit
         id: version
         run: python3 tools/version-gate.py
