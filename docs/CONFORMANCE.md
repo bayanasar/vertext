@@ -42,7 +42,7 @@ a verdict):
 | | Conforms | Partial | Not implemented | Informative |
 |---|---|---|---|---|
 | CLReq | 7 | 15 | 21 | 3 |
-| MLReq | 3 | 12 | 7 | 4 |
+| MLReq | 6 | 9 | 7 | 4 |
 
 The pattern is the same in both. Direction, orientation, keeping words whole
 and preserving the text are met and tested, and so are the page measurements
@@ -188,9 +188,9 @@ would eventually need its own measurement. See "Beyond both documents" below.
 | 7.1 Words not split | Conforms | A Mongolian run is never split by the engine and never wraps in the browser. Every golden run arrives on the page as one span, and the browser joins it. | gates `delivery-golden` and `browser-golden` |
 | 7.2 Alignment and justification | Partial | Each slot is centred across its column (the default MLReq names). Top-and-bottom justification, MLReq's default for multi-line text, is not done. | |
 | 7.3 Line height | Informative | MLReq names line height in this section's title and states no requirement for it. vertext sets a line of Mongolian one pitch from the next, as it does a line of Chinese (see CLReq 7.1.1.5): measured on a paragraph of bichig alone, in `vertical-lr`, where there is no Han character to hold the pitch. | gate `page-geometry` (27px apart) |
-| 7.3.1 Baseline position | Partial | Runs are `vertical-align: middle` and the font puts the baseline on the centre line. Not measured. | |
-| 7.3.2–7.3.3 Mixed with other scripts, numbers and Latin | Partial | Latin and digits are horizontal boxes centred in the column. Latin and Mongolian are sized in proportion to the CJK cell (14 and 15 against 18), so changing the cell keeps the three in step. How their centre lines align is not measured. | `examples/test-column-budget.js` |
-| 7.3.4 Mixed with Chinese and Japanese | Partial | Han characters stay upright inside a `vertical-lr` column, as required. Their centre line against the Mongolian baseline is not measured. | |
+| 7.3.1 Baseline position | Conforms | The stem of a Mongolian run sits on the line's centre. Centring the run's box does not do that: the golden face's stem is 0.19 em off its content area's centre, measured, so the run is moved by `--vertext-mongolian-stem-shift`. A page in another face declares its own value. | gate `script-centres` |
+| 7.3.2–7.3.3 Mixed with other scripts, numbers and Latin | Conforms | Latin and digits are horizontal boxes centred on the line, so their centre falls on the Mongolian stem: within 0.05 of a cell in both progressions. They are sized in proportion to the CJK cell (14 and 15 against 18), so changing the cell keeps the three in step. The boxes are horizontal-in-vertical, as for CJK text (CLReq 2.1.2). | gate `script-centres`, `examples/test-column-budget.js` |
+| 7.3.4 Mixed with Chinese and Japanese | Conforms | Han characters stay upright inside a `vertical-lr` column, and their centre line falls on the Mongolian stem within 0.05 of a cell, in both progressions. | gate `script-centres` |
 | 7.4 Lists and counters | Partial | An ordered item carries its number as text, and that number reads left to right as a horizontal slot. Not measured. | |
 | 8.1.1–8.1.2 Binding, page turning, paper | Not implemented | No pagination. | |
 | 8.1.3–8.1.4 Scrolling direction and scroll bar | Partial | In document mode a Mongolian document opens at its first column and scrolls left to right, and the region scrolls horizontally, so its scroll bar runs along the bottom. Page mode sets its writing mode by the same rule, but no gate opens a page-mode document. The wheel direction is not tested (see 5.1.4). | gate `progression-scroll` |

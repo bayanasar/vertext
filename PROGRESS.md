@@ -727,6 +727,20 @@ nothing in the core may foreclose it.
   4 Latin words and went horizontal; it is 4 against 4 now and stays vertical.
   Both new tests red with the old ranges.
 
+- **Han, Latin and digits are centred on the Mongolian stem** (#80).
+  `tools/script-centres.py`, CI gate `script-centres`: six lines mixing
+  bichig with Han, Latin and digits, both progressions, the golden Mongolian
+  face and Noto Sans SC, each script coloured apart and screenshotted. The
+  stem is the centre of the band of columns with the most Mongolian ink.
+  Measured first: at cells of 24, 48, 96 and 192px every Han and Latin centre
+  sat 0.15 to 0.17 of a cell right of the stem, about 0.19 em of the run's
+  own size. The run's box is centred on the face's content area (0.582 em
+  above the baseline in this face) and the stem is drawn lower, about 0.39 em,
+  which no metric reports. The run now moves by `--vertext-mongolian-stem-shift`
+  (.19em): all lines within 0.04 of a cell at 18 to 192px, the gate's bound is
+  0.05, and with the shift removed 7 checks are red. The other browser gates
+  stay green, the caret clicks on bichig included.
+
 ## Not sealed
 
 

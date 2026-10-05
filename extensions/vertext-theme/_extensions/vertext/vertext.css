@@ -22,6 +22,15 @@
    another value inside the range. */
 :root { --vertext-line-gap: .5; }
 
+/* How far a Mongolian run moves across its line so that its stem, the line
+   every letter of a word hangs from, falls on the line's centre, where the
+   Han and Latin slots are centred (MLReq 7.3.2-7.3.4). A run's box is centred
+   on its face's content area, and where the stem sits inside that area is a
+   matter of the face's design, not of a metric. Measured for the golden face,
+   Noto Sans Mongolian: 0.19 of the run's own em, at cells from 18 to 192px.
+   A page that sets bichig in another face declares its own value. */
+:root { --vertext-mongolian-stem-shift: .19em; }
+
 .vertext {
   display: flex;
   flex-direction: row-reverse;
@@ -311,6 +320,9 @@
      one pitch, with the face's content area centred in it, as an upright
      mark's is. */
   line-height: var(--vertext-line-pitch);
+  /* Onto the line's centre: see --vertext-mongolian-stem-shift. */
+  position: relative;
+  left: var(--vertext-mongolian-stem-shift);
 }
 /* Bichig inside a HORIZONTAL block — a Latin-majority paragraph, where the run
    stays in the horizontal flow and never becomes a slot. It needs the face and
