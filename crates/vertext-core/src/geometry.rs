@@ -102,13 +102,6 @@ impl fmt::Display for SourceMapError {
 
 impl std::error::Error for SourceMapError {}
 
-fn slot_text(slot: &Slot) -> &str {
-    match slot {
-        Slot::Upright(s) | Slot::LatinWord(s) | Slot::MongolianRun(s) | Slot::Space(s)
-        | Slot::VerticalPunctuation(s) | Slot::CornerPunctuation(s) | Slot::Neutral(s) => s,
-    }
-}
-
 /// Lays `input` out and maps the result back onto it.
 pub fn layout_with_source_map(input: &str, config: &LayoutConfig) -> (Layout, SourceMap) {
     let layout = crate::layout_text(input, config);
@@ -133,7 +126,7 @@ pub fn source_map(input: &str, layout: &Layout) -> Result<SourceMap, SourceMapEr
         let start = cursor;
         let first_slot = slots.len();
         for (i, slot) in column.slots.iter().enumerate() {
-            let text = slot_text(slot);
+            let text = slot.text();
             let rest = &input[cursor..];
             let (length, inserted_hyphen) = if rest.starts_with(text) {
                 (text.len(), false)
@@ -271,7 +264,7 @@ mod tests {
             assert_eq!(map.slots().len(), laid.len(), "{text:?}");
             let mut covered = 0;
             for (source, slot) in map.slots().iter().zip(laid) {
-                let shown = slot_text(slot);
+                let shown = slot.text();
                 let expected = if source.inserted_hyphen {
                     shown.strip_suffix(INSERTED_HYPHEN).unwrap()
                 } else {

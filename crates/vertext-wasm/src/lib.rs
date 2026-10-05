@@ -26,10 +26,8 @@
 
 use std::cell::RefCell;
 
-use vertext_core::{
-    layout_with_source_map, prefers_horizontal, Caret, Progression, SourceMap,
-};
-use vertext_html::{code_config, prose_config, render_document, RenderOptions};
+use vertext_core::{Caret, Progression, SourceMap};
+use vertext_html::{render_document, strip_layout, RenderOptions};
 
 /// Lay the whole input out as code, as `--code` does.
 pub const CODE: u32 = 1;
@@ -65,16 +63,7 @@ pub fn render(input: &str, flags: u32) -> String {
 /// the renderer would not lay it out that way: it carries mode markers, or its
 /// prose is Latin-majority and goes horizontal.
 pub fn map(input: &str, flags: u32) -> Option<SourceMap> {
-    let text = input.trim_end_matches(['\n', '\r']);
-    let code = flags & CODE != 0;
-    if text.chars().any(|c| ('\u{E000}'..='\u{E0FF}').contains(&c)) {
-        return None;
-    }
-    if !code && prefers_horizontal(text) {
-        return None;
-    }
-    let config = if code { code_config(progression(flags)) } else { prose_config(progression(flags)) };
-    Some(layout_with_source_map(text, &config).1)
+    strip_layout(input, flags & CODE != 0, progression(flags)).map(|(_, map)| map)
 }
 
 /// The map as JSON: for each column, each slot's source range, grapheme count

@@ -35,6 +35,12 @@ extension or a web IDE — shares it byte for byte rather than growing a second,
 subtly different layout engine; `tools/wasm-parity.mjs` checks the bytes. Anything in the core that cannot cross `wasm32` is a design
 smell to be quarantined in an adapter.
 
+A host that draws text itself, Flutter through `dart:ffi` first, takes the
+same layout from `crates/vertext-ffi`: each slot's kind, text and source range
+as JSON over a C ABI. The kinds come from the renderer's own `slot_kind` and
+the strip from its `strip_layout`, so such a host classifies every slot as the
+page does, and keeps for itself only what needs a font.
+
 ## The unit of layout is a grapheme cluster
 
 Not the Unicode scalar. A variation selector must stay with the ideograph whose

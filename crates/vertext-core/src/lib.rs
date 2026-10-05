@@ -238,6 +238,17 @@ pub enum Slot {
     Neutral(String),
 }
 
+impl Slot {
+    /// What the slot shows: its source text, plus the hard hyphen
+    /// [`layout_text`] appends when it splits a long word.
+    pub fn text(&self) -> &str {
+        match self {
+            Slot::Upright(s) | Slot::LatinWord(s) | Slot::MongolianRun(s) | Slot::Space(s)
+            | Slot::VerticalPunctuation(s) | Slot::CornerPunctuation(s) | Slot::Neutral(s) => s,
+        }
+    }
+}
+
 /// Creates a top-to-bottom layout. Each source newline starts a new column to
 /// the *left*. Whitespace separates Latin words but does not create an empty
 /// slot. Long Latin words use predictable hard hyphens; dictionary hyphenation

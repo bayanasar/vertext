@@ -1,0 +1,18 @@
+[package]
+name = "vertext-ffi"
+description = "vertext for native hosts: the slots the renderer would draw, as JSON over a C ABI"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+readme.workspace = true
+keywords.workspace = true
+categories.workspace = true
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+vertext-core.workspace = true
+vertext-html.workspace = true

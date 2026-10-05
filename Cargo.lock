@@ -24,6 +24,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "vertext-ffi"
+version = "0.3.0-dev"
+dependencies = [
+ "vertext-core",
+ "vertext-html",
+]
+
+[[package]]
 name = "vertext-html"
 version = "0.3.0-dev"
 dependencies = [

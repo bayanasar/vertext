@@ -6,8 +6,8 @@
 //! strings out.
 
 use vertext_core::{
-    is_mongolian, layout_text, prefers_horizontal, HorizontalKind, Layout, LayoutConfig,
-    Progression, Slot,
+    is_mongolian, layout_text, layout_with_source_map, prefers_horizontal, HorizontalKind,
+    Layout, LayoutConfig, Progression, Slot, SourceMap,
 };
 
 /// Reserved private-use markers that the Quarto filter inserts around a
@@ -471,26 +471,51 @@ fn render_table(html: &mut String, text: &str, progression: Progression) {
     html.push_str("</tbody></table>");
 }
 
+/// The name of a slot's kind: the suffix of its class on the page
+/// (`vertext-upright`), and the kind a host that draws its own slots reads.
+/// One table, so such a host classifies every slot exactly as the page does.
+pub fn slot_kind(slot: &Slot) -> &'static str {
+    match slot {
+        Slot::Upright(_) => "upright",
+        Slot::LatinWord(_) => "latin",
+        Slot::MongolianRun(_) => "mongolian",
+        Slot::Space(_) => "space",
+        // The character is emitted exactly as the author wrote it. The
+        // vertical appearance is the stylesheet's job — see the note on
+        // `Slot::VerticalPunctuation`.
+        Slot::VerticalPunctuation(_) => "vform",
+        Slot::CornerPunctuation(_) => "corner",
+        Slot::Neutral(_) => "neutral",
+    }
+}
+
 fn render_slots(html: &mut String, slots: &[Slot]) {
     for slot in slots {
         // Whitespace is emitted as the character the author typed, never a
         // stand-in glyph. Code indentation is made visible by the stylesheet
         // instead — a background, not a substitution, so the text a reader
         // copies is the text a writer wrote.
-        let (class, body) = match slot {
-            Slot::Upright(s) => ("vertext-upright", escape(s)),
-            Slot::LatinWord(s) => ("vertext-latin", escape(s)),
-            Slot::MongolianRun(s) => ("vertext-mongolian", escape(s)),
-            Slot::Space(s) => ("vertext-space", escape(s)),
-            // The character is emitted exactly as the author wrote it. The
-            // vertical appearance is the stylesheet's job — see the note on
-            // `Slot::VerticalPunctuation`.
-            Slot::VerticalPunctuation(s) => ("vertext-vform", escape(s)),
-            Slot::CornerPunctuation(s) => ("vertext-corner", escape(s)),
-            Slot::Neutral(s) => ("vertext-neutral", escape(s)),
-        };
-        html.push_str(&format!("<span class=\"{class}\">{body}</span>"));
+        html.push_str(&format!("<span class=\"vertext-{}\">{}</span>",
+                               slot_kind(slot), escape(slot.text())));
     }
+}
+
+/// One run of text laid out as a single vertical strip, for a host that
+/// places slots itself: the layout and its source map. `None` where this
+/// renderer would not set the text as one strip: it carries mode markers, or,
+/// outside code, its Latin outweighs its vertical script and it goes
+/// horizontal. Trailing line breaks are dropped first, as the page drops them.
+pub fn strip_layout(input: &str, code: bool, progression: Progression)
+                    -> Option<(Layout, SourceMap)> {
+    let text = input.trim_end_matches(['\n', '\r']);
+    if text.chars().any(|c| ('\u{E000}'..='\u{E0FF}').contains(&c)) {
+        return None;
+    }
+    if !code && prefers_horizontal(text) {
+        return None;
+    }
+    let config = if code { code_config(progression) } else { prose_config(progression) };
+    Some(layout_with_source_map(text, &config))
 }
 
 /// Exposes the advance keyword for hosts that render their own shell.
