@@ -640,8 +640,11 @@ nothing in the core may foreclose it.
   page on both, and the gate compares column by column, with blank lines at
   the end and private-use characters added to its inputs: 184 inputs under 3
   flag sets and 2 more in code, 550 vertical layouts giving the page's 565
-  columns and 1769 slots. With the old `strip_layout` the per-column gate is
-  red on 17 cases and the flattened one green on the same inputs.
+  columns and 1769 slots. With the old `strip_layout` the gate is red on 17
+  cases: 9 blank columns at the end, which the flattened comparison passed on
+  the same inputs, and 8 private-use inputs, which the old gate fails as well
+  (the binding said horizontal where the page has columns), so it is the new
+  inputs that find those.
   `vertext-html` has a test of its own for the column counts.
 
   **The C boundary does not unwind.** A panic inside `vertext_layout` would
