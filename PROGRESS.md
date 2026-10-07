@@ -837,8 +837,8 @@ nothing in the core may foreclose it.
   own load has every face it is set in, so a shot in another face has nothing
   to judge. With a face moved away while only the screenshot loads, both gates
   are red and say so; `punctuation-ink` before the change judged the fallback
-  glyphs instead, red only on the 2 marks whose position happened to differ.
-  Green on 6 runs of `punctuation-ink` and 3 of `script-centres`.
+  glyphs instead, red on all 24 cells of the missing face for where their ink
+  sat, with no word of the face. Green on 6 runs of each gate in a row.
   Under the same Quarto, `examples/test-extension.sh`, which needs `quarto
   render` and so had never run on any runner here, passed all 82 of its
   checks.
