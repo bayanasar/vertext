@@ -41,17 +41,18 @@ a verdict):
 
 | | Conforms | Partial | Not implemented | Informative |
 |---|---|---|---|---|
-| CLReq | 8 | 14 | 21 | 3 |
+| CLReq | 7 | 15 | 21 | 3 |
 | MLReq | 4 | 11 | 7 | 4 |
 
 The pattern is the same in both. Direction, orientation, keeping words whole
 and preserving the text are met and tested, and so are the page measurements
 CLReq gives numbers for (a line in whole characters, the line gap, marks used
-together) and the marks kept off line edges, which are measured in a browser
-with a real CJK face. Where the pause marks sit and a number with its sign
+together), which are measured in a browser with a real CJK face. Where the
+pause marks sit, a number with its sign, and the marks kept off line edges
 are measured too, and each holds only in part: the first on the page's own
 face and language, the second not where a sign has a word on its other side
-(`30°C`). Anything that needs the engine to
+(`30°C`), the third not for connector marks, interpuncts and solidi.
+Anything that needs the engine to
 measure (justification, punctuation compression, widows, hanging punctuation),
 anything that needs markup vertext does not carry (ruby, emphasis marks,
 interlinear lines, decoration), and anything print-only (pages, running heads,
@@ -133,7 +134,7 @@ Three findings are worth reading before the tables:
 
 | Section | Status | Note | Evidence |
 |---|---|---|---|
-| 6.1.1 Line start and line end prohibition | Conforms | Line breaking is the browser's (UAX #14 and CSS `line-break`), by design: the engine does not measure, so it cannot own a break. The marks are plain inline text, so the browser's rules reach them beside Han characters: no closing or pause mark of `、，。．；：！？）」』》` begins a line and no opening mark of `（「『《` ends one. They were inline-block until October 2026, which let 14 of those 16 cases through. A Latin word, a number and a Mongolian run are each one box, and a line may break on either side of a box, so in prose the renderer puts a box in one span that does not wrap with the closing and pause marks right after it and the opening marks right before it. Measured with `sayin，`, `sayin！？`, `50%。`, `2026」`, `ᠮᠣᠩᠭᠣᠯ》`, `（sayin）`, `「50%」` and `《ᠮᠣᠩᠭᠣᠯ》`, each at several distances from a line end: all hold, and a column copies as written. | gate `page-geometry` |
+| 6.1.1 Line start and line end prohibition | Partial | Line breaking is the browser's (UAX #14 and CSS `line-break`), by design: the engine does not measure, so it cannot own a break. The marks are plain inline text, so the browser's rules reach them beside Han characters: no closing or pause mark of `、，。．；：！？）」』》` begins a line and no opening mark of `（「『《` ends one. They were inline-block until October 2026, which let 14 of those 16 cases through. A Latin word, a number and a Mongolian run are each one box, and a line may break on either side of a box, so in prose the renderer puts a box in one span that does not wrap with the closing and pause marks right after it and the opening marks right before it. Measured with `sayin，`, `sayin！？`, `50%。`, `2026」`, `ᠮᠣᠩᠭᠣᠯ》`, `（sayin）`, `「50%」` and `《ᠮᠣᠩᠭᠣᠯ》`, each at several distances from a line end: all hold, and a column copies as written. The basic rule also keeps connector marks, interpuncts and solidi off a line's start, and those fail. Beside Han, `～`, a lone `—`, `·` and `／` can begin a line: the browser keeps no line from starting with them. Beside a box every one of CLReq's connectors, interpuncts and solidi can (`～`, `〜`, `-`, `–`, `—`, `·`, `・`, `‧`, `/`, `／`), as can the closing quotation marks `〞` and `〟`, and the opening `〝` can end a line: the renderer's group leaves them out. Measured with each mark at a line edge. Not fixed yet. | gate `page-geometry` |
 | 6.1.2.1 Two-em dash and ellipsis unbroken | Partial | Each is one or two vertical-form slots; whether they stay together is the browser's. | |
 | 6.1.2.2 Digits and their prefixes and suffixes | Partial | A digit run is one slot and never splits. `%`, `‰`, `‱`, the degree signs and a trailing currency symbol join the number before them, and `+`, `-`, `±`, `−` and a leading currency symbol the number after them, so no line falls between them. Measured first: as separate slots, Chrome broke between them in all four cases tried. Prose only. Not handled: a sign with a word on its other side, as in `30°C`, `US$100` or `5−3`, joins neither, since a Latin word on each side of it is two slots and joining it to one would merge them. So `30°C` may break after the number. The fullwidth `－` is not a sign: between numbers in Chinese it marks a range (`1990－2000`) and keeps its vertical form. | `a_number_keeps_its_sign_and_unit`, gate `page-geometry` |
 | 6.1.2.3 Annotation marks | Not implemented | No superscript or note markup. | |

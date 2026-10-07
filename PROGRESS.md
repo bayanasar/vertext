@@ -934,9 +934,21 @@ nothing in the core may foreclose it.
   groups (with the old lookup the page threw before it reported);
   `wasm-parity` counts slot spans too (the old count was red on 8 strips of
   the golden corpus). `dart-parity` reads slot spans by kind and needed only
-  the new input.
+  the new input. These probes are not the whole basic rule: connector marks,
+  interpuncts, solidi and the quotation marks `〝〞〟` are left out of the
+  group and can still reach the wrong end of a line beside a box, and four
+  of them beside Han (#94, under Not sealed).
 
 ## Not sealed
+
+- **Connector marks, interpuncts and solidi can begin a line** (#94). CLReq
+  6.1.1's basic rule keeps them off a line's start, with the closing marks.
+  Measured with the `page-geometry` probes extended to every mark of CLReq's
+  tables, each at a line edge: beside Han, `～`, a lone `—`, `·` and `／`
+  begin a line (the browser holds `〜`, `-`, `–`, `・`, `‧` and `/` itself);
+  beside a box all ten connectors, interpuncts and solidi do, `〞` and `〟`
+  begin a line and `〝` ends one, since the renderer's group leaves them out.
+  CONFORMANCE 6.1.1 is Partial until they hold.
 
 
 
