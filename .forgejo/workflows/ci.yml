@@ -69,6 +69,12 @@ jobs:
         id: version
         run: python3 tools/version-gate.py
 
+      # The conformance summary is a count of the rows below it, and every
+      # change to a row has had to recount it by hand.
+      - name: The conformance summary counts its own tables
+        id: conformance-summary
+        run: python3 tools/conformance-summary.py
+
       # Every `run:` is its own shell, so an `export` in one step is gone by
       # the next. $GITHUB_PATH is the mechanism that outlives a step -- the
       # version print below runs in a different shell than this line, which is
