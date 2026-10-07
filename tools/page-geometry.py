@@ -292,8 +292,14 @@ def numbers_keep_affixes(m, where):
     return fails
 
 # A full first line, then marks that may not start a line: each paragraph puts
-# one of them exactly where the second line begins.
-PROHIBITED = "、，。．；：！？）」』》"
+# one of them exactly where the second line begins. CLReq 6.1.1's basic rule,
+# with the characters from CLReq's tables of marks: the pause and stop marks;
+# the closing quotation marks, brackets and title marks; and the connector
+# marks, interpuncts and solidi. A lone `—` is a connector; two are a dash,
+# which may begin a line.
+PROHIBITED = ("、，。．；：！？"
+              "」』”’〞〟）］｝〕】〗〉》"
+              "～〜-–—·・‧/／")
 
 
 def line_start(n):
@@ -316,7 +322,7 @@ def no_mark_starts_a_line(m, where):
 
 
 # And the other end: an opening mark placed in the last cell of the first line.
-OPENING = "（「『《"
+OPENING = "「『“‘〝（［｛〔【〖〈《"
 
 
 def line_end(n):
@@ -345,7 +351,14 @@ def no_mark_ends_a_line(m, where):
 # placed 1 to 8 cells from the end of the first line (an opening mark 1 to 3),
 # and at one of those the box fills the line and the mark has to go somewhere.
 BOX_CLOSING = ["sayin，", "sayin。", "sayin）", "sayin！？", "50%。", "2026」", "ᠮᠣᠩᠭᠣᠯ，",
-               "ᠮᠣᠩᠭᠣᠯ》"]
+               "ᠮᠣᠩᠭᠣᠯ》",
+               # A pair around a box: 1 cell from the end its opening mark
+               # ends the line, a few further its closing mark would begin
+               # the next.
+               "〝sayin〞", "〝sayin〟", "“sayin”", "‘sayin’", "［sayin］", "｛sayin｝",
+               "〔sayin〕", "【sayin】", "〖sayin〗", "〈sayin〉",
+               "2000～2010", "sayin〜", "sayin-", "sayin–", "sayin—", "sayin·", "sayin・",
+               "sayin‧", "sayin/", "sayin／"]
 BOX_OPENING = ["（sayin）", "「50%」", "《ᠮᠣᠩᠭᠣᠯ》"]
 BOX_PROBES = ([(probe, k) for probe in BOX_CLOSING for k in range(1, 9)]
               + [(probe, k) for probe in BOX_OPENING for k in range(1, 4)])
@@ -371,12 +384,13 @@ def lines_of(column, cell):
 
 def no_mark_beside_a_box_breaks(m, where):
     """CLReq 6.1.1 beside a Latin word, a number and a Mongolian run: no
-    closing or pause mark begins a line and no opening mark ends one. And the
-    text a reader copies from each column is the paragraph as written. Each
-    probe must reach a line edge at one of its distances at least -- the
-    second line beginning inside it -- or the probe proves nothing: a face or
-    a stylesheet that makes the box shorter would leave every placement
-    inside the first line, and the rules would hold by never being asked."""
+    mark that may not begin a line begins one and no opening mark ends one.
+    And the text a reader copies from each column is the paragraph as
+    written. Each probe must reach a line edge at one of its distances at
+    least -- the second line beginning inside it, or with the slot just
+    before it -- or the probe proves nothing: a face or a stylesheet that
+    makes the box shorter would leave every placement inside the first line,
+    and the rules would hold by never being asked."""
     fails = []
     cell = m["cell"]
     n = round(m["heights"][0] / cell) if m["heights"] else 0
@@ -387,8 +401,9 @@ def no_mark_beside_a_box_breaks(m, where):
         at = f"{where}: `{probe}` {k} cell(s) from the end"
         lines = lines_of(column, cell)
         # The probe's slots follow the n - k Han before it and precede the
-        # three after it.
-        if len(lines) > 1 and n - k <= len(lines[0]) < len(column) - 3:
+        # three after it. The line may also break one slot early: a `“` holds
+        # to both sides, so the Han before it goes to the next line with it.
+        if len(lines) > 1 and n - k - 1 <= len(lines[0]) < len(column) - 3:
             reached.add(probe)
         for line in lines[1:]:
             if line[0] in set(PROHIBITED) | {"？！", "！？", "？？", "！！"}:
