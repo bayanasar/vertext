@@ -119,9 +119,12 @@ side, does editing. Selection, caret placement and hit-testing need the
 inverse map, from a tap back to an offset in the source. That map exists:
 `vertext_core::SourceMap` turns a source offset into a caret (column, slot,
 grapheme) and back, and `examples/wasm/caret.html` drives it in a browser.
-Each slot the binding returns already carries its source range; the caret
-calls are not bound yet. What remains for editing is Flutter's half, hit
-testing against the slots chaji placed.
+Each slot the binding returns already carries its source range, but of its
+graphemes only how many there are, not where they break, so a tap in the middle
+of a Mongolian run cannot yet be turned into a source offset. Editing still
+needs two things: the caret calls bound through the FFI (or each slot's
+grapheme boundaries added to its JSON), and Flutter's half, hit testing
+against the slots chaji placed.
 
 ## Status
 

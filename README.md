@@ -326,8 +326,10 @@ it is the narrow space its name describes and keeps its own slot.
 | `vertext-ffi` | For a native host that draws slots itself: each slot's kind, text and source range as JSON over a C ABI. `bindings/dart` binds it for Dart and Flutter. |
 
 **One host ships.** The Markdown/Quarto extension in `extensions/vertext` is
-in production. Every other adapter is a design document and no code — they are
-indexed in [`docs/ROADMAP.md`](docs/ROADMAP.md), with what each is waiting on:
+in production. Every other adapter is a design document and no code, except
+chaji's backend (`vertext-ffi`, `bindings/dart`), which exists without its host.
+They are indexed in [`docs/ROADMAP.md`](docs/ROADMAP.md), with what each is
+waiting on:
 
 | Product | Status |
 |---|---|

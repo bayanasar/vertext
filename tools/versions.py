@@ -19,9 +19,10 @@ disagree. Every tool reads them here, so there is one parser per file and a
 file that moves its declaration fails in one place.
 
 The handshake compares WIRE versions, and `wire()` is the rule, written the
-same way in vertext.lua and vertext.mjs. tools/wire-pairs.json holds it as
-data; `wire_problems()` checks `wire()` against it, and filter-golden.py and
-wasm-parity.mjs check the other two:
+same way in vertext.lua, vertext.mjs and vertext.dart. tools/wire-pairs.json
+holds it as data; `wire_problems()` checks `wire()` against it, and
+filter-golden.py, wasm-parity.mjs and the Dart binding's vertext_test.dart
+check the other three:
 
 - A release (`0.3.1`) speaks its MAJOR.MINOR (`0.3`): a patch release may not
   change the wire protocol, an export or what the source map means, so patch
