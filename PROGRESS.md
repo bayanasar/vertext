@@ -804,7 +804,13 @@ nothing in the core may foreclose it.
   document and a website both put the font next to the stylesheet they link,
   and Chrome reports the face loaded in each. `script-centres` now sets every
   line from the shipped stylesheet and font alone, asks the page which faces
-  loaded, and is red, naming the face, with the font file missing.
+  loaded, and is red, naming the face, with the font file missing. The filter
+  lists the licence as a resource as well, so a rendered document and a
+  website carry `NotoSansMongolian-OFL.txt` beside the font, which
+  `examples/test-extension.sh` checks in both (86 checks under Quarto
+  1.10.19; the two licence checks red with the licence dropped from
+  `resources`). The README's licence section names the font's OFL, and says
+  what a site that copies `vertext.css` by hand must copy with it.
 
   The gate also checks more since review. Each line names the scripts it must
   show, so a script that stops drawing is red rather than skipped (red on 4

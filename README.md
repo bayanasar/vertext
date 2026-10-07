@@ -170,6 +170,11 @@ on the line's centre. A theme that sets bichig in another face declares its own
 value on `.vertext`, not on `:root`, where it would depend on which stylesheet
 loads last.
 
+A site that copies `vertext.css` somewhere itself, rather than through Quarto,
+copies `NotoSansMongolian-Regular.ttf` and `NotoSansMongolian-OFL.txt` into
+the same directory. Without the font the face is a 404, and the shift still
+moves a fallback face that was never measured.
+
 ### What markdown survives
 
 The filter flattens each block to characters before handing it to the binary,
@@ -415,4 +420,7 @@ that corrupts neighbouring CJK.
 
 ## License
 
-MIT.
+MIT, except the Noto Sans Mongolian font: `NotoSansMongolian-Regular.ttf`,
+in `goldens/fonts/` and shipped with the extension, is under the SIL Open Font
+License 1.1 (`OFL.txt` beside it, `NotoSansMongolian-OFL.txt` in the
+extension).

@@ -43,6 +43,22 @@ check_absent() {
   fi
 }
 
+# The Mongolian face ships beside the stylesheet that loads it, with its
+# licence: the OFL travels with the font file, and a face missing there is a
+# 404 that leaves the stem shift measured for it on a fallback face.
+ships_face() {
+  where=$1
+  css=$(find "$2" -name vertext.css -not -path '*/_extensions/*' 2>/dev/null | head -1)
+  for file in NotoSansMongolian-Regular.ttf NotoSansMongolian-OFL.txt; do
+    if [ -n "$css" ] && [ -f "$(dirname "$css")/$file" ]; then
+      printf 'ok   %s ships %s beside vertext.css\n' "$where" "$file"
+    else
+      printf 'FAIL %s has no %s beside vertext.css\n' "$where" "$file"
+      failures=$((failures + 1))
+    fi
+  done
+}
+
 # Author text carrying the reserved markers must not be able to switch the
 # renderer's mode. The literals below are U+E000 and U+E002.
 #
@@ -62,6 +78,7 @@ printf '%s\n' '---' 'title: "Injection 山"' 'vertext-page: true' 'filters: [ver
 quarto render "$work/doc.qmd" --quiet
 
 out="$work/doc.html"
+ships_face "a document" "$work"
 check        "CJK heading stays a vertical column" 'vertext-column-h2'      "$out"
 check        "Latin heading goes horizontal"   'vertext-horizontal-h2'      "$out"
 check        "fenced code is set horizontally" 'vertext-horizontal-code'    "$out"
@@ -279,6 +296,7 @@ printf '%s\n' '---' 'title: "雙寫"' 'filters:' '  - vertext' '---' '' \
   '## 唯一標題' '' '山川异域，风月同天。' > "$theme/twice.qmd"
 quarto render "$theme" --quiet
 th="$theme/_site/index.html"
+ships_face "a website" "$theme/_site"
 check        "theme renders an unedited document"  'class="vertext'          "$th"
 check        "theme stamps the progression"        'data-vertext-progression' "$th"
 check        "the navbar survives the rotation"    'quarto-header'            "$th"

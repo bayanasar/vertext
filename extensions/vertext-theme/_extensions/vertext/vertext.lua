@@ -59,8 +59,9 @@ local column_chars = nil
 -- nothing styles, and the page renders as flat horizontal text: the failure
 -- looks like the extension did nothing rather than like a missing stylesheet.
 -- Declaring the dependency here means the CSS ships wherever the filter runs,
--- and the Mongolian face with it: the stylesheet names it by a relative URL,
--- so it has to land in the same directory.
+-- and the Mongolian face with it, and the face's licence: the stylesheet names
+-- the face by a relative URL, so it has to land in the same directory, and the
+-- OFL goes wherever the font file goes.
 local stylesheet_added = false
 local function ensure_stylesheet()
   if stylesheet_added then return end
@@ -68,7 +69,7 @@ local function ensure_stylesheet()
   quarto.doc.add_html_dependency({
     name = 'vertext',
     stylesheets = { 'vertext.css' },
-    resources = { 'NotoSansMongolian-Regular.ttf' },
+    resources = { 'NotoSansMongolian-Regular.ttf', 'NotoSansMongolian-OFL.txt' },
   })
 end
 
