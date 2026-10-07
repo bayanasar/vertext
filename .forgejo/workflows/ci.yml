@@ -56,8 +56,10 @@ jobs:
 
       # The checkout is shallow and carries no tags, and the version gate and
       # both release archives ask which versions are already tagged. With no
-      # tags visible they fail rather than pass, so a fetch that broke would
-      # show up here instead of letting every version through.
+      # tags visible they fail rather than pass, so a fetch that broke shows
+      # up as the version gate's red, with its reason in that status, instead
+      # of letting every version through. That gate runs whatever this step
+      # did; this step has no status of its own.
       - name: Fetch the release tags
         run: git fetch --tags --force --quiet origin
 
@@ -74,6 +76,7 @@ jobs:
       # steps below skipped, the commit a review approved would carry no
       # evidence of anything else (docs/ARCHITECTURE.md gives the order).
       - name: The version is declared once and names no other commit
+        if: ${{ !cancelled() }}
         id: version
         run: python3 tools/version-gate.py
 
