@@ -514,19 +514,33 @@ fn attach_affixes(slots: &mut Vec<Slot>) {
 /// keyboard. Prose only. In code, `!!` and `?!` are operators, and setting
 /// them side by side would misquote the program.
 ///
-/// Two halfwidth marks after a Latin word or a space stay apart. Inline code
-/// in a paragraph reaches the layout as prose, so `x!!` and `a ?? b` there are
-/// operators too, and `Really?!` is a Latin sentence's. A pair with a
-/// fullwidth mark in it was typed in Chinese wherever it stands.
+/// Halfwidth marks after a Latin word, with or without a space between, stay
+/// apart, and so does the rest of their run. Inline code in a paragraph
+/// reaches the layout as prose, so `x!!`, `x!!!` and `a ?? b` there are
+/// operators too, and `Really?!` is a Latin sentence's. A word of digits and
+/// signs is not Latin here: `共100?!` and `增长5%?!` are Chinese sentences
+/// that end in a figure, and pair. A pair with a fullwidth mark in it was
+/// typed in Chinese wherever it stands.
 fn combine_marks(slots: &mut Vec<Slot>) {
     let is_mark = |slot: &Slot| matches!(slot, Slot::Neutral(s)
         if matches!(s.as_str(), "！" | "？" | "!" | "?"));
     let halfwidth = |slot: &Slot| matches!(slot.text(), "!" | "?");
+    let latin_before = |out: &[Slot]| matches!(
+        out.iter().rev().find(|slot| !matches!(slot, Slot::Space(_))),
+        Some(Slot::LatinWord(word)) if word.chars().any(is_latin));
     let mut out: Vec<Slot> = Vec::with_capacity(slots.len());
     let mut rest = std::mem::take(slots).into_iter().peekable();
+    // Read where a run of marks starts, and kept to its end: the second `!`
+    // of `x!!!` follows a mark, but the run still follows `x`.
+    let mut after_latin = None;
     while let Some(slot) = rest.next() {
-        let after_latin = matches!(out.last(), Some(Slot::LatinWord(_) | Slot::Space(_)));
-        if is_mark(&slot) && rest.peek().is_some_and(is_mark)
+        if !is_mark(&slot) {
+            after_latin = None;
+            out.push(slot);
+            continue;
+        }
+        let after_latin = *after_latin.get_or_insert_with(|| latin_before(&out));
+        if rest.peek().is_some_and(is_mark)
             && !(after_latin && halfwidth(&slot) && rest.peek().is_some_and(halfwidth)) {
             let next = rest.next().unwrap();
             out.push(Slot::Combined(format!("{}{}", slot.text(), next.text())));
@@ -859,13 +873,19 @@ mod tests {
         // One alone is a mark like any other, and so are marks apart.
         assert_eq!(slots("好？好")[1], Slot::Neutral("？".into()));
         assert_eq!(slots("好？好！好")[1], Slot::Neutral("？".into()));
-        // Halfwidth marks after a Latin word or a space are not a pair: that
-        // is a Latin sentence or an operator, and inline code in prose reaches
-        // the layout as text. A fullwidth mark is typed in Chinese, and pairs.
-        for text in ["在Kotlin里写x!!，在JS里写a ?? b", "Really?!", "共100?!"] {
+        // Halfwidth marks after a Latin word, spaced or not, are not a pair:
+        // that is a Latin sentence or an operator, and inline code in prose
+        // reaches the layout as text. Nor is the rest of their run.
+        for text in ["在Kotlin里写x!!，在JS里写a ?? b", "Really?!", "x!!!", "a ??? b",
+                     "Really?!?", "写arr[0]!!即可"] {
             assert!(!slots(text).iter().any(|s| matches!(s, Slot::Combined(_))), "{text}");
         }
-        assert_eq!(slots("Really？！")[1], Slot::Combined("？！".into()));
+        // A figure is not a Latin word, and a space after Chinese is not
+        // Latin either; a fullwidth mark is typed in Chinese. These pair.
+        for (text, pair) in [("共100?!", "?!"), ("增长5%?!", "?!"), ("真的 ?!", "?!"),
+                             ("Really？！", "？！")] {
+            assert!(slots(text).contains(&Slot::Combined(pair.into())), "{text}");
+        }
         // In code they are operators, and are left exactly as written.
         let code = LayoutConfig { preserve_spaces: true, ..LayoutConfig::default() };
         assert!(!layout_text("x！！y", &code).columns[0].slots
