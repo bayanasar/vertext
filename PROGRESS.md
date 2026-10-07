@@ -686,8 +686,8 @@ nothing in the core may foreclose it.
   green, and a mixed page screenshotted before and after differs only in the
   spacing of its lines.
 
-  **Every line is a pitch, whatever fills it** (#83). With the strut at zero,
-  only the slots that carry the pitch as a line height held it; the Latin and
+  **A line of Latin or bichig alone is a pitch too** (#83). With the strut at
+  zero, only the slots that carry the pitch as a line height held it; the Latin and
   Mongolian slots are boxes, and a line of nothing but bichig measured 18.0px
   from the next, its runs almost touching. The Mongolian run now takes the
   pitch as its line height and a Latin word is at least a pitch wide, so
@@ -696,7 +696,8 @@ nothing in the core may foreclose it.
   before at 18.0px. A paragraph mixing Han, bichig and Latin words up to
   `internationally` keeps its line pitches to the tenth of a pixel in both
   progressions (87.0 and 72.9px, set by the long words), so a mixed page does
-  not move.
+  not move. A space is a fixed 1em box, so a line of nothing but spaces is
+  still 1em wide; it takes a line's worth of spaces in a row.
 
   The line-edge paragraphs (#75, #77) put a mark exactly at the end of a line,
   which holds only for the column length they were built for. They were built

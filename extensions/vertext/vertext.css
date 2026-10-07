@@ -140,12 +140,6 @@
 .vertext-corner,
 .vertext-combine,
 .vertext-space { line-height: var(--vertext-line-pitch); }
-/* The Latin and Mongolian slots are boxes, and a box adds its own extent to
-   the line, not a line height. Each takes at least one pitch across the line
-   below, so a line holding only Mongolian or only Latin is a pitch wide like
-   any other: with nothing on it carrying the pitch, a line of bichig measured
-   18px from the next. Neither adds anything to a line that already has an
-   upright mark, so a mixed line keeps its width. */
 
 /* Headings. The level sets one scale factor and every glyph class multiplies
    the base size by it, so adding a level means adding one line here and the
@@ -306,8 +300,11 @@
      against the default cell, so at that cell nothing moves. */
   font-size: calc(var(--vertext-cell) * 14 / 18);
   line-height: 1;
-  /* At least one pitch wide, with the word centred in it; a longer word sets
-     the width itself, as it always did. */
+  /* A box adds its own extent to the line, not a line height, so the word
+     takes the pitch as a width: at least one pitch, with the word centred in
+     it, and a line of only Latin words is a pitch wide like any other. A
+     longer word sets the width itself, as it always did, and next to an
+     upright mark, which already carries the pitch, this adds nothing. */
   min-inline-size: var(--vertext-line-pitch);
 }
 .vertext-code .vertext-latin,
@@ -333,7 +330,8 @@
   font-size: calc(var(--vertext-cell) * 15 / 18);
   /* The run is one line, so its width across the column is its line height:
      one pitch, with the face's content area centred in it, as an upright
-     mark's is. */
+     mark's is. With nothing carrying the pitch, a line of bichig alone
+     measured 18px from the next; beside an upright mark this adds nothing. */
   line-height: var(--vertext-line-pitch);
   /* Onto the line's centre: see --vertext-mongolian-stem-shift. */
   position: relative;
