@@ -201,9 +201,10 @@ fn measure_slots(text: &str) -> (usize, usize) {
             // there and must be punctuation here too, so it falls through.
         } else if in_bichig && is_suffix_separator(base) && !after_separator {
             // The word continues across the joint. A stem and its case ending
-            // are one word and one slot — see `is_suffix_separator` — and
-            // counting them twice weighs the same word twice, which is the
-            // measure disagreeing with the layout about what a slot is.
+            // are one word and one slot — see `is_suffix_separator`, and the
+            // separator branch of `layout_text` that decides it — and counting
+            // them twice weighs the same word twice, which is the measure
+            // disagreeing with the layout about what a slot is.
             //
             // One joint, not two. Of two separators in a row neither has
             // bichig on both sides, so the layout sets both as spaces and
@@ -655,9 +656,11 @@ pub fn is_mongolian(ch: char) -> bool { matches!(ch as u32, 0x1800..=0x18AF | 0x
 /// answers true and an engine that asks only that question sets a case ending
 /// as a separate word: a half-em gap in the column with the suffix stranded
 /// below it, and the joining that carries the grammar cut in two. That one
-/// property is what this function exists to override — and only where bichig
-/// holds the mark on both sides, because U+202F is also the ordinary narrow
-/// space that its name describes.
+/// property is what this function exists to override. It names the character
+/// and nothing more: U+202F is also the ordinary narrow space that its name
+/// describes, so the callers decide the joint, and only where bichig holds
+/// the mark on both sides — `layout_text` holds it until the next cluster
+/// shows a suffix, and `measure_slots` follows the same reading.
 ///
 /// U+180E MONGOLIAN VOWEL SEPARATOR needs no such rescue. It was `Zs` until
 /// Unicode 6.3 and is `Cf` now, so it is not whitespace to begin with, and it
