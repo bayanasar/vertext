@@ -915,7 +915,12 @@ nothing in the core may foreclose it.
   `archive_suffix()`, whose cases state each outcome. In the same scratch
   repository: a clean release commit was red on `version` alone with that
   status; a broken release case and a wrong Dart checksum were each named in
-  their gate's status; a failed tag fetch was red on `version`.
+  their gate's status; a failed tag fetch was red on `version`. No visible
+  tag is then refused by `archive_suffix()` itself rather than by its caller,
+  with a case for a release and one for a pre-release: with the refusal
+  removed, both cases are red, where before a release commit whose tags did
+  not arrive read as awaiting its tag and both archives came out
+  `+untagged`.
 
 - **Line-edge rules hold beside a Latin, digit or Mongolian slot** (#85).
   Those slots are boxes (`inline-block`), and a line may break on either side
@@ -939,10 +944,14 @@ nothing in the core may foreclose it.
   groups (with the old lookup the page threw before it reported);
   `wasm-parity` counts slot spans too (the old count was red on 8 strips of
   the golden corpus). `dart-parity` reads slot spans by kind and needed only
-  the new input. These probes are not the whole basic rule: connector marks,
-  interpuncts, solidi and the quotation marks `〝〞〟` are left out of the
-  group and can still reach the wrong end of a line beside a box, and four
-  of them beside Han (#94, under Not sealed).
+  the new input. Each probe must also reach a line edge at one of its
+  distances, or the check fails; red for all 8 closing probes with their
+  placements moved to 5 to 8 cells from the end. The renderer's tests fail
+  if a run of opening marks is cut to one or a table cell is grouped.
+  These probes are not the whole basic rule: connector marks, interpuncts,
+  solidi and the quotation marks `〝〞〟` are left out of the group and can
+  still reach the wrong end of a line beside a box, and four of them beside
+  Han (#94, under Not sealed).
 
 ## Not sealed
 
