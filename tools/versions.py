@@ -44,11 +44,12 @@ pre-release passes unless a tag already names it (`v0.3.0-rc.1`), which is the
 same wire comparison: a pre-release speaks only its whole version.
 
 One refusal is a state rather than a mistake: a release version that no tag
-names yet, which is what a release commit under review carries.
-`awaits_its_tag()` says when that is the only reason, and the release
+names yet, which is what a release commit under review carries. The release
 archives then build and check everything and withhold only the release name,
 so the review sees the packaging work on the commit it approves. A release
 version whose tag is on another commit is a mistake, and refused outright.
+`archive_suffix()` is that three-way rule, and both archives take their name
+from it rather than each working it out.
 """
 
 import json
@@ -118,6 +119,14 @@ def _git(*args):
                           text=True, check=True).stdout.split()
 
 
+NO_TAGS = "no v* tags are visible, so nothing can be checked: fetch the tags"
+
+
+def _tags():
+    """(v* tags, tags on HEAD)."""
+    return _git("tag", "--list", "v*"), _git("tag", "--points-at", "HEAD")
+
+
 def release_problem(v):
     """Why version `v` may not be built at HEAD, or None.
 
@@ -125,10 +134,8 @@ def release_problem(v):
     is an error rather than a pass, because a checkout without tags would let
     every version through.
     """
-    tags = _git("tag", "--list", "v*")
-    if not tags:
-        return "no v* tags are visible, so nothing can be checked: fetch the tags"
-    return release_refusal(v, tags, _git("tag", "--points-at", "HEAD"))
+    tags, at_head = _tags()
+    return release_refusal(v, tags, at_head) if tags else NO_TAGS
 
 
 def release_refusal(v, tags, at_head):
@@ -152,14 +159,26 @@ def release_refusal(v, tags, at_head):
     return None
 
 
-def awaiting_tag(v, tags):
-    """Whether `release_refusal()` refuses `v` only because its tag is not
-    pushed yet: a release version no tag names."""
-    return "-" not in v and f"v{v}" not in tags
+UNTAGGED = "+untagged"
 
 
-def awaits_its_tag(v):
-    """`awaiting_tag()` against the repository's tags; false when none are
-    visible, since then nothing about `v` is known."""
-    tags = _git("tag", "--list", "v*")
-    return bool(tags) and awaiting_tag(v, tags)
+def archive_suffix(v, tags, at_head):
+    """What a release archive for `v` carries after the version in its name,
+    and why: `("", None)` when `release_refusal()` lets `v` through,
+    `(UNTAGGED, refusal)` when the only refusal is that `v` is a release no
+    tag names yet -- a release commit under review, built and checked in
+    full under a name no release uses -- and `(None, refusal)`, no archive,
+    for anything else. version-gate.py runs its cases through this."""
+    refusal = release_refusal(v, tags, at_head)
+    if refusal is None:
+        return "", None
+    if "-" not in v and f"v{v}" not in tags:
+        return UNTAGGED, refusal
+    return None, refusal
+
+
+def archive_suffix_at_head(v):
+    """`archive_suffix()` against the repository's tags; no archive when
+    none are visible, since then nothing about `v` is known."""
+    tags, at_head = _tags()
+    return archive_suffix(v, tags, at_head) if tags else (None, NO_TAGS)

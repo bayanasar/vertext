@@ -25,30 +25,31 @@ import sys
 
 import versions
 
-# (version, v* tags, tags on HEAD, refused, awaiting its tag): the release
-# rule's cases, as wire-pairs.json is the wire rule's. Awaiting its tag is the
-# one refusal the release archives build through, under another name.
+# (version, v* tags, tags on HEAD, what a release archive does): the release
+# rule's cases, as wire-pairs.json is the wire rule's. `named`: the gate
+# passes and the archive takes the version's name. `untagged`: the gate is
+# red, awaiting the tag, and the archive is built in full as `+untagged`.
+# `refused`: the gate is red and there is no archive.
 RELEASE_CASES = [
-    ("0.3.0", ["v0.2.0"], [], True, True),       # a new minor, under review
-    ("0.3.0", ["v0.2.0", "v0.3.0"], ["v0.3.0"], False, False),  # on its tag
-    ("0.2.1", ["v0.2.0"], [], True, True),       # a patch, under review
-    ("0.2.0", ["v0.2.0"], [], True, False),      # a tag, but not HEAD's
-    ("0.3.0-dev", ["v0.2.0"], [], False, False),  # main between releases
-    ("0.3.0-rc.1", ["v0.2.0", "v0.3.0-rc.1"], [], True, False),  # tag names it
-    ("0.3.0-rc.1", ["v0.2.0", "v0.3.0-rc.1"], ["v0.3.0-rc.1"], False, False),
+    ("0.3.0", ["v0.2.0"], [], "untagged"),          # a new minor, under review
+    ("0.3.0", ["v0.2.0", "v0.3.0"], ["v0.3.0"], "named"),  # on its tag
+    ("0.2.1", ["v0.2.0"], [], "untagged"),          # a patch, under review
+    ("0.2.0", ["v0.2.0"], [], "refused"),           # a tag, but not HEAD's
+    ("0.3.0-dev", ["v0.2.0"], [], "named"),         # main between releases
+    ("0.3.0-rc.1", ["v0.2.0", "v0.3.0-rc.1"], [], "refused"),  # tag names it
+    ("0.3.0-rc.1", ["v0.2.0", "v0.3.0-rc.1"], ["v0.3.0-rc.1"], "named"),
 ]
+OUTCOME = {"": "named", versions.UNTAGGED: "untagged", None: "refused"}
 
 
 def case_problems():
     problems = []
-    for v, tags, at_head, refused, awaiting in RELEASE_CASES:
-        where = f"{v} with tags {tags}, HEAD at {at_head or 'no tag'}"
-        if (versions.release_refusal(v, tags, at_head) is not None) != refused:
-            problems.append(f"release rule: {where}, should "
-                            f"{'' if refused else 'not '}be refused")
-        if versions.awaiting_tag(v, tags) != awaiting:
-            problems.append(f"release rule: {where}, should "
-                            f"{'' if awaiting else 'not '}be awaiting its tag")
+    for v, tags, at_head, outcome in RELEASE_CASES:
+        suffix, _ = versions.archive_suffix(v, tags, at_head)
+        if OUTCOME[suffix] != outcome:
+            problems.append(f"release rule: {v} with tags {tags}, HEAD at "
+                            f"{at_head or 'no tag'}, is {OUTCOME[suffix]}, "
+                            f"should be {outcome}")
     return problems
 
 

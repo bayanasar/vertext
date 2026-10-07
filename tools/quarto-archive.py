@@ -44,7 +44,7 @@ permission bits are constant, so the same tree always gives the same sha256.
 
 A release commit under review, whose version no tag names yet, gets the whole
 build and every check, and the archive is named `+untagged` instead of for the
-release (tools/versions.py, `awaits_its_tag`).
+release (tools/versions.py, `archive_suffix`).
 
 Usage
 -----
@@ -84,9 +84,8 @@ def main():
     version = versions.version()
     # A release commit under review builds and checks everything, and only
     # the release name waits for the tag.
-    problem = versions.release_problem(version)
-    untagged = problem is not None and versions.awaits_its_tag(version)
-    if problem and not untagged:
+    suffix, problem = versions.archive_suffix_at_head(version)
+    if suffix is None:
         sys.exit(f"refusing to name an archive for {version}: {problem}")
 
     missing = [name for name in FILES if not (SOURCE / name).is_file()]
@@ -100,7 +99,7 @@ def main():
 
     out = pathlib.Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
-    archive = out / f"vertext-quarto-{version}{'+untagged' if untagged else ''}.zip"
+    archive = out / f"vertext-quarto-{version}{suffix}.zip"
     with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_DEFLATED) as zf:
         for name in sorted(FILES):
             info = zipfile.ZipInfo(f"_extensions/vertext/{name}", date_time=EPOCH)
@@ -116,7 +115,7 @@ def main():
     digest = hashlib.sha256(archive.read_bytes()).hexdigest()
     shown = archive.relative_to(ROOT) if archive.is_relative_to(ROOT) else archive
     print(f"{shown}  sha256 {digest}")
-    if untagged:
+    if suffix:
         print(f"not the release name: HEAD is not tagged v{version} yet")
     return 0
 
