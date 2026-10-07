@@ -224,6 +224,25 @@ mod tests {
         assert_eq!(len, 0);
     }
 
+    /// Text that once reached the panic through the export: the layout set a
+    /// closing bracket ahead of the mark before it, and the source map, which
+    /// walks the slots over the text, panicked. It lays out now, and the slots
+    /// read back from the JSON are the text, in order.
+    #[test]
+    fn brackets_that_once_panicked_lay_out() {
+        for (input, flags) in [("山 (a() 川", 0), ("山 (a() 川", CODE), ("(a()", CODE),
+                               ("a(b()c", CODE)] {
+            let json: serde_json::Value =
+                serde_json::from_slice(&call(input.as_bytes(), flags).expect(input)).unwrap();
+            assert_eq!(json["horizontal"], false, "{input}");
+            let text: String = json["columns"].as_array().unwrap().iter()
+                .flat_map(|column| column.as_array().unwrap().iter())
+                .map(|slot| slot["text"].as_str().unwrap())
+                .collect();
+            assert_eq!(text, input, "flags {flags}");
+        }
+    }
+
     #[test]
     fn the_version_export_is_the_crate_version() {
         let version = unsafe { std::ffi::CStr::from_ptr(vertext_version()) };

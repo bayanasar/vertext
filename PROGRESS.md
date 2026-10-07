@@ -812,6 +812,24 @@ nothing in the core may foreclose it.
   render` and so had never run on any runner here, passed all 82 of its
   checks.
 
+- **The layout keeps every character in its place, whatever the input**
+  (#89). Found in review with random input: `(a()` came out as `(a)` and
+  `(`, and `(etc.)` as `(etc)` and `.`. A closing bracket that closes one
+  the word opened joins the word at once, and it was appended ahead of the
+  marks still waiting to learn whether letters follow. The page showed the
+  brackets in an order nobody typed with every gate green, and the source
+  map, which walks the slots over the text, panicked, so through the C
+  export such text returned null and before that aborted the host. Waiting
+  marks now go into the word first, and a bracket that closes one of them
+  waits with them. `layout_keeps_every_character_in_its_place` lays out
+  20,000 random strings of brackets, Latin, spaces, Han and bichig in prose
+  and in code and has the source map accept each: red on the core of
+  `97b300b` (on `-{a=(})}Zᠮ`, with the fixed cases taken out), green now,
+  and clean on 1,000,000 inputs a mode over a wider alphabet. The FFI crate
+  lays the same inputs out through the export and reads them back from the
+  JSON (red, null, without the fix), and `dart-parity` has them: 188 inputs,
+  558 vertical layouts, 573 columns, 1812 slots.
+
 ## Not sealed
 
 

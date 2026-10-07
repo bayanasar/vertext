@@ -385,7 +385,15 @@ pub fn layout_text(input: &str, config: &LayoutConfig) -> Layout {
             // `(` inside the word -- the pair is balanced, so the mark is the
             // word's own and needs no lookahead. Deferring it would strand the
             // closing bracket outside the word at end of input.
-            if closes_open_bracket(base, &latin_word) {
+            //
+            // Marks still waiting stand between the word and its bracket, so
+            // they go in first: `(etc.)` is one word, and appending the `)`
+            // alone would set it ahead of the stop. A bracket that closes one
+            // of those waiting marks instead, as in `(a()`, is theirs and not
+            // the word's, and waits with them.
+            if !closes_open_bracket(base, &pending_connectors)
+                && closes_open_bracket(base, &latin_word) {
+                latin_word.push_str(&std::mem::take(&mut pending_connectors));
                 latin_word.push_str(cluster);
             } else {
                 pending_connectors.push_str(cluster);
@@ -1207,6 +1215,32 @@ mod tests {
         assert_eq!(rebuilt, source, "layout must not add, drop, or swap characters");
     }
 
+    /// The same, for any arrangement of brackets, Latin and spaces, in prose
+    /// and in code. A closing bracket is the word's own when the word opened
+    /// it, but marks still waiting to learn whether letters follow sit between
+    /// the two: `(etc.)` came out as `(etc)` and `.`, and `(a()` as `(a)` and
+    /// `(`, so the page set brackets in an order nobody typed and the source
+    /// map, which walks the slots over the text, panicked.
+    #[test]
+    fn layout_keeps_every_character_in_its_place() {
+        let code = LayoutConfig { max_latin_word_width: 24, preserve_spaces: true,
+                                  ..LayoutConfig::default() };
+        for config in [LayoutConfig::default(), code] {
+            for text in ["(a()", "山 (a() 川", "a(b()c", "(etc.)", "see (e.g.) here"] {
+                let laid: String = layout_text(text, &config).columns.iter()
+                    .flat_map(|column| column.slots.iter().map(Slot::text)).collect();
+                assert_eq!(laid, text, "{config:?}");
+            }
+            let alphabet = ["(", ")", "[", "]", "{", "}", "<", ">", ".", "-", "_", ":", "'",
+                            "\"", "=", "|", "+", "/", "a", "Z", "7", " ", "\n", "\u{5C71}",
+                            "\u{FF0C}", "\u{182E}"];
+            for text in random_texts(&alphabet, 20_000) {
+                assert!(source_map(&text, &layout_text(&text, &config)).is_ok(),
+                        "the slots are not {text:?} under {config:?}");
+            }
+        }
+    }
+
     #[test]
     fn a_leading_mark_joins_the_word_that_follows() {
         let layout = layout_text("-n_a / -n_e", &LayoutConfig::default());
@@ -1455,13 +1489,30 @@ mod tests {
             "增长5%5倍",
             "温度T−5℃",
             "1990－2000年",
+            // Brackets that close inside a word while another waits behind it.
+            "(a()",
+            "山 (a() 川",
+            "a(b()c",
+            "(etc.)",
         ];
 
         for text in cases {
-            let layout = layout_text(text, &LayoutConfig::default());
-            let (mut vertical, mut horizontal) = (0usize, 0usize);
+            assert_eq!(
+                measure_slots(text),
+                census(&layout_text(text, &LayoutConfig::default())),
+                "measure and layout disagree on {text:?}"
+            );
+        }
+    }
+
+    /// What `measure_slots` counts, counted from a layout instead: vertical
+    /// slots, then Latin words, where consecutive Latin slots within a column
+    /// are one hyphenated word.
+    fn census(layout: &Layout) -> (usize, usize) {
+        let (mut vertical, mut horizontal) = (0usize, 0usize);
+        for column in &layout.columns {
             let mut previous_was_latin = false;
-            for slot in layout.columns.iter().flat_map(|column| column.slots.iter()) {
+            for slot in &column.slots {
                 match slot {
                     Slot::Upright(_) | Slot::MongolianRun(_) => {
                         vertical += 1;
@@ -1476,12 +1527,24 @@ mod tests {
                     _ => previous_was_latin = false,
                 }
             }
-            assert_eq!(
-                measure_slots(text),
-                (vertical, horizontal),
-                "measure and layout disagree on {text:?}"
-            );
         }
+        (vertical, horizontal)
+    }
+
+    /// Short strings over `alphabet`, the same ones on every run, so a failure
+    /// names an input that reproduces.
+    fn random_texts<'a>(alphabet: &'a [&'a str], count: usize) -> impl Iterator<Item = String> + 'a {
+        let mut state = 0x9E37_79B9_7F4A_7C15u64;
+        let mut next = move || {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            state as usize
+        };
+        (0..count).map(move |_| {
+            let length = 1 + next() % 10;
+            (0..length).map(|_| alphabet[next() % alphabet.len()]).collect()
+        })
     }
 
     /// A word and its transliteration read the same way whichever comes first.

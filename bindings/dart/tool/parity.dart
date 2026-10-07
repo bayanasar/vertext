@@ -84,6 +84,11 @@ Future<void> main(List<String> args) async {
     // Private-use characters the page does not read as markers are text.
     '山川\u{E0A0}字',
     '山川\u{E009}字',
+    // A closing bracket with marks waiting before it keeps its place.
+    '(a()',
+    '山 (a() 川',
+    'a(b()c',
+    '见 (etc.) 一节',
     // Latin-majority: the page sets these horizontally, and so must a host.
     'this paragraph is plainly English and goes horizontal',
     'the word ᠮᠣᠩᠭᠣᠯ is written in bichig and read here in English',
