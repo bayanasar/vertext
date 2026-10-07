@@ -502,9 +502,9 @@ pub fn slot_kind(slot: &Slot) -> &'static str {
 /// span does not wrap. Connector marks, interpuncts and solidi may not begin
 /// a line either, and the browser lets most of them even beside Han, so any
 /// slot they follow is held to them the same way. Only the breaks change:
-/// the slots, their order and their
-/// text are what they were, and a slot span's parent is its column or such a
-/// span. In code no line edge is kept, as the marks there are code.
+/// the slots, their order and their text are what they were, and a slot
+/// span's parent is its column or such a span. In code no line edge is kept,
+/// as the marks there are code.
 fn render_slots(html: &mut String, slots: &[Slot], keep_edges: bool) {
     let mut i = 0;
     while i < slots.len() {
@@ -760,9 +760,9 @@ mod tests {
         assert!(prose_at > heading_at, "the prose column must follow the heading column");
     }
 
-    /// CLReq 6.1.1 beside a box. A line may break on either side of a Latin
-    /// word, a number or a Mongolian run, so each shares a span that does not
-    /// wrap with the marks that may not leave it at a line edge.
+    /// CLReq 6.1.1's connector marks, interpuncts and solidi. The browser lets
+    /// some of them begin a line even beside Han, so each shares a span that
+    /// does not wrap with the slot before it.
     #[test]
     fn a_connector_an_interpunct_or_a_solidus_holds_to_the_slot_before_it() {
         let slot = |kind: &str, text: &str| format!("<span class=\"vertext-{kind}\">{text}</span>");
@@ -783,6 +783,9 @@ mod tests {
         assert_eq!(html.matches("vertext-nobreak").count(), 1, "{html}");
     }
 
+    /// CLReq 6.1.1 beside a box. A line may break on either side of a Latin
+    /// word, a number or a Mongolian run, so each shares a span that does not
+    /// wrap with the marks that may not leave it at a line edge.
     #[test]
     fn a_box_and_the_marks_that_hold_to_it_share_a_span() {
         let slot = |kind: &str, text: &str| format!("<span class=\"vertext-{kind}\">{text}</span>");
