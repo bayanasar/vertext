@@ -750,7 +750,12 @@ nothing in the core may foreclose it.
   starts, so `x!!!` is three marks, not a mark and a pair, and a word of
   digits and signs is not Latin to it, so `共100?!` and `增长5%?!` pair as the
   Chinese sentences they are (both red under the first guard, which looked
-  only at the slot before each mark and counted any word and any space). In the `page-geometry` gate each of 4
+  only at the slot before each mark and counted any word and any space).
+  Looking back it passes over ASCII punctuation as well as spaces, so
+  `getValue()!!`, `C++!!` and `"s"!!` stay apart (red before: the `)`, `+`
+  or `"` stopped it), and it counts a Mongolian word with a Latin one: GB/T
+  15834 rules Chinese, MLReq gives Mongolian no pairing, and `ᠮᠣᠩᠭᠣᠯ ?!` had
+  begun to pair once spaces were passed over. In the `page-geometry` gate each of 4
   pairs (one of them `?!`) is one 18px cell along the line; red at 36px with
   the property removed, and the core test red with the pairing pass skipped. The new kind reaches the Dart binding, and `dart-parity` holds it
   to the page's class (179 inputs, 1726 slots).

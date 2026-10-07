@@ -515,34 +515,42 @@ fn attach_affixes(slots: &mut Vec<Slot>) {
 /// keyboard. Prose only. In code, `!!` and `?!` are operators, and setting
 /// them side by side would misquote the program.
 ///
-/// Halfwidth marks after a Latin word, with or without a space between, stay
-/// apart, and so does the rest of their run. Inline code in a paragraph
-/// reaches the layout as prose, so `x!!`, `x!!!` and `a ?? b` there are
-/// operators too, and `Really?!` is a Latin sentence's. A word of digits and
-/// signs is not Latin here: `共100?!` and `增长5%?!` are Chinese sentences
-/// that end in a figure, and pair. A pair with a fullwidth mark in it was
-/// typed in Chinese wherever it stands.
+/// Halfwidth marks after a Latin or Mongolian word stay apart, and so does
+/// the rest of their run. Looking back from the run, spaces and ASCII
+/// punctuation are passed over: the `)` of `getValue()!!` and the `"` of
+/// `"s"!!` close what the word opened. Inline code in a paragraph reaches the
+/// layout as prose, so `x!!`, `getValue()!!`, `x!!!` and `a ?? b` there are
+/// operators too, and `Really?!` is a Latin sentence's. The pairing is GB/T
+/// 15834's, a rule for Chinese, and MLReq gives Mongolian no such rule, so
+/// `ᠮᠣᠩᠭᠣᠯ ?!` is left as typed as well. A word of digits and signs is
+/// neither: `共100?!` and `增长5%?!` are Chinese sentences that end in a
+/// figure, and pair. A pair with a fullwidth mark in it was typed in Chinese
+/// wherever it stands.
 fn combine_marks(slots: &mut Vec<Slot>) {
     let is_mark = |slot: &Slot| matches!(slot, Slot::Neutral(s)
         if matches!(s.as_str(), "！" | "？" | "!" | "?"));
     let halfwidth = |slot: &Slot| matches!(slot.text(), "!" | "?");
-    let latin_before = |out: &[Slot]| matches!(
-        out.iter().rev().find(|slot| !matches!(slot, Slot::Space(_))),
-        Some(Slot::LatinWord(word)) if word.chars().any(is_latin));
+    let after_a_word = |out: &[Slot]| match out.iter().rev().find(|slot| {
+        !matches!(slot, Slot::Space(_)) && !slot.text().chars().all(|c| c.is_ascii_punctuation())
+    }) {
+        Some(Slot::LatinWord(word)) => word.chars().any(is_latin),
+        Some(Slot::MongolianRun(_)) => true,
+        _ => false,
+    };
     let mut out: Vec<Slot> = Vec::with_capacity(slots.len());
     let mut rest = std::mem::take(slots).into_iter().peekable();
     // Read where a run of marks starts, and kept to its end: the second `!`
     // of `x!!!` follows a mark, but the run still follows `x`.
-    let mut after_latin = None;
+    let mut after_word = None;
     while let Some(slot) = rest.next() {
         if !is_mark(&slot) {
-            after_latin = None;
+            after_word = None;
             out.push(slot);
             continue;
         }
-        let after_latin = *after_latin.get_or_insert_with(|| latin_before(&out));
+        let after_word = *after_word.get_or_insert_with(|| after_a_word(&out));
         if rest.peek().is_some_and(is_mark)
-            && !(after_latin && halfwidth(&slot) && rest.peek().is_some_and(halfwidth)) {
+            && !(after_word && halfwidth(&slot) && rest.peek().is_some_and(halfwidth)) {
             let next = rest.next().unwrap();
             out.push(Slot::Combined(format!("{}{}", slot.text(), next.text())));
         } else {
@@ -878,15 +886,18 @@ mod tests {
         assert_eq!(slots("好？好！好")[1], Slot::Neutral("？".into()));
         // Halfwidth marks after a Latin word, spaced or not, are not a pair:
         // that is a Latin sentence or an operator, and inline code in prose
-        // reaches the layout as text. Nor is the rest of their run.
+        // reaches the layout as text. Nor is the rest of their run, nor marks
+        // after the ASCII punctuation that closes a word, nor after Mongolian.
         for text in ["在Kotlin里写x!!，在JS里写a ?? b", "Really?!", "x!!!", "a ??? b",
-                     "Really?!?", "写arr[0]!!即可"] {
+                     "Really?!?", "写arr[0]!!即可", "调用getValue()!!即可", "C++!!",
+                     "写\"s\"!!即可", "ᠮᠣᠩᠭᠣᠯ?!", "ᠮᠣᠩᠭᠣᠯ ?!"] {
             assert!(!slots(text).iter().any(|s| matches!(s, Slot::Combined(_))), "{text}");
         }
         // A figure is not a Latin word, and a space after Chinese is not
         // Latin either; a fullwidth mark is typed in Chinese. These pair.
         for (text, pair) in [("共100?!", "?!"), ("增长5%?!", "?!"), ("真的 ?!", "?!"),
-                             ("Really？！", "？！")] {
+                             ("他说\"真的\"?!", "?!"), ("Really？！", "？！"),
+                             ("ᠮᠣᠩᠭᠣᠯ？！", "？！")] {
             assert!(slots(text).contains(&Slot::Combined(pair.into())), "{text}");
         }
         // In code they are operators, and are left exactly as written.
