@@ -961,7 +961,7 @@ nothing in the core may foreclose it.
   `〝` to the opening ones. A lone `—` is a connector; two are a dash, which
   the basic rule lets begin a line, and they are left to the browser.
   `page-geometry` now places every mark of those tables at a line edge: 32
-  that may not begin a line beside Han, 13 that may not end one, and 30
+  that may not begin a line beside Han, 13 that may not end one, and 31
   probes beside a box at 233 placements (the vertical quotation marks and
   every bracket pair around `sayin`, `2000～2010`, and `sayin` before each
   connector, interpunct and solidus). Red in 18 places before: beside Han
