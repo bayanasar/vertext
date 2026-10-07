@@ -951,18 +951,33 @@ nothing in the core may foreclose it.
   These probes are not the whole basic rule: connector marks, interpuncts,
   solidi and the quotation marks `〝〞〟` are left out of the group and can
   still reach the wrong end of a line beside a box, and four of them beside
-  Han (#94, under Not sealed).
+  Han (#94, the next entry).
+
+- **Connector marks, interpuncts and solidi do not begin a line** (#94).
+  CLReq 6.1.1's basic rule keeps them off a line's start with the closing
+  marks, and CLReq's tables list them: `～ - – —`, `· ・ ‧`, `/ ／`. The
+  renderer holds each to the slot before it in a `vertext-nobreak` span,
+  beside Han as beside a box, and adds `〞` and `〟` to the closing marks and
+  `〝` to the opening ones. A lone `—` is a connector; two are a dash, which
+  the basic rule lets begin a line, and they are left to the browser.
+  `page-geometry` now places every mark of those tables at a line edge: 32
+  that may not begin a line beside Han, 13 that may not end one, and 30
+  probes beside a box at 233 placements (the vertical quotation marks and
+  every bracket pair around `sayin`, `2000～2010`, and `sayin` before each
+  connector, interpunct and solidus). Red in 18 places before: beside Han
+  `～`, a lone `—`, `·` and `／` began a line (the browser holds `〜`, `-`,
+  `–`, `・`, `‧` and `/` itself); beside a box all ten began one, `〞` and
+  `〟` began one and `〝` ended one. Green after, and every column copies as
+  written. A probe now also counts as reaching a line edge when the line
+  breaks one slot before it: `“` and `”` hold to both sides, so the Han
+  before `“sayin”` goes to the next line with it, and the stricter count
+  called those two probes unreached although they held. The renderer test
+  is red with Han left ungrouped, with `〞` or `〝` out of the sets, and with
+  every `—` taken as a connector. The wasm and Dart parity inputs gain a
+  line with each kind. CONFORMANCE 6.1.1 conforms again, now measured
+  against the whole basic rule.
 
 ## Not sealed
-
-- **Connector marks, interpuncts and solidi can begin a line** (#94). CLReq
-  6.1.1's basic rule keeps them off a line's start, with the closing marks.
-  Measured with the `page-geometry` probes extended to every mark of CLReq's
-  tables, each at a line edge: beside Han, `～`, a lone `—`, `·` and `／`
-  begin a line (the browser holds `〜`, `-`, `–`, `・`, `‧` and `/` itself);
-  beside a box all ten connectors, interpuncts and solidi do, `〞` and `〟`
-  begin a line and `〝` ends one, since the renderer's group leaves them out.
-  CONFORMANCE 6.1.1 is Partial until they hold.
 
 
 
