@@ -715,11 +715,13 @@ nothing in the core may foreclose it.
 
 - **Every upright CJK block counts as CJK** (#68). Found through the Dart
   binding: `𠀋` (extension B) came back `neutral`, because the core's CJK
-  test stopped at U+9FFF. It now takes planes 2 and 3 whole (extensions B to I
-  and the compatibility supplement), bopomofo, the radicals, the description
-  characters, the strokes, hangul jamo and the kana supplements, each checked
-  against `VerticalOrientation.txt` from Unicode 18.0: all `U` or `Tu`, but for
-  the 4 plane-end noncharacters, which are left out. The page drew them the
+  test stopped at U+9FFF. It now takes planes 2 and 3 whole (extensions B to J,
+  the compatibility supplement and the small seal script), bopomofo, the
+  radicals, the description characters, the strokes, hangul jamo and the kana
+  supplements from kana extension B on, each checked against
+  `VerticalOrientation.txt` from Unicode 18.0: all 171,898 code points `U` or
+  `Tu` but U+30A0 and U+30FC in the kana block, which are `Tr` and stand up
+  only through the font's `vert`; the 4 plane-end noncharacters are left out. The page drew them the
   same either way (the two classes share a style); what changed is the vote.
   `佢哋𠵱家 use the new app`, written Cantonese, was 3 vertical slots against
   4 Latin words and went horizontal; it is 4 against 4 now and stays vertical.

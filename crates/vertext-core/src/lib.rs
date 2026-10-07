@@ -629,17 +629,20 @@ pub fn is_mongolian(ch: char) -> bool { matches!(ch as u32, 0x1800..=0x18AF | 0x
 fn is_suffix_separator(ch: char) -> bool { ch == '\u{202F}' }
 
 /// An upright CJK character: an ideograph, kana, hangul or bopomofo, and the
-/// radicals and strokes ideographs are built from. Each block here is upright
-/// in UTR #50 (`vo=U` or `Tu`), checked against `VerticalOrientation.txt`
-/// from Unicode 18.0. Planes 2 and 3 are taken whole: Unicode allots them to
-/// ideographs (extensions B to I, the compatibility supplement), and the next
-/// extension lands there too. Only their last two code points, which are
-/// noncharacters, are left out.
+/// radicals and strokes ideographs are built from. Checked against
+/// `VerticalOrientation.txt` from Unicode 18.0, every code point here is
+/// upright in UTR #50 (`vo=U` or `Tu`) but two in the kana block: U+30A0 and
+/// U+30FC are `Tr`, upright only because the font's `vert` substitutes a
+/// vertical form, so a host that draws its own glyphs without `vert` sets the
+/// prolonged sound mark sideways. Planes 2 and 3 are taken whole: Unicode
+/// allots them to ideographs (extensions B to J, the compatibility supplement,
+/// the small seal script), and the next extension lands there too. Only their
+/// last two code points, which are noncharacters, are left out.
 fn is_cjk(ch: char) -> bool { matches!(ch as u32,
     0x3400..=0x4DBF | 0x4E00..=0x9FFF | 0xF900..=0xFAFF |
     0x20000..=0x2FFFD | 0x30000..=0x3FFFD |
     0x2E80..=0x2FDF | 0x2FF0..=0x2FFF | 0x31C0..=0x31EF |
-    0x3040..=0x30FF | 0x31F0..=0x31FF | 0x1B000..=0x1B16F |
+    0x3040..=0x30FF | 0x31F0..=0x31FF | 0x1AFF0..=0x1B16F |
     0x3100..=0x312F | 0x31A0..=0x31BF |
     0xAC00..=0xD7AF | 0x1100..=0x11FF | 0x3130..=0x318F | 0xA960..=0xA97F | 0xD7B0..=0xD7FF
 ) }
@@ -874,15 +877,26 @@ mod tests {
 
     #[test]
     fn every_upright_cjk_block_is_upright() {
-        // The first and last character of each block `is_cjk` admits, all
-        // `vo=U` or `Tu` in UTR #50. Before, everything from extension B on was
-        // `Neutral`: `𠀋` came back that way through the Dart binding.
-        for ch in ['\u{20000}', '\u{2000B}', '\u{2A6DF}', '\u{2EBF0}', '\u{2F800}', '\u{30000}',
-                   '\u{323AF}', '\u{2E80}', '\u{2F00}', '\u{2FD5}', '\u{2FF0}', '\u{31C0}',
-                   '\u{3105}', '\u{31A0}', '\u{1100}', '\u{3131}', '\u{A960}', '\u{D7B0}',
-                   '\u{1B000}', '\u{1B132}'] {
+        // The first and last code point of each range `is_cjk` admits beyond
+        // the original ideograph blocks, all `vo=U` or `Tu` in UTR #50. Before,
+        // everything from extension B on was `Neutral`: `𠀋` came back that way
+        // through the Dart binding.
+        for ch in ['\u{20000}', '\u{2000B}', '\u{2A6DF}', '\u{2EBF0}', '\u{2F800}', '\u{2FFFD}',
+                   '\u{30000}', '\u{323B0}', '\u{3D000}', '\u{3FFFD}',
+                   '\u{2E80}', '\u{2F00}', '\u{2FD5}', '\u{2FF0}', '\u{2FFF}',
+                   '\u{31C0}', '\u{31EF}', '\u{3100}', '\u{3105}', '\u{312F}', '\u{31A0}',
+                   '\u{31BF}', '\u{1100}', '\u{11FF}', '\u{3131}', '\u{318F}', '\u{A960}',
+                   '\u{A97F}', '\u{D7B0}', '\u{D7FF}', '\u{1AFF0}', '\u{1B000}', '\u{1B132}',
+                   '\u{1B16F}'] {
             let layout = layout_text(&ch.to_string(), &LayoutConfig::default());
             assert_eq!(layout.columns[0].slots, vec![Slot::Upright(ch.to_string())],
+                       "U+{:04X}", ch as u32);
+        }
+        // Just outside: the plane-end noncharacters, and the halfwidth hangul
+        // letters, which are `vo=R` and turn with the Latin around them.
+        for ch in ['\u{2FFFE}', '\u{2FFFF}', '\u{3FFFE}', '\u{3FFFF}', '\u{FFA0}', '\u{FFDC}'] {
+            let layout = layout_text(&ch.to_string(), &LayoutConfig::default());
+            assert_eq!(layout.columns[0].slots, vec![Slot::Neutral(ch.to_string())],
                        "U+{:04X}", ch as u32);
         }
     }
@@ -1430,6 +1444,8 @@ mod tests {
             "山川异域，风月同天",
             "ᠢᠢ",
             "",
+            // An ideograph from extension B votes like any other.
+            "佢哋𠵱家 use the new app",
             // A sign between two words belongs to neither: joining it to one
             // would leave two Latin slots side by side.
             "气温30°C左右",
