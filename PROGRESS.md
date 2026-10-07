@@ -866,6 +866,30 @@ nothing in the core may foreclose it.
   character escaped in the source) holds the two together: red on `97b300b`,
   green now, and clean on 1,000,000 inputs over a wider alphabet.
 
+- **A release commit is reviewed with its evidence** (#88). The `version`
+  gate was the first step and every step after it ran only on success, so on
+  a release commit, red there by design until its tag is pushed, every other
+  gate was skipped: the commit a review approved had run nothing else, and
+  the first full run came after the tag, when a red would mean moving a
+  published tag. Every step after `version` now runs whatever came before it,
+  and the job still fails if any did. A release version that no tag names yet
+  is the one refusal the release archives build through, named `+untagged`; a
+  version whose tag is on another commit is refused with its own message.
+  Rehearsed in a scratch repository that mirrors nowhere, from `4e71457` with
+  these changes:
+  - version `0.3.0`, untagged, with a core test made to fail: on the gates
+    before the change, `version` red and all 19 gates after it skipped,
+    `engine` included; after it, `version` and `engine` red and the other 18
+    green, both archives built as `+untagged`.
+  - the whole order, with a clean release commit: the push and pull request
+    runs red on `version` alone; the tag pushed, and its run green throughout
+    while `CI / tests (pull_request)` stayed red on the same commit; the pull
+    request closed and reopened, and its new run green, `version` included,
+    so a pull request run checks out the commit itself; then a fast-forward,
+    and main's run green.
+  `docs/ARCHITECTURE.md` gives the order, the approval condition and the
+  repeated pull request run.
+
 ## Not sealed
 
 

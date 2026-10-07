@@ -67,6 +67,12 @@ jobs:
       # after a release main moves to the next minor's pre-release, or a
       # checkout's half and a release's half speak the same wire and the
       # handshakes let them pair.
+      #
+      # Every step after this one runs whatever happened before it, and the
+      # job still fails if any did. A release commit is red here until its
+      # tag is pushed, by design, and it is reviewed in that state: with the
+      # steps below skipped, the commit a review approved would carry no
+      # evidence of anything else (docs/ARCHITECTURE.md gives the order).
       - name: The version is declared once and names no other commit
         id: version
         run: python3 tools/version-gate.py
@@ -74,6 +80,7 @@ jobs:
       # The conformance summary is a count of the rows below it, and every
       # change to a row has had to recount it by hand.
       - name: The conformance summary counts its own tables
+        if: ${{ !cancelled() }}
         id: conformance-summary
         run: python3 tools/conformance-summary.py
 
@@ -82,20 +89,25 @@ jobs:
       # version print below runs in a different shell than this line, which is
       # what makes it a check rather than a comment.
       - name: Put the Rust toolchain on PATH
+        if: ${{ !cancelled() }}
         run: echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
 
       - name: Toolchain
+        if: ${{ !cancelled() }}
         run: cargo --version
 
       - name: Layout engine and renderer
+        if: ${{ !cancelled() }}
         id: engine
         run: cargo test --workspace
 
       - name: Nav-collapse logic
+        if: ${{ !cancelled() }}
         id: nav-toggle
         run: node examples/test-nav-toggle.js
 
       - name: Column budget and the theme hook
+        if: ${{ !cancelled() }}
         id: column-budget
         run: node examples/test-column-budget.js
 
@@ -112,6 +124,7 @@ jobs:
       # Refresh the copy, never edit it:
       #   cp -R extensions/vertext extensions/vertext-theme/_extensions/
       - name: The theme's vendored filter matches its source
+        if: ${{ !cancelled() }}
         id: filter-copies
         run: |
           diff -r extensions/vertext \
@@ -126,8 +139,10 @@ jobs:
       # every run keeps the one thing that goes out buildable, and the builder
       # refuses when the version declarations disagree, the source is no longer
       # exactly the files the archive ships, or the Mongolian face is not the
-      # golden one.
+      # golden one. A release commit awaiting its tag is built and checked in
+      # full, and the archive named `+untagged` instead of for the release.
       - name: The quarto add archive builds from the one source
+        if: ${{ !cancelled() }}
         id: quarto-archive
         run: python3 tools/quarto-archive.py
 
@@ -138,6 +153,7 @@ jobs:
       # that the golden still diffs when joining is off; a golden that has
       # never gone red is a golden whose every green is untested.
       - name: Mongolian shaping golden
+        if: ${{ !cancelled() }}
         id: shaping-golden
         run: |
           # Try first, install only on failure: the venv is all this needs, and
@@ -165,6 +181,7 @@ jobs:
       # shaped. It reuses the venv the step above built, and needs the release
       # binary, which nothing before this point produces.
       - name: Mongolian delivery golden
+        if: ${{ !cancelled() }}
         id: delivery-golden
         run: |
           cargo build --release -p vertext-cli
@@ -189,6 +206,7 @@ jobs:
       # instead of a 33MiB tarball. Pin one the way the browser is pinned if
       # they ever diverge.
       - name: The filter half of the chain
+        if: ${{ !cancelled() }}
         id: filter-golden
         env:
           DEBIAN_FRONTEND: noninteractive
@@ -221,12 +239,14 @@ jobs:
       #     end: ~8s to fetch and unpack 185MiB, ~8s of apt, ~9s of gate. The
       #     cost here is the browser, not the gate.
       - name: The pinned browser
+        if: ${{ !cancelled() }}
         uses: actions/cache@v4
         with:
           path: /opt/chrome
           key: chrome-for-testing-${{ env.CHROME_VERSION }}-linux64
 
       - name: Unpack the browser and its libraries
+        if: ${{ !cancelled() }}
         id: browser-setup
         env:
           # Without this, apt's debconf prints five lines about frontends it
@@ -261,6 +281,7 @@ jobs:
           /opt/chrome/chrome-linux64/chrome --version
 
       - name: Mongolian browser golden
+        if: ${{ !cancelled() }}
         id: browser-golden
         run: |
           python3 tools/browser-golden.py --chrome /opt/chrome/chrome-linux64/chrome
@@ -271,6 +292,7 @@ jobs:
       # Mongolian text, which no markup check can see. This opens one document
       # per progression in the browser and requires the first column in view.
       - name: A document opens at its first column in either progression
+        if: ${{ !cancelled() }}
         id: progression-scroll
         run: |
           cargo build --release -p vertext-cli
@@ -281,12 +303,14 @@ jobs:
       # (as later checks join it) how the lines and marks sit. The faces are
       # pinned by tag and sha256 and cached like the browser.
       - name: The pinned CJK faces
+        if: ${{ !cancelled() }}
         uses: actions/cache@v4
         with:
           path: /opt/vertext-fonts
           key: noto-cjk-Sans2.004-sc-tc-cjksc
 
       - name: The page keeps CLReq's geometry
+        if: ${{ !cancelled() }}
         id: page-geometry
         run: |
           cargo build --release -p vertext-cli
@@ -298,6 +322,7 @@ jobs:
       # Located by ink in a screenshot, since a box says nothing about where
       # the glyph inside it was drawn.
       - name: The pause and stop marks keep their place
+        if: ${{ !cancelled() }}
         id: punctuation-ink
         run: |
           python3 tools/punctuation-ink.py --chrome /opt/chrome/chrome-linux64/chrome \
@@ -308,6 +333,7 @@ jobs:
       # two cells. The stem is found in the pixels, the densest line of a
       # word's ink, because where a face puts it is design, not a metric.
       - name: Mixed scripts share the Mongolian centre line
+        if: ${{ !cancelled() }}
         id: script-centres
         run: |
           python3 tools/script-centres.py --chrome /opt/chrome/chrome-linux64/chrome \
@@ -319,6 +345,7 @@ jobs:
       # target is added here rather than assumed, because the image is not
       # built from this repository.
       - name: The browser build renders what the CLI renders
+        if: ${{ !cancelled() }}
         id: wasm-parity
         run: |
           rustup target add wasm32-unknown-unknown
@@ -334,6 +361,7 @@ jobs:
       # location of every panic site, and for dependencies that is under
       # $CARGO_HOME unless the build remaps it.
       - name: The browser build ships as one release archive
+        if: ${{ !cancelled() }}
         id: wasm-archive
         run: python3 tools/wasm-archive.py
 
@@ -341,6 +369,7 @@ jobs:
       # clicks every grapheme through the browser's own hit test and moves the
       # textarea caret onto every slot.
       - name: A caret moves between the source and the vertical strip
+        if: ${{ !cancelled() }}
         id: wasm-caret
         run: python3 tools/wasm-caret.py --chrome /opt/chrome/chrome-linux64/chrome
 
@@ -354,12 +383,14 @@ jobs:
       # from PATH alone: hooks drop RUSTUP_HOME, and this image keeps rustup
       # outside $HOME.
       - name: The pinned Dart SDK
+        if: ${{ !cancelled() }}
         uses: actions/cache@v4
         with:
           path: /opt/dart-sdk
           key: dart-sdk-${{ env.DART_VERSION }}-linux-x64
 
       - name: The Dart binding cuts text the way the page does
+        if: ${{ !cancelled() }}
         id: dart-parity
         run: |
           if [ ! -x /opt/dart-sdk/bin/dart ]; then

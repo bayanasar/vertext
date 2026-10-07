@@ -42,6 +42,10 @@ from goldens/fonts/.
 The zip is byte-reproducible: entries are sorted, timestamps are fixed and the
 permission bits are constant, so the same tree always gives the same sha256.
 
+A release commit under review, whose version no tag names yet, gets the whole
+build and every check, and the archive is named `+untagged` instead of for the
+release (tools/versions.py, `awaits_its_tag`).
+
 Usage
 -----
     python3 tools/quarto-archive.py              # writes target/quarto/
@@ -78,8 +82,11 @@ def main():
     if disagree:
         sys.exit("\n".join(disagree))
     version = versions.version()
+    # A release commit under review builds and checks everything, and only
+    # the release name waits for the tag.
     problem = versions.release_problem(version)
-    if problem:
+    untagged = problem is not None and versions.awaits_its_tag(version)
+    if problem and not untagged:
         sys.exit(f"refusing to name an archive for {version}: {problem}")
 
     missing = [name for name in FILES if not (SOURCE / name).is_file()]
@@ -93,7 +100,7 @@ def main():
 
     out = pathlib.Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
-    archive = out / f"vertext-quarto-{version}.zip"
+    archive = out / f"vertext-quarto-{version}{'+untagged' if untagged else ''}.zip"
     with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_DEFLATED) as zf:
         for name in sorted(FILES):
             info = zipfile.ZipInfo(f"_extensions/vertext/{name}", date_time=EPOCH)
@@ -109,6 +116,8 @@ def main():
     digest = hashlib.sha256(archive.read_bytes()).hexdigest()
     shown = archive.relative_to(ROOT) if archive.is_relative_to(ROOT) else archive
     print(f"{shown}  sha256 {digest}")
+    if untagged:
+        print(f"not the release name: HEAD is not tagged v{version} yet")
     return 0
 
 

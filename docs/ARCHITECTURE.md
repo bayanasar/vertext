@@ -231,17 +231,32 @@ release version is built only on its tag: an untagged `0.3.0` would claim to
 be a release whose tag may land on another commit, and an untagged `0.3.1`
 would pair with `v0.3.0`. The gate does not check that the pre-release is the
 *next* minor's: any pre-release refuses every release, which is the property
-the handshake needs. Both release archives refuse on the same condition.
+the handshake needs. Both release archives refuse on the same condition but
+one: a release version that no tag names yet, which is what a release commit
+under review carries, is built and checked in full, and the archive is named
+`+untagged` rather than for the release.
 
 A release, new minor or patch, therefore goes out in this order:
 
 1. The release commit is pushed on its branch and reviewed. Its `version` gate
    is red, as it should be: the commit claims a release no tag names yet.
+   Every other step runs after that red, so the commit carries the evidence
+   the review approves on. **A release commit is approved only when `version`
+   is its one red gate**, and its message says the release awaits its tag;
+   a version whose tag is already on another commit says so instead, and the
+   archives refuse it too.
 2. Once the review approves, the tag goes on that same commit and is pushed.
-   CI runs on a tag push too, so the gate runs again on the same commit, now
-   with HEAD on the tag, and passes.
-3. Main fast-forwards to the commit. A fast-forward keeps the commit, so the
-   tag names what main holds.
+   CI runs on a tag push too, on the same commit with HEAD on the tag, and
+   every gate passes, `version` included; the archives take their release
+   names.
+3. The pull request's own run is repeated, by closing and reopening it. The
+   tag push writes the statuses of its push run, and the pull request's red
+   `CI / tests (pull_request)` stays on the same commit until that run is
+   repeated. A pull request run checks out the commit itself
+   (`refs/pull/<n>/head`; this instance keeps no merge ref), so the gate finds
+   the tag there too.
+4. Main fast-forwards to the commit once that run is green. A fast-forward
+   keeps the commit, so the tag names what main holds.
 
 The tag is never pushed before the approval. A pushed tag is public, and a
 review that asks for a change would then mean moving it: whoever fetched the

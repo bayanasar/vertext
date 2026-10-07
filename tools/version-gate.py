@@ -25,26 +25,30 @@ import sys
 
 import versions
 
-# (version, v* tags, tags on HEAD, refused): the release rule's cases, as
-# wire-pairs.json is the wire rule's.
+# (version, v* tags, tags on HEAD, refused, awaiting its tag): the release
+# rule's cases, as wire-pairs.json is the wire rule's. Awaiting its tag is the
+# one refusal the release archives build through, under another name.
 RELEASE_CASES = [
-    ("0.3.0", ["v0.2.0"], [], True),             # a new minor, untagged
-    ("0.3.0", ["v0.2.0", "v0.3.0"], ["v0.3.0"], False),  # on its tag
-    ("0.2.1", ["v0.2.0"], [], True),             # a patch, untagged
-    ("0.2.0", ["v0.2.0"], [], True),             # a tag, but not HEAD's
-    ("0.3.0-dev", ["v0.2.0"], [], False),        # main between releases
-    ("0.3.0-rc.1", ["v0.2.0", "v0.3.0-rc.1"], [], True),   # tag names it
-    ("0.3.0-rc.1", ["v0.2.0", "v0.3.0-rc.1"], ["v0.3.0-rc.1"], False),
+    ("0.3.0", ["v0.2.0"], [], True, True),       # a new minor, under review
+    ("0.3.0", ["v0.2.0", "v0.3.0"], ["v0.3.0"], False, False),  # on its tag
+    ("0.2.1", ["v0.2.0"], [], True, True),       # a patch, under review
+    ("0.2.0", ["v0.2.0"], [], True, False),      # a tag, but not HEAD's
+    ("0.3.0-dev", ["v0.2.0"], [], False, False),  # main between releases
+    ("0.3.0-rc.1", ["v0.2.0", "v0.3.0-rc.1"], [], True, False),  # tag names it
+    ("0.3.0-rc.1", ["v0.2.0", "v0.3.0-rc.1"], ["v0.3.0-rc.1"], False, False),
 ]
 
 
 def case_problems():
     problems = []
-    for v, tags, at_head, refused in RELEASE_CASES:
+    for v, tags, at_head, refused, awaiting in RELEASE_CASES:
+        where = f"{v} with tags {tags}, HEAD at {at_head or 'no tag'}"
         if (versions.release_refusal(v, tags, at_head) is not None) != refused:
-            problems.append(f"release rule: {v} with tags {tags}, HEAD at "
-                            f"{at_head or 'no tag'}, should "
+            problems.append(f"release rule: {where}, should "
                             f"{'' if refused else 'not '}be refused")
+        if versions.awaiting_tag(v, tags) != awaiting:
+            problems.append(f"release rule: {where}, should "
+                            f"{'' if awaiting else 'not '}be awaiting its tag")
     return problems
 
 

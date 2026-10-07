@@ -42,6 +42,13 @@ only once its review approves; the tag push runs CI again on the same commit,
 with HEAD on the tag (docs/ARCHITECTURE.md gives the order). Off a tag a
 pre-release passes unless a tag already names it (`v0.3.0-rc.1`), which is the
 same wire comparison: a pre-release speaks only its whole version.
+
+One refusal is a state rather than a mistake: a release version that no tag
+names yet, which is what a release commit under review carries.
+`awaits_its_tag()` says when that is the only reason, and the release
+archives then build and check everything and withhold only the release name,
+so the review sees the packaging work on the commit it approves. A release
+version whose tag is on another commit is a mistake, and refused outright.
 """
 
 import json
@@ -129,13 +136,30 @@ def release_refusal(v, tags, at_head):
     those on HEAD. version-gate.py runs its cases through this."""
     if f"v{v}" in at_head:
         return None
+    if f"v{v}" in tags:
+        return (f"version {v} is already tagged v{v} on another commit: move "
+                f"to the next pre-release")
     if "-" not in v:
         return (f"version {v} is a release and HEAD is not tagged v{v}: a "
                 f"release version is built only on its tag. Under review this "
-                f"is expected; once the review approves, tag this commit and "
-                f"push the tag (docs/ARCHITECTURE.md), or move to a pre-release")
+                f"is expected, and every other gate must pass; once the review "
+                f"approves, tag this commit and push the tag "
+                f"(docs/ARCHITECTURE.md), or move to a pre-release")
     speaking = [t for t in tags if wire(t[1:]) == wire(v)]
     if speaking:
         return (f"version {v} is already tagged {', '.join(speaking)}, and "
                 f"HEAD is not that tag: move to the next pre-release")
     return None
+
+
+def awaiting_tag(v, tags):
+    """Whether `release_refusal()` refuses `v` only because its tag is not
+    pushed yet: a release version no tag names."""
+    return "-" not in v and f"v{v}" not in tags
+
+
+def awaits_its_tag(v):
+    """`awaiting_tag()` against the repository's tags; false when none are
+    visible, since then nothing about `v` is known."""
+    tags = _git("tag", "--list", "v*")
+    return bool(tags) and awaiting_tag(v, tags)

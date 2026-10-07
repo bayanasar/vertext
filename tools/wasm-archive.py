@@ -15,7 +15,9 @@ and this archive is the one official place to take it from.
 The builder refuses to write the archive when
 
 - the version declarations disagree (tools/versions.py), or the version is
-  already tagged and HEAD is not that tag,
+  already tagged and HEAD is not that tag (a release version no tag names
+  yet, a release commit under review, is built and checked in full and the
+  archive named `+untagged`),
 - the module does not load through the glue, which runs the handshake itself,
 - or the module still carries a path from the machine that built it.
 
@@ -96,8 +98,11 @@ def main():
     if disagree:
         sys.exit("\n".join(disagree))
     version = versions.version()
+    # A release commit under review builds and checks everything, and only
+    # the release name waits for the tag.
     problem = versions.release_problem(version)
-    if problem:
+    untagged = problem is not None and versions.awaits_its_tag(version)
+    if problem and not untagged:
         sys.exit(f"refusing to name an archive for {version}: {problem}")
 
     forbidden = build()
@@ -112,7 +117,7 @@ def main():
 
     out = pathlib.Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
-    archive = out / f"vertext-wasm-{version}.zip"
+    archive = out / f"vertext-wasm-{version}{'+untagged' if untagged else ''}.zip"
     files = {GLUE_NAME: GLUE.read_bytes(), MODULE_NAME: module}
     with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_DEFLATED) as zf:
         for name in sorted(files):
@@ -124,6 +129,8 @@ def main():
     digest = hashlib.sha256(archive.read_bytes()).hexdigest()
     shown = archive.relative_to(ROOT) if archive.is_relative_to(ROOT) else archive
     print(f"{shown}  sha256 {digest}")
+    if untagged:
+        print(f"not the release name: HEAD is not tagged v{version} yet")
     return 0
 
 
