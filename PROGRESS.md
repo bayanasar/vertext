@@ -1042,6 +1042,20 @@ nothing in the core may foreclose it.
 
 ## Decisions
 
+- 2026-10-07 **A host finds slots by class, never by their place among a
+  column's children** (#85). Each slot is one `span.vertext-<kind>`, in
+  document order, and its parent is either the column or a
+  `span.vertext-nobreak`, which holds a box and the marks beside it on one
+  line and is not a slot. Until 0.3.0 every slot was a direct child of its
+  column, and both readers in this tree that found slots by position (the
+  caret example and `wasm-parity`) broke when the group was added; a host
+  outside it would break the same way, so the 0.3.0 release notes say so.
+  Counting `span:not(.vertext-nobreak)`, or any `vertext-` class other than
+  that one, finds the slots under either parent. Chosen over setting the
+  group's marks some other way because the line may break on either side of
+  an inline-block, and only an element around the box and its marks keeps
+  the break out (see the #85 entry under Sealed).
+
 - 2026-09-12 **The filter ships to `quarto add` as a zip attached to the tagged
   release, not as an `_extensions/` copy at the repository root** — because the
   tree already holds the source and the copy the theme must vendor, and those
