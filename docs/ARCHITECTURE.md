@@ -229,11 +229,23 @@ built from a checkout refuses every released half and the reverse. The
 version (`tools/versions.py` lists them) is one string, and off a tag the version is a pre-release that no tag names. A
 release version is built only on its tag: an untagged `0.3.0` would claim to
 be a release whose tag may land on another commit, and an untagged `0.3.1`
-would pair with `v0.3.0`. So a release commit, new minor or patch, is pushed
-together with its tag (`git push --atomic origin <branch> v0.3.0`), and CI
-sees HEAD on the tag. The gate does not check that the pre-release is the
+would pair with `v0.3.0`. The gate does not check that the pre-release is the
 *next* minor's: any pre-release refuses every release, which is the property
 the handshake needs. Both release archives refuse on the same condition.
+
+A release, new minor or patch, therefore goes out in this order:
+
+1. The release commit is pushed on its branch and reviewed. Its `version` gate
+   is red, as it should be: the commit claims a release no tag names yet.
+2. Once the review approves, the tag goes on that same commit and is pushed.
+   CI runs on a tag push too, so the gate runs again on the same commit, now
+   with HEAD on the tag, and passes.
+3. Main fast-forwards to the commit. A fast-forward keeps the commit, so the
+   tag names what main holds.
+
+The tag is never pushed before the approval. A pushed tag is public, and a
+review that asks for a change would then mean moving it: whoever fetched the
+first one keeps it, and two commits answer to one release.
 
 What the handshake cannot do:
 

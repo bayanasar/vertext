@@ -584,8 +584,12 @@ nothing in the core may foreclose it.
 
   That green at `0.3.0` was the last hole: between setting a new minor and
   cutting its tag, every commit that lands builds halves claiming the release.
-  Off a tag the gate now refuses every release version, and a release commit
-  is pushed together with its tag. The rule's 7 cases run in the gate itself
+  Off a tag the gate now refuses every release version, so a release commit
+  is red until its review approves and its tag is pushed onto it; the tag
+  push runs CI on that commit again (it did for `v0.2.0`), and main then
+  fast-forwards to it. A tag pushed before the approval would have to move if
+  the review asked for a change, and a moved public tag is two releases under
+  one name; docs/ARCHITECTURE.md gives the order. The rule's 7 cases run in the gate itself
   (`RELEASE_CASES` in `tools/version-gate.py`), so the cases are red whatever
   version main carries: with the release branch removed, the gate fails on
   exactly the untagged `0.3.0`. In a scratch clone with all four declarations

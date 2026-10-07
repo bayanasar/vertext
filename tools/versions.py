@@ -37,10 +37,11 @@ A release version is only honest on its tag, so off a tag `release_problem()`
 refuses every release version, a new minor's included: between setting
 `0.3.0` and cutting `v0.3.0`, every commit that lands builds halves claiming
 to be 0.3.0, and if the tag goes on a later commit they pair with the release.
-A release commit is therefore pushed together with its tag (`git push --atomic
-origin <branch> v0.3.0`), so CI sees HEAD on the tag. Off a tag a pre-release
-passes unless a tag already names it (`v0.3.0-rc.1`), which is the same wire
-comparison: a pre-release speaks only its whole version.
+A release commit is therefore red here until its tag is pushed, which happens
+only once its review approves; the tag push runs CI again on the same commit,
+with HEAD on the tag (docs/ARCHITECTURE.md gives the order). Off a tag a
+pre-release passes unless a tag already names it (`v0.3.0-rc.1`), which is the
+same wire comparison: a pre-release speaks only its whole version.
 """
 
 import json
@@ -130,8 +131,9 @@ def release_refusal(v, tags, at_head):
         return None
     if "-" not in v:
         return (f"version {v} is a release and HEAD is not tagged v{v}: a "
-                f"release version is built only on its tag. Push the release "
-                f"commit together with its tag, or move to a pre-release")
+                f"release version is built only on its tag. Under review this "
+                f"is expected; once the review approves, tag this commit and "
+                f"push the tag (docs/ARCHITECTURE.md), or move to a pre-release")
     speaking = [t for t in tags if wire(t[1:]) == wire(v)]
     if speaking:
         return (f"version {v} is already tagged {', '.join(speaking)}, and "
