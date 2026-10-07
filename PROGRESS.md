@@ -672,7 +672,13 @@ nothing in the core may foreclose it.
   **CI pins the Dart toolchain and the binding's dependencies.** It checks the
   Dart SDK against the archive's published sha256 (checked against a download
   of the zip) and its version when the cache serves it, and resolves the
-  binding from a committed `pubspec.lock` with `--enforce-lockfile`.
+  binding from a committed `pubspec.lock` with `--enforce-lockfile`. The cache
+  key carries the checksum as well as the version: the old key was first
+  written by a download nobody checked, and restoring it skipped the check.
+  The step says which happened in its status, as a note the reporter now adds
+  to a gate's description, since this instance serves no log through the API:
+  the first run under the new key, in the scratch repository above, reads
+  `downloaded, sha256sum -c: /tmp/dart.zip: OK`.
 
 - **The page keeps CLReq's geometry** (#71, #72, #73, #74, #75, #77). `tools/page-geometry.py`,
   CI gate `page-geometry`: documents through pandoc, the real filter and the

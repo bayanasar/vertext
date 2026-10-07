@@ -24,6 +24,10 @@ From `steps` (passed in as `STEPS`), which holds an entry per step that declared
 an `id` in ci.yml. The ids ARE the gate list: there is no second copy here to
 keep in step, and a gate added later reports itself the day its id is written.
 
+A gate may add one line to its status by writing a `note` output
+(`echo "note=..." >> "$GITHUB_OUTPUT"`), for a fact a reviewer would otherwise
+need the log for, which this instance does not serve through the API either.
+
 Run by the last step of .forgejo/workflows/ci.yml, under `if: always()`.
 """
 
@@ -76,10 +80,11 @@ def main():
         state = STATE.get(outcome, "warning")
         if state == "failure":
             failures.append(name)
+        note = ((step or {}).get("outputs") or {}).get("note")
         body = json.dumps({
             "state": state,
             "context": f"gate/{name}",
-            "description": f"{outcome} in this run",
+            "description": f"{outcome} in this run" + (f"; {note}" if note else ""),
             "target_url": f"{server}/{repo}/actions",
         }).encode()
         request = urllib.request.Request(

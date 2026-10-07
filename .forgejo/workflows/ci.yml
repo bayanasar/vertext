@@ -382,12 +382,18 @@ jobs:
       # the image's cargo, which also checks that the hook finds the toolchain
       # from PATH alone: hooks drop RUSTUP_HOME, and this image keeps rustup
       # outside $HOME.
+      #
+      # The key carries the checksum, so whatever it restores was written by
+      # a run whose download passed `sha256sum -c`; a key of the version alone
+      # was first written by an unchecked download, and restoring it skipped
+      # the check for as long as it lived. The step reports which happened in
+      # its status (`note`, read by the reporter below).
       - name: The pinned Dart SDK
         if: ${{ !cancelled() }}
         uses: actions/cache@v4
         with:
           path: /opt/dart-sdk
-          key: dart-sdk-${{ env.DART_VERSION }}-linux-x64
+          key: dart-sdk-${{ env.DART_VERSION }}-${{ env.DART_SHA256 }}-linux-x64
 
       - name: The Dart binding cuts text the way the page does
         if: ${{ !cancelled() }}
@@ -396,13 +402,17 @@ jobs:
           if [ ! -x /opt/dart-sdk/bin/dart ]; then
             curl -sSfL -o /tmp/dart.zip \
               "https://storage.googleapis.com/dart-archive/channels/stable/release/$DART_VERSION/sdk/dartsdk-linux-x64-release.zip"
-            echo "$DART_SHA256  /tmp/dart.zip" | sha256sum -c -
+            echo "$DART_SHA256  /tmp/dart.zip" | sha256sum -c - > /tmp/dart-checksum
+            cat /tmp/dart-checksum
+            echo "note=downloaded, sha256sum -c: $(cat /tmp/dart-checksum)" >> "$GITHUB_OUTPUT"
             unzip -q /tmp/dart.zip -d /opt
             rm -f /tmp/dart.zip
+          else
+            echo "note=restored from the cache keyed by the checksum" >> "$GITHUB_OUTPUT"
           fi
           export PATH="/opt/dart-sdk/bin:$PATH"
-          # A cached SDK skips the checksum, so it must at least be the version
-          # the key names.
+          # A cached SDK was checked when its key was written; it must still
+          # be the version the key names.
           dart --version 2>&1 | tee /tmp/dart-version
           grep -q "Dart SDK version: $DART_VERSION " /tmp/dart-version
           cargo build --release -p vertext-cli
