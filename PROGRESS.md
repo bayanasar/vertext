@@ -624,6 +624,22 @@ nothing in the core may foreclose it.
   (shown with the binding set to `0.2.0`), and its wire rule is held to
   `tools/wire-pairs.json`.
 
+  **The binding gives the page's columns, not only its slots** (#82). The
+  gate compared one flattened run of slots, so a blank column on one side
+  and not the other compared equal, and its own input `第一行\r\n\r\n第三行\n\n`
+  gave 3 columns through the binding and 4 on the page. `strip_layout` cut
+  every trailing line break, where the page drops only the file's last one
+  and draws one blank column for any before it; and it refused every
+  private-use character as a mode marker, where the page reads only the
+  protocol's markers, and none in code (`山川\u{E0A0}字` and the table
+  separator U+E009 outside a table are text on the page). It now follows the
+  page on both, and the gate compares column by column, with blank lines at
+  the end and private-use characters added to its inputs: 184 inputs under 3
+  flag sets and 2 more in code, 550 vertical layouts giving the page's 565
+  columns and 1769 slots. With the old `strip_layout` the per-column gate is
+  red on 17 cases and the flattened one green on the same inputs.
+  `vertext-html` has a test of its own for the column counts.
+
   **The C boundary does not unwind.** A panic inside `vertext_layout` would
   have aborted the host process; it now returns null with length 0, as input
   that is not UTF-8 does, and the Dart binding throws.

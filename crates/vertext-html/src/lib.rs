@@ -502,19 +502,34 @@ fn render_slots(html: &mut String, slots: &[Slot]) {
 }
 
 /// One run of text laid out as a single vertical strip, for a host that
-/// places slots itself: the layout and its source map. `None` where this
-/// renderer would not set the text as one strip: it carries mode markers, or,
-/// outside code, its Latin outweighs its vertical script and it goes
-/// horizontal. Trailing line breaks are dropped first, as the page drops them.
+/// places slots itself: the layout and its source map, column for column what
+/// [`render_document`] draws for the same input. `None` where it would not set
+/// the text as one strip: outside code, the text carries a mode marker, or its
+/// Latin outweighs its vertical script and it goes horizontal. In code the
+/// page reads no markers, and neither does this; any other private-use
+/// character is text on the page and is text here.
+///
+/// The line breaks at the end follow the page too: the last is the file's
+/// terminator and draws nothing, and any before it, however many, draw one
+/// blank column.
 pub fn strip_layout(input: &str, code: bool, progression: Progression)
                     -> Option<(Layout, SourceMap)> {
-    let text = input.trim_end_matches(['\n', '\r']);
-    if text.chars().any(|c| ('\u{E000}'..='\u{E0FF}').contains(&c)) {
+    let trimmed = input.trim_end_matches(['\n', '\r']);
+    if !code && trimmed.chars().any(|c| Mode::from_marker(c).is_some()) {
         return None;
     }
-    if !code && prefers_horizontal(text) {
+    if !code && prefers_horizontal(trimmed) {
         return None;
     }
+    // Keep the first trailing break when there is more than one: laid out, it
+    // opens the blank column the page adds, and it is a slice of the input, so
+    // the source map still points into it.
+    let rest = &input[trimmed.len()..];
+    let text = if !trimmed.is_empty() && rest.matches('\n').count() > 1 {
+        &input[..trimmed.len() + if rest.starts_with("\r\n") { 2 } else { 1 }]
+    } else {
+        trimmed
+    };
     let config = if code { code_config(progression) } else { prose_config(progression) };
     Some(layout_with_source_map(text, &config))
 }
@@ -545,6 +560,42 @@ mod tests {
         assert_eq!(RESERVED_END, MODE_CODE as u32 + 13);
         assert!(Mode::from_marker(MODE_LIST_ORDERED).is_some());
         assert!(char::from_u32(RESERVED_END).and_then(Mode::from_marker).is_none());
+    }
+
+    /// The columns a host is handed are the columns the page draws, counted
+    /// per column: blank ones included, and with the page's reading of
+    /// private-use characters.
+    #[test]
+    fn a_strip_has_the_columns_the_page_draws() {
+        let page_columns = |input: &str, code: bool| -> Vec<usize> {
+            let html = render_document(input, RenderOptions {
+                whole_strip_code: code, page: false, progression: Progression::RightToLeft,
+            });
+            html.split("<div class=\"vertext-column").skip(1)
+                .map(|column| column.split("</div>").next().unwrap().matches("<span").count())
+                .collect()
+        };
+        let strip_columns = |input: &str, code: bool| -> Option<Vec<usize>> {
+            strip_layout(input, code, Progression::RightToLeft)
+                .map(|(layout, _)| layout.columns.iter().map(|c| c.slots.len()).collect())
+        };
+        for (input, code) in [
+            ("第一行\r\n\r\n第三行\n\n", false),
+            ("第一行\n", false),
+            ("第一行\n\n\n\n", false),
+            ("第一行\r\n\r\n", false),
+            ("ᠮᠣᠩᠭᠣᠯ\n\n", false),
+            ("let x = 1;\n\n", true),
+            ("山川\u{E0A0}字", false),
+            ("山川\u{E009}字", false),
+            ("山川\u{E000}x", true),
+        ] {
+            assert_eq!(strip_columns(input, code), Some(page_columns(input, code)),
+                       "{input:?} code {code}");
+        }
+        // A marker the page reads splits the text into blocks: no one strip.
+        assert_eq!(strip_columns("山川\u{E000}x", false), None);
+        assert_eq!(strip_columns("\u{E002}標題\u{E001}正文", false), None);
     }
 
     #[test]

@@ -7,7 +7,8 @@
 // CLI, then requires:
 //
 //   * the binding says Horizontal exactly where the page has no column;
-//   * otherwise the slots, in order, are the page's slot spans, kind for
+//   * otherwise its columns are the page's columns, blank ones included, and
+//     each column's slots, in order, are that column's slot spans, kind for
 //     class and text for text;
 //   * every slot's range, in UTF-16, is its own text in the Dart string.
 //
@@ -18,6 +19,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:vertext/vertext.dart';
+
+final _column = RegExp('<div class="vertext-column[^"]*">(.*?)</div>');
 
 final _slotSpan = RegExp(
   '<span class="vertext-(${SlotKind.values.map((k) => k.name).join('|')})">'
@@ -73,6 +76,14 @@ Future<void> main(List<String> args) async {
     'ᠮᠣᠩᠭᠣᠯ\u{202f}ᠤᠨ (mongɣol-un) ᠨᠣᠮ᠃',
     '山 internationalization 川，𠀋字「引文」',
     '真的？！不会吧！！谁？？？',
+    // The page draws one blank column for any number of blank lines at the
+    // end, and nothing for the file's own last line break.
+    '山\n',
+    '山\n\n\n\n',
+    'ᠮᠣᠩᠭᠣᠯ\r\n\r\n',
+    // Private-use characters the page does not read as markers are text.
+    '山川\u{E0A0}字',
+    '山川\u{E009}字',
     // Latin-majority: the page sets these horizontally, and so must a host.
     'this paragraph is plainly English and goes horizontal',
     'the word ᠮᠣᠩᠭᠣᠯ is written in bichig and read here in English',
@@ -87,59 +98,72 @@ Future<void> main(List<String> args) async {
     (code: true, progression: Progression.rightToLeft, cli: ['--code']),
   ];
 
+  // In code the page reads no markers at all, so a marker is text there; in
+  // prose it splits the input into blocks, which no one strip can be.
+  final codeInputs = <String>['山川\u{E000}x', '\u{E002}標題\u{E001}正文'];
+
   final fails = <String>[];
-  var vertical = 0, horizontal = 0, slots = 0;
-  for (final text in inputs) {
-    for (final flags in flagSets) {
-      final where = '${jsonEncode(text)} ${flags.cli.join(' ')}'.trim();
-      final laid = layout(
-        text,
-        code: flags.code,
-        progression: flags.progression,
-      );
-      final html = await _render(binary, text, flags.cli);
-      final hasColumn = html.contains('<div class="vertext-column');
-      switch (laid) {
-        case Horizontal():
-          horizontal++;
-          if (hasColumn) {
-            fails.add(
-              '$where: the binding says horizontal, the page has columns',
-            );
+  var vertical = 0, horizontal = 0, slots = 0, columnCount = 0;
+  final cases = [
+    for (final text in inputs)
+      for (final flags in flagSets) (text: text, flags: flags),
+    for (final text in codeInputs) (text: text, flags: flagSets.last),
+  ];
+  for (final (:text, :flags) in cases) {
+    final where = '${jsonEncode(text)} ${flags.cli.join(' ')}'.trim();
+    final laid = layout(text, code: flags.code, progression: flags.progression);
+    final html = await _render(binary, text, flags.cli);
+    final hasColumn = html.contains('<div class="vertext-column');
+    switch (laid) {
+      case Horizontal():
+        horizontal++;
+        if (hasColumn) {
+          fails.add(
+            '$where: the binding says horizontal, the page has columns',
+          );
+        }
+      case Vertical(:final columns):
+        vertical++;
+        // Column by column: flattened, a blank column on one side and not
+        // the other compares equal.
+        final drawn = [
+          for (final column in columns)
+            [
+              for (final slot in column)
+                '${slot.kind.name} ${jsonEncode(slot.text)}',
+            ].join(' | '),
+        ];
+        final page = [
+          for (final column in _column.allMatches(html))
+            [
+              for (final m in _slotSpan.allMatches(column[1]!))
+                '${m[1]} ${jsonEncode(_unescape(m[2]!))}',
+            ].join(' | '),
+        ];
+        slots += columns.fold(0, (n, c) => n + c.length);
+        columnCount += columns.length;
+        if (drawn.join('\n') != page.join('\n')) {
+          var at = 0;
+          while (at < drawn.length &&
+              at < page.length &&
+              drawn[at] == page[at]) {
+            at++;
           }
-        case Vertical(:final columns):
-          vertical++;
-          final drawn = [
-            for (final slot in columns.expand((c) => c))
-              '${slot.kind.name} ${jsonEncode(slot.text)}',
-          ];
-          final page = [
-            for (final m in _slotSpan.allMatches(html))
-              '${m[1]} ${jsonEncode(_unescape(m[2]!))}',
-          ];
-          slots += drawn.length;
-          if (drawn.join('\n') != page.join('\n')) {
-            var at = 0;
-            while (at < drawn.length &&
-                at < page.length &&
-                drawn[at] == page[at]) {
-              at++;
-            }
-            fails.add(
-              '$where: slot $at differs\n'
-              '     binding ${at < drawn.length ? drawn[at] : '(none)'}\n'
-              '     page    ${at < page.length ? page[at] : '(none)'}',
-            );
+          fails.add(
+            '$where: column $at differs (the binding has ${drawn.length} '
+            'columns, the page ${page.length})\n'
+            '     binding ${at < drawn.length ? '[${drawn[at]}]' : '(none)'}\n'
+            '     page    ${at < page.length ? '[${page[at]}]' : '(none)'}',
+          );
+        }
+        for (final slot in columns.expand((c) => c)) {
+          final shown = slot.hyphen
+              ? slot.text.substring(0, slot.text.length - 1)
+              : slot.text;
+          if (text.substring(slot.start, slot.end) != shown) {
+            fails.add('$where: $slot does not show its own source');
           }
-          for (final slot in columns.expand((c) => c)) {
-            final shown = slot.hyphen
-                ? slot.text.substring(0, slot.text.length - 1)
-                : slot.text;
-            if (text.substring(slot.start, slot.end) != shown) {
-              fails.add('$where: $slot does not show its own source');
-            }
-          }
-      }
+        }
     }
   }
 
@@ -151,8 +175,9 @@ Future<void> main(List<String> args) async {
     exit(1);
   }
   print(
-    'PASS: ${inputs.length} inputs under ${flagSets.length} flag sets: '
-    '$vertical vertical layouts give the page\'s $slots slots in order, each '
+    'PASS: ${inputs.length} inputs under ${flagSets.length} flag sets and '
+    '${codeInputs.length} more in code: $vertical vertical layouts give the '
+    'page\'s $columnCount columns and $slots slots in order, each slot '
     'showing its own source, and the $horizontal horizontal ones have no '
     'column on the page either',
   );
