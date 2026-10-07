@@ -637,6 +637,18 @@ nothing in the core may foreclose it.
   green, and a mixed page screenshotted before and after differs only in the
   spacing of its lines.
 
+  **Every line is a pitch, whatever fills it** (#83). With the strut at zero,
+  only the slots that carry the pitch as a line height held it; the Latin and
+  Mongolian slots are boxes, and a line of nothing but bichig measured 18.0px
+  from the next, its runs almost touching. The Mongolian run now takes the
+  pitch as its line height and a Latin word is at least a pitch wide, so
+  `page-geometry` measures 8 lines of bichig alone (`vertical-lr`, Noto Sans
+  Mongolian) and 6 lines around two of short Latin words alone at 27.0px; red
+  before at 18.0px. A paragraph mixing Han, bichig and Latin words up to
+  `internationally` keeps its line pitches to the tenth of a pixel in both
+  progressions (87.0 and 72.9px, set by the long words), so a mixed page does
+  not move.
+
   The line-edge paragraphs (#75, #77) put a mark exactly at the end of a line,
   which holds only for the column length they were built for. They were built
   for 28 cells and never checked it: on a host whose 900x700 window gives

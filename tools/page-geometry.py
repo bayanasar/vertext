@@ -38,6 +38,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 BINARY = ROOT / "target" / "release" / "vertext"
 SHIM = ROOT / "tools" / "quarto-shim.lua"
 STYLESHEET = ROOT / "extensions" / "vertext" / "vertext.css"
+MONGOLIAN = ROOT / "goldens" / "fonts" / "NotoSansMongolian-Regular.ttf"
 
 _spec = importlib.util.spec_from_file_location(
     "progression_scroll", ROOT / "tools" / "progression-scroll.py")
@@ -62,8 +63,8 @@ PROSE = "山川异域，风月同天。寄诸佛子，共结来缘。" * 12
 MEASURE = """
 <script>
 document.fonts.ready.then(() => {
-  const cell = parseFloat(getComputedStyle(document.documentElement)
-    .getPropertyValue('--vertext-cell'));
+  const root = getComputedStyle(document.documentElement);
+  const cell = parseFloat(root.getPropertyValue('--vertext-cell'));
   const columns = [...document.querySelectorAll('.vertext-column')]
     .filter(c => c.textContent.trim());
   // The centre of every upright character in the first column, across the
@@ -72,6 +73,12 @@ document.fonts.ready.then(() => {
     .map(s => { const r = s.getBoundingClientRect(); return (r.left + r.right) / 2; });
   const result = {
     cell,
+    lineGap: parseFloat(root.getPropertyValue('--vertext-line-gap')),
+    // Every slot of the first column, by kind, with the centre of its line.
+    items: [...(columns[0] ? columns[0].children : [])].map(e => {
+      const r = e.getBoundingClientRect();
+      return [e.className, (r.left + r.right) / 2];
+    }),
     heights: columns.map(c => parseFloat(getComputedStyle(c).height)),
     centres,
     // Each column's slots, as text and the centre of their line.
@@ -183,6 +190,37 @@ def line_gap(m, where):
     return []
 
 
+def line_pitch(kinds):
+    """Every line of the first paragraph is one pitch from the next, the cell
+    plus the declared gap, whatever kind of slot fills it. The upright marks
+    carry the pitch as their line height; a line holding only Mongolian runs
+    or only Latin words has no upright mark in it, so those slots must carry
+    it too. `kinds` are the slot classes whose centres mark the lines."""
+    def check(m, where):
+        cell = m["cell"]
+        pitch = cell * (1 + m["lineGap"])
+        centres = sorted(x for cls, x in m["items"]
+                         if any(f"vertext-{kind}" in cls.split() for kind in kinds))
+        lines = []
+        for x in centres:
+            if lines and x - lines[-1][-1] < cell / 4:
+                lines[-1].append(x)
+            else:
+                lines.append([x])
+        lines = [sum(line) / len(line) for line in lines]
+        if len(lines) < 3:
+            return [f"{where}: the first paragraph has {len(lines)} line(s) of "
+                    f"{'/'.join(kinds)}; the pitch needs at least three"]
+        apart = [b - a for a, b in zip(lines, lines[1:])]
+        off = [d for d in apart if abs(d - pitch) > 0.5]
+        if off:
+            return [f"{where}: lines {', '.join(f'{d:.1f}' for d in apart)}px apart; "
+                    f"the pitch is {pitch:.1f}px"]
+        m["gap"] = (m.get("gap", "") + f"{len(lines)} lines {pitch:.1f}px apart").strip()
+        return []
+    return check
+
+
 def marks_together(m, where):
     """CLReq 5.1.1.3: two question or exclamation marks used together take one
     character's space. Along the line that is one cell; across it, no wider
@@ -283,6 +321,19 @@ def no_mark_ends_a_line(m, where):
     return fails
 
 
+# Bichig alone, in its own progression: no upright mark on any line.
+BICHIG = "ᠮᠣᠩᠭᠣᠯ ᠪᠢᠴᠢᠭ " * 24
+
+
+def short_latin(n):
+    """A Han line, then about two and a half lines of short Latin words, then
+    Han again: still a vertical paragraph (3n Han characters outvote 2n
+    words), with whole lines that hold nothing but Latin. The words are
+    narrower than a cell, so their lines are exactly one pitch wide."""
+    words = ("of in to is at by on or an a " * n).split()[:2 * n]
+    return "永" * n + " ".join(words) + "永" * (2 * n)
+
+
 CASES = [
     # name, text (or a builder given the column's cells), metadata, window,
     # the faces that must load (the first is the body's), checks
@@ -293,6 +344,10 @@ CASES = [
     ("number-affixes", affixes, {}, (900, 700), ["Noto Sans SC"], [numbers_keep_affixes]),
     ("line-start", line_start, {}, (900, 700), ["Noto Sans SC"], [no_mark_starts_a_line]),
     ("line-end", line_end, {}, (900, 700), ["Noto Sans SC"], [no_mark_ends_a_line]),
+    ("bichig-lines", BICHIG, {"vertext-progression": "lr"}, (900, 700),
+     ["Noto Sans SC", "Noto Sans Mongolian"], [line_pitch(["mongolian"])]),
+    ("latin-lines", short_latin, {}, (900, 700), ["Noto Sans SC"],
+     [line_pitch(["latin", "upright"])]),
 ]
 
 
@@ -309,7 +364,7 @@ def main():
 
     work = pathlib.Path(tempfile.mkdtemp(prefix="vertext-geometry-"))
     shutil.copy(STYLESHEET, work / STYLESHEET.name)
-    for family, path in fonts.items():
+    for family, path in [*fonts.items(), ("Noto Sans Mongolian", MONGOLIAN)]:
         shutil.copy(path, work / path.name)
         FONTS_IN_WORK[family] = path
     fails, lines = [], []
@@ -348,7 +403,8 @@ def main():
     if fails:
         return 1
     print("PASS: every column on a short window is a whole number of cells long, "
-          "the lines of a paragraph sit within CLReq's usual gap, marks used "
+          "the lines of a paragraph sit within CLReq's usual gap, and one pitch "
+          "apart when they hold only Mongolian or only Latin, marks used "
           "together share a cell, a number keeps its sign and unit, and no "
           "closing mark starts a line or opening mark ends one")
     for line in lines:
