@@ -372,15 +372,24 @@ def lines_of(column, cell):
 def no_mark_beside_a_box_breaks(m, where):
     """CLReq 6.1.1 beside a Latin word, a number and a Mongolian run: no
     closing or pause mark begins a line and no opening mark ends one. And the
-    text a reader copies from each column is the paragraph as written."""
+    text a reader copies from each column is the paragraph as written. Each
+    probe must reach a line edge at one of its distances at least -- the
+    second line beginning inside it -- or the probe proves nothing: a face or
+    a stylesheet that makes the box shorter would leave every placement
+    inside the first line, and the rules would hold by never being asked."""
     fails = []
     cell = m["cell"]
     n = round(m["heights"][0] / cell) if m["heights"] else 0
     if len(m["slots"]) != len(BOX_PROBES):
         return [f"{where}: {len(m['slots'])} columns for {len(BOX_PROBES)} probes"]
+    reached = set()
     for (probe, k), column, copied in zip(BOX_PROBES, m["slots"], m["copied"]):
         at = f"{where}: `{probe}` {k} cell(s) from the end"
         lines = lines_of(column, cell)
+        # The probe's slots follow the n - k Han before it and precede the
+        # three after it.
+        if len(lines) > 1 and n - k <= len(lines[0]) < len(column) - 3:
+            reached.add(probe)
         for line in lines[1:]:
             if line[0] in set(PROHIBITED) | {"？！", "！？", "？？", "！！"}:
                 fails.append(f"{at}: a line begins with `{line[0]}`")
@@ -390,9 +399,12 @@ def no_mark_beside_a_box_breaks(m, where):
         written = "永" * (n - k) + probe + "永永永"
         if copied != written:
             fails.append(f"{at}: copying the column gives {copied!r}")
+    fails += [f"{where}: `{probe}` never reached a line edge"
+              for probe in dict.fromkeys(probe for probe, _ in BOX_PROBES)
+              if probe not in reached]
     if not fails:
         m["gap"] = (m.get("gap", "") + f"{len(BOX_PROBES)} probes beside a box hold, "
-                    f"and copy as written").strip()
+                    f"each reaching a line edge, and copy as written").strip()
     return fails
 
 
