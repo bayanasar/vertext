@@ -646,7 +646,9 @@ nothing in the core may foreclose it.
 
   **The C boundary does not unwind.** A panic inside `vertext_layout` would
   have aborted the host process; it now returns null with length 0, as input
-  that is not UTF-8 does, and the Dart binding throws.
+  that is not UTF-8 does, and the Dart binding throws. Where a panic aborts
+  there is nothing to catch, so the crate refuses to compile under
+  `panic = "abort"` (shown with `-C panic=abort`).
 
   **The crate's tests read the JSON back.** They compare the JSON the export
   returns, parsed with `serde_json`, with the page's spans column by column,

@@ -25,6 +25,11 @@ use std::ffi::c_char;
 use vertext_core::Progression;
 use vertext_html::{slot_kind, strip_layout};
 
+// The C boundary keeps a panic inside by catching it as it unwinds. Where a
+// panic aborts there is nothing to catch, and it takes the host process down.
+#[cfg(panic = "abort")]
+compile_error!("vertext-ffi relies on unwinding to keep panics inside the C boundary");
+
 /// Lay the whole input out as code, as `--code` does.
 pub const CODE: u32 = 1;
 /// Columns advance left to right, as `--progression lr` does.
