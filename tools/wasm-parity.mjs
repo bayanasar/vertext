@@ -7,7 +7,8 @@
 // rendered by the release CLI and by the wasm module, under every flag the CLI
 // takes, and the two strings must be equal. It also walks the source map the
 // wasm module exports, because the caret host in examples/wasm relies on two
-// things: that a mapped strip has one span per slot, and that an offset and a
+// things: that a mapped strip has one slot span per slot (a `vertext-nobreak`
+// span around a box and its marks is not one), and that an offset and a
 // caret convert back to each other.
 //
 //   cargo build --release -p vertext-cli
@@ -35,6 +36,8 @@ const inputs = [
   'ᠮᠣᠩᠭᠣᠯ\u202fᠤᠨ (mongɣol-un) ᠨᠣᠮ᠃',
   'the genitive ᠮᠣᠩᠭᠣᠯ\u202fᠤᠨ is a single word in this English sentence',
   'internationalization 与 use-after-free',
+  // A box and the marks that may not leave it at a line edge share a span.
+  '《ᠮᠣᠩᠭᠣᠯ》即 mongɣol，见（2026）。sayin！？',
   'e\u0301cole 葛\ufe00城 👩\u200d💻 <b>&amp;</b>',
   // The wire protocol: a heading, prose, a table, list items and code.
   '\ue002標題\ue001正文，接着寫。\ue008名\ue009意\ue00aᠨᠣᠮ\ue009書\ue001\ue00b一項\ue00c二項\ue000fn main() {}\n\ue001完。',
@@ -73,7 +76,7 @@ for (const text of inputs) {
     if (map === null) continue;
     mapped++;
     const slots = map.columns.flat();
-    const spans = (wasm.match(/<span class="vertext-/g) || []).length;
+    const spans = (wasm.match(/<span class="vertext-(?!nobreak")/g) || []).length;
     if (spans !== slots.length) {
       fails.push(`${JSON.stringify(text.slice(0, 40))}: ${spans} spans for ${slots.length} mapped slots`);
     }
@@ -113,4 +116,4 @@ if (fails.length) {
   process.exit(1);
 }
 console.log(`PASS: ${compared} renders over ${inputs.length} inputs and ${FLAGS.length} flag sets are byte-identical between the CLI and the wasm module`);
-console.log(`      and ${mapped} mapped strips have one span per slot, with ${carets} carets converting to their offsets and back`);
+console.log(`      and ${mapped} mapped strips have one slot span per slot, with ${carets} carets converting to their offsets and back`);

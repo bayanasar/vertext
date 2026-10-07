@@ -300,7 +300,7 @@ pub fn render_document(input: &str, options: RenderOptions) -> String {
                 let column_class = mode.column_class();
                 for column in &layout.columns {
                     html.push_str(&format!("<div class=\"{column_class}\">"));
-                    render_slots(&mut html, &column.slots);
+                    render_slots(&mut html, &column.slots, mode != Mode::Code);
                     html.push_str("</div>");
                 }
                 // Preserve a blank column for a paragraph break that ends the
@@ -461,7 +461,8 @@ fn render_table(html: &mut String, text: &str, progression: Progression) {
             let layout = layout_text(cell, &config);
             for column in &layout.columns {
                 html.push_str("<div class=\"vertext-column vertext-column-cell\">");
-                render_slots(html, &column.slots);
+                // A cell never wraps, so there is no line edge to keep.
+                render_slots(html, &column.slots, false);
                 html.push_str("</div>");
             }
             html.push_str(&format!("</{cell_tag}>"));
@@ -490,14 +491,84 @@ pub fn slot_kind(slot: &Slot) -> &'static str {
     }
 }
 
-fn render_slots(html: &mut String, slots: &[Slot]) {
-    for slot in slots {
-        // Whitespace is emitted as the character the author typed, never a
-        // stand-in glyph. Code indentation is made visible by the stylesheet
-        // instead — a background, not a substitution, so the text a reader
-        // copies is the text a writer wrote.
-        html.push_str(&format!("<span class=\"vertext-{}\">{}</span>",
-                               slot_kind(slot), escape(slot.text())));
+/// Emits a column's slots, one span each, in order.
+///
+/// A Latin word, a number and a Mongolian run are each one box on the page,
+/// and a line may break on either side of a box wherever it falls: the
+/// browser's line-start and line-end rules (CLReq 6.1.1) look at the
+/// characters beside a mark, and a box is not one. So in prose (`keep_edges`)
+/// a box goes into one `vertext-nobreak` span with the closing and pause
+/// marks right after it and the opening marks right before it, and that span
+/// does not wrap. Only the breaks change: the slots, their order and their
+/// text are what they were, and a slot span's parent is its column or such a
+/// span. In code no line edge is kept, as the marks there are code.
+fn render_slots(html: &mut String, slots: &[Slot], keep_edges: bool) {
+    let mut i = 0;
+    while i < slots.len() {
+        let (start, end) = if keep_edges { keep_together(slots, i) } else { (i, i + 1) };
+        let grouped = end - start > 1;
+        if grouped {
+            html.push_str("<span class=\"vertext-nobreak\">");
+        }
+        for slot in &slots[start..end] {
+            // Whitespace is emitted as the character the author typed, never a
+            // stand-in glyph. Code indentation is made visible by the
+            // stylesheet instead — a background, not a substitution, so the
+            // text a reader copies is the text a writer wrote.
+            html.push_str(&format!("<span class=\"vertext-{}\">{}</span>",
+                                   slot_kind(slot), escape(slot.text())));
+        }
+        if grouped {
+            html.push_str("</span>");
+        }
+        i = end;
+    }
+}
+
+/// The slots from `i` on that must share a line: `i..i + 1` unless opening
+/// marks from `i` lead up to a box, or the slot at `i` is a box; then the
+/// opening marks, the box, and the closing and pause marks after it.
+fn keep_together(slots: &[Slot], i: usize) -> (usize, usize) {
+    let is_box = |slot: &Slot| matches!(slot, Slot::LatinWord(_) | Slot::MongolianRun(_));
+    let mut b = i;
+    while b < slots.len() && may_not_end_a_line(&slots[b]) {
+        b += 1;
+    }
+    if b == slots.len() || !is_box(&slots[b]) {
+        return (i, i + 1);
+    }
+    let mut end = b + 1;
+    while end < slots.len() && may_not_start_a_line(&slots[end]) {
+        end += 1;
+    }
+    (i, end)
+}
+
+/// A closing bracket or quotation mark, or a pause or stop mark, fullwidth
+/// or halfwidth: CLReq 6.1.1's marks that do not begin a line. A pair of
+/// question and exclamation marks is one of them.
+fn may_not_start_a_line(slot: &Slot) -> bool {
+    match slot {
+        Slot::Combined(_) => true,
+        Slot::VerticalPunctuation(s) | Slot::CornerPunctuation(s) | Slot::Neutral(s) =>
+            matches!(s.as_str(),
+                "）" | "］" | "｝" | "〕" | "〉" | "》" | "」" | "』" | "】" | "〙" | "〗" | "｠"
+                | ")" | "]" | "}" | "’" | "”"
+                | "、" | "，" | "。" | "．" | "；" | "：" | "！" | "？"
+                | "," | "." | ";" | ":" | "!" | "?"),
+        _ => false,
+    }
+}
+
+/// An opening bracket or quotation mark: CLReq 6.1.1's marks that do not end
+/// a line.
+fn may_not_end_a_line(slot: &Slot) -> bool {
+    match slot {
+        Slot::VerticalPunctuation(s) | Slot::CornerPunctuation(s) | Slot::Neutral(s) =>
+            matches!(s.as_str(),
+                "（" | "［" | "｛" | "〔" | "〈" | "《" | "「" | "『" | "【" | "〘" | "〖" | "｟"
+                | "(" | "[" | "{" | "‘" | "“"),
+        _ => false,
     }
 }
 
@@ -663,6 +734,41 @@ mod tests {
         let heading_at = html.find("vertext-column-heading").unwrap();
         let prose_at = html.rfind("vertext-column-prose\"").unwrap();
         assert!(prose_at > heading_at, "the prose column must follow the heading column");
+    }
+
+    /// CLReq 6.1.1 beside a box. A line may break on either side of a Latin
+    /// word, a number or a Mongolian run, so each shares a span that does not
+    /// wrap with the marks that may not leave it at a line edge.
+    #[test]
+    fn a_box_and_the_marks_that_hold_to_it_share_a_span() {
+        let slot = |kind: &str, text: &str| format!("<span class=\"vertext-{kind}\">{text}</span>");
+        let kept = |slots: &[String]| format!("<span class=\"vertext-nobreak\">{}</span>", slots.concat());
+        let input = "永sayin，见（2026）。读《ᠮᠣᠩᠭᠣᠯ》a，b永，「永」";
+        let html = render_document(input, RenderOptions::default());
+        assert!(html.contains(&kept(&[slot("latin", "sayin"), slot("corner", "，")])), "{html}");
+        assert!(html.contains(&kept(&[slot("vform", "（"), slot("latin", "2026"),
+                                      slot("vform", "）"), slot("corner", "。")])), "{html}");
+        assert!(html.contains(&kept(&[slot("vform", "《"), slot("mongolian", "ᠮᠣᠩᠭᠣᠯ"),
+                                      slot("vform", "》")])), "{html}");
+        assert!(html.contains(&kept(&[slot("latin", "a"), slot("corner", "，")])), "{html}");
+        // A box with no mark beside it, and marks beside a Han character, are
+        // left to the browser, which keeps those itself.
+        assert_eq!(html.matches("vertext-nobreak").count(), 4, "{html}");
+        // The text is the text: a span adds no character.
+        let mut text = String::new();
+        let mut in_tag = false;
+        for ch in html.chars() {
+            match ch {
+                '<' => in_tag = true,
+                '>' => in_tag = false,
+                _ if !in_tag => text.push(ch),
+                _ => {}
+            }
+        }
+        assert_eq!(text.trim_end_matches('\n'), input);
+        // In code the marks are code, and no edge is kept.
+        let code = render_document("x，(y)，", RenderOptions { whole_strip_code: true, ..Default::default() });
+        assert!(!code.contains("vertext-nobreak"), "{code}");
     }
 
     #[test]

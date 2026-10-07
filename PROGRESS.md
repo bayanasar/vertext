@@ -777,7 +777,7 @@ nothing in the core may foreclose it.
   ended one; only `！？`, already plain inline, held. An atomic inline box may
   break on either side, so the browser's rules never saw those characters. As
   plain inline text, all 16 hold beside Han characters. Beside a Latin, digit
-  or Mongolian slot they do not (see "Not sealed"). Screenshots before and after: the brackets
+  or Mongolian slot they did not until #85 (below). Screenshots before and after: the brackets
   keep their vertical forms and the arrows still turn, and a two-em dash that
   was split across two lines now moves whole.
 
@@ -912,6 +912,30 @@ nothing in the core may foreclose it.
   status; a broken release case and a wrong Dart checksum were each named in
   their gate's status; a failed tag fetch was red on `version`.
 
+- **Line-edge rules hold beside a Latin, digit or Mongolian slot** (#85).
+  Those slots are boxes (`inline-block`), and a line may break on either side
+  of a box, so a mark next to one escaped the rules that hold it beside Han
+  characters. In prose the renderer now puts a box in one
+  `vertext-nobreak` span, which does not wrap, with the closing and pause
+  marks right after it and the opening marks right before it. The slots, their
+  order and their text are unchanged; a slot span's parent is its column or
+  that span. In code the marks are code, and nothing is grouped.
+  `page-geometry` places 11 probes (`sayin，`, `sayin！？`, `50%。`, `2026」`,
+  `ᠮᠣᠩᠭᠣᠯ》`, `（sayin）`, `「50%」`, `《ᠮᠣᠩᠭᠣᠯ》` and three more) at 1 to 8
+  cells from a line end, 73 paragraphs, and copies each column through a
+  selection: red in 15 places before, at least once for each probe (the 8
+  cases of #85, the two Mongolian closing marks it saw hold at the distance
+  it tried, and `sayin！？`), green after, and every column copies as written
+  both times. A paired `？！` after Han held already; after a Latin word it
+  began a line, and it is grouped as a closing mark. Two readers counted
+  slots by position and changed with it: the wasm caret example found a slot
+  as the column's n-th child, and `wasm-parity` counted every `vertext-`
+  span. The example now counts slot spans and its text has a line that
+  groups (with the old lookup the page threw before it reported);
+  `wasm-parity` counts slot spans too (the old count was red on 8 strips of
+  the golden corpus). `dart-parity` reads slot spans by kind and needed only
+  the new input.
+
 ## Not sealed
 
 
@@ -975,14 +999,6 @@ nothing in the core may foreclose it.
   actually for: two consumers still install the two halves separately, so there
   is still a pair to mismatch. This is the second line of defence the issue
   asks for, built before the first.
-- **Line-edge rules fail beside a Latin, digit or Mongolian slot** (#85).
-  Those slots are inline-block, and a line may break on either side of an
-  atomic box, so a mark next to one escapes the rules that hold it beside Han
-  characters: measured, the comma of `sayin，` and the closing marks after
-  `50%`, `2026` and `sayin` began a line, and the opening brackets of
-  `（sayin）`, `「50%」` and `《ᠮᠣᠩᠭᠣᠯ》` ended one. CLReq 6.1.1 is Partial until it
-  is fixed.
-
 - **A sign between two words breaks from its number.** `30°C` is three slots,
   and a line may fall after `30`. Joining `°` to either word would set two
   Latin slots side by side, which the slot census forbids; CLReq 6.1.2.2 is

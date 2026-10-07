@@ -18,7 +18,8 @@
 <body>
 <textarea id="source" spellcheck="false">ᠮᠣᠩᠭᠣᠯ&#x202F;ᠤᠨ ᠪᠢᠴᠢᠭ
 山川异域，风月同天。
-寄诸佛子，共结来缘。</textarea>
+寄诸佛子，共结来缘。
+《ᠮᠣᠩᠭᠣᠯ》即 mongɣol，见（2026）。</textarea>
 <div id="strip"></div>
 <div id="status"></div>
 <script type="module">
@@ -48,8 +49,16 @@ try {
 const graphemes = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
 let map = null;
 
+// A column's slot spans, in the map's order. Most are the column's children,
+// but a Latin word, number or Mongolian run and the marks that must share its
+// line sit together inside a `vertext-nobreak` span.
+function slotsOf(columnEl) {
+  return [...columnEl.querySelectorAll('span:not(.vertext-nobreak)')];
+}
+
 function slotElement(column, index) {
-  return strip.querySelectorAll('.vertext-column')[column]?.children[index] ?? null;
+  const columnEl = strip.querySelectorAll('.vertext-column')[column];
+  return columnEl ? slotsOf(columnEl)[index] ?? null : null;
 }
 
 function render() {
@@ -62,11 +71,11 @@ function render() {
 // Strip -> source: which slot was hit, and which grapheme inside it.
 function caretAtPoint(x, y) {
   const range = document.caretRangeFromPoint?.(x, y);
-  const span = range?.startContainer.parentElement?.closest('#strip span');
-  if (!map || !span) return null;
-  const columnEl = span.parentElement;
+  const span = range?.startContainer.parentElement?.closest('#strip span:not(.vertext-nobreak)');
+  const columnEl = span?.closest('.vertext-column');
+  if (!map || !columnEl) return null;
   const column = [...strip.querySelectorAll('.vertext-column')].indexOf(columnEl);
-  const index = [...columnEl.children].indexOf(span);
+  const index = slotsOf(columnEl).indexOf(span);
   const slot = map.columns[column]?.[index];
   if (!slot) return null;
   // The code units before the hit, counted as graphemes; an inserted hyphen

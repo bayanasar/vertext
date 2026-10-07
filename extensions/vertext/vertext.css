@@ -284,6 +284,14 @@
   font-size: var(--vertext-cell);
   text-combine-upright: all;
 }
+/* The marks stay inline so the browser keeps them off the wrong end of a
+   line, but a Latin word, a number or a Mongolian run beside them is a box,
+   and a line may break on either side of a box: `sayin，` could put the comma
+   at the top of a line and `（sayin）` leave the bracket at the foot of one.
+   The renderer puts the box and the marks that hold to it in this span. */
+.vertext-nobreak {
+  white-space: nowrap;
+}
 /* A Latin word reads horizontally inside the vertical flow. `inline-block`
    rather than `block`: an inline-level box keeps the selection continuous. */
 .vertext-latin {

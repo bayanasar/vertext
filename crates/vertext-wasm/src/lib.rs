@@ -212,12 +212,15 @@ mod tests {
 
     #[test]
     fn the_map_is_the_layout_the_renderer_draws() {
-        let text = "山川异域\nᠮᠣᠩᠭᠣᠯ\u{202F}ᠤᠨ ᠨᠣᠮ\n";
+        let text = "山川异域\nᠮᠣᠩᠭᠣᠯ\u{202F}ᠤᠨ ᠨᠣᠮ\n《ᠮᠣᠩᠭᠣᠯ》即 mongɣol，见（2026）。\n";
         let html = render(text, 0);
         let m = map(text, 0).unwrap();
-        // One column div per mapped column, one span per mapped slot.
+        // One column div per mapped column, one span per mapped slot. A span
+        // that keeps a box and its marks on one line is not a slot.
         let columns = html.matches("<div class=\"vertext-column").count();
-        let spans = html.matches("<span class=\"vertext-").count();
+        let groups = html.matches("<span class=\"vertext-nobreak\">").count();
+        assert_eq!(groups, 3, "{html}");
+        let spans = html.matches("<span class=\"vertext-").count() - groups;
         let mapped = map_json(&m);
         assert_eq!(columns, mapped.matches('[').count() - 1, "{mapped}");
         assert_eq!(spans, m.slots().len());

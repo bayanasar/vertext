@@ -69,6 +69,21 @@ document.fonts.ready.then(() => {
   const cell = parseFloat(root.getPropertyValue('--vertext-cell'));
   const columns = [...document.querySelectorAll('.vertext-column')]
     .filter(c => c.textContent.trim());
+  // A column's slots in order: its children, and the slots inside a span
+  // that keeps a box and its marks on one line.
+  const slotsOf = c => [...c.children]
+    .flatMap(e => e.classList.contains('vertext-nobreak') ? [...e.children] : [e]);
+  // What a reader who selects a whole column and copies it gets.
+  const copied = c => {
+    const range = document.createRange();
+    range.selectNodeContents(c);
+    const selection = getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+    const text = selection.toString();
+    selection.removeAllRanges();
+    return text;
+  };
   // The centre of every upright character in the first column, across the
   // line axis: one distinct value per line of the paragraph.
   const centres = [...(columns[0] ? columns[0].querySelectorAll('.vertext-upright') : [])]
@@ -77,17 +92,18 @@ document.fonts.ready.then(() => {
     cell,
     lineGap: parseFloat(root.getPropertyValue('--vertext-line-gap')),
     // Every slot of the first column, by kind, with the centre of its line.
-    items: [...(columns[0] ? columns[0].children : [])].map(e => {
+    items: (columns[0] ? slotsOf(columns[0]) : []).map(e => {
       const r = e.getBoundingClientRect();
       return [e.className, (r.left + r.right) / 2];
     }),
     heights: columns.map(c => parseFloat(getComputedStyle(c).height)),
     centres,
     // Each column's slots, as text and the centre of their line.
-    slots: columns.map(c => [...c.children].map(e => {
+    slots: columns.map(c => slotsOf(c).map(e => {
       const r = e.getBoundingClientRect();
       return [e.textContent, Math.round((r.left + r.right) / 2)];
     })),
+    copied: columns.map(copied),
     combined: [...document.querySelectorAll('.vertext-combine')]
       .map(e => { const r = e.getBoundingClientRect(); return [r.width, r.height]; }),
     fonts: [...document.fonts].filter(f => f.status === 'loaded').map(f => f.family),
@@ -323,6 +339,63 @@ def no_mark_ends_a_line(m, where):
     return fails
 
 
+# The same rules beside a slot the browser sets as one box -- a Latin word, a
+# number, a Mongolian run -- where a line may otherwise break on either side
+# of the box. Its length along the line depends on the face, so each probe is
+# placed 1 to 8 cells from the end of the first line (an opening mark 1 to 3),
+# and at one of those the box fills the line and the mark has to go somewhere.
+BOX_CLOSING = ["sayin，", "sayin。", "sayin）", "sayin！？", "50%。", "2026」", "ᠮᠣᠩᠭᠣᠯ，",
+               "ᠮᠣᠩᠭᠣᠯ》"]
+BOX_OPENING = ["（sayin）", "「50%」", "《ᠮᠣᠩᠭᠣᠯ》"]
+BOX_PROBES = ([(probe, k) for probe in BOX_CLOSING for k in range(1, 9)]
+              + [(probe, k) for probe in BOX_OPENING for k in range(1, 4)])
+
+
+def beside_boxes(n):
+    return "\n\n".join("永" * (n - k) + probe + "永永永" for probe, k in BOX_PROBES)
+
+
+def lines_of(column, cell):
+    """A column's slots as lines, in reading order: a new line wherever the
+    centre moves by more than half a cell. A box's centre may sit a pixel off
+    the line's, or a Mongolian run's by its stem shift, so equal centres do
+    not mark a line here."""
+    lines, previous = [], None
+    for text, x in column:
+        if previous is None or abs(x - previous) > cell / 2:
+            lines.append([])
+        lines[-1].append(text)
+        previous = x
+    return lines
+
+
+def no_mark_beside_a_box_breaks(m, where):
+    """CLReq 6.1.1 beside a Latin word, a number and a Mongolian run: no
+    closing or pause mark begins a line and no opening mark ends one. And the
+    text a reader copies from each column is the paragraph as written."""
+    fails = []
+    cell = m["cell"]
+    n = round(m["heights"][0] / cell) if m["heights"] else 0
+    if len(m["slots"]) != len(BOX_PROBES):
+        return [f"{where}: {len(m['slots'])} columns for {len(BOX_PROBES)} probes"]
+    for (probe, k), column, copied in zip(BOX_PROBES, m["slots"], m["copied"]):
+        at = f"{where}: `{probe}` {k} cell(s) from the end"
+        lines = lines_of(column, cell)
+        for line in lines[1:]:
+            if line[0] in set(PROHIBITED) | {"？！", "！？", "？？", "！！"}:
+                fails.append(f"{at}: a line begins with `{line[0]}`")
+        for line in lines[:-1]:
+            if line[-1] in OPENING:
+                fails.append(f"{at}: a line ends with `{line[-1]}`")
+        written = "永" * (n - k) + probe + "永永永"
+        if copied != written:
+            fails.append(f"{at}: copying the column gives {copied!r}")
+    if not fails:
+        m["gap"] = (m.get("gap", "") + f"{len(BOX_PROBES)} probes beside a box hold, "
+                    f"and copy as written").strip()
+    return fails
+
+
 # Bichig alone, in its own progression: no upright mark on any line.
 BICHIG = "ᠮᠣᠩᠭᠣᠯ ᠪᠢᠴᠢᠭ " * 24
 
@@ -346,6 +419,8 @@ CASES = [
     ("number-affixes", affixes, {}, (900, 700), ["Noto Sans SC"], [numbers_keep_affixes]),
     ("line-start", line_start, {}, (900, 700), ["Noto Sans SC"], [no_mark_starts_a_line]),
     ("line-end", line_end, {}, (900, 700), ["Noto Sans SC"], [no_mark_ends_a_line]),
+    ("beside-a-box", beside_boxes, {}, (900, 700),
+     ["Noto Sans SC", "Vertext Noto Sans Mongolian"], [no_mark_beside_a_box_breaks]),
     ("bichig-lines", BICHIG, {"vertext-progression": "lr"}, (900, 700),
      ["Noto Sans SC", "Vertext Noto Sans Mongolian"], [line_pitch(["mongolian"])]),
     ("latin-lines", short_latin, {}, (900, 700), ["Noto Sans SC"],
