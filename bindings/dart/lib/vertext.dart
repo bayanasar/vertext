@@ -168,7 +168,10 @@ Layout layout(
     final outLen = arena<Size>();
     final out = native.vertextLayout(input, bytes.length, flags, outLen);
     if (out == nullptr) {
-      throw StateError('vertext: the native library refused the input');
+      throw StateError(
+        'vertext: the native library returned no layout (the input was not '
+        'UTF-8, or the layout failed)',
+      );
     }
     final String json;
     try {

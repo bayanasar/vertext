@@ -622,6 +622,10 @@ nothing in the core may foreclose it.
   (shown with the binding set to `0.2.0`), and its wire rule is held to
   `tools/wire-pairs.json`.
 
+  **The C boundary does not unwind.** A panic inside `vertext_layout` would
+  have aborted the host process; it now returns null with length 0, as input
+  that is not UTF-8 does, and the Dart binding throws.
+
 - **The page keeps CLReq's geometry** (#71, #72, #73, #74, #75, #77). `tools/page-geometry.py`,
   CI gate `page-geometry`: documents through pandoc, the real filter and the
   binary, in headless Chrome 152 with Noto Sans SC pinned by tag and sha256.

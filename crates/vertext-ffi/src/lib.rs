@@ -135,7 +135,9 @@ pub extern "C" fn vertext_version() -> *const c_char {
 
 /// Lay out `len` bytes of UTF-8 at `input` and return [`layout_json`] in a
 /// new buffer, its length written to `out_len`. Input that is not UTF-8
-/// returns null and writes 0. Release the buffer with [`vertext_free`].
+/// returns null and writes 0, and so does a layout that panics: a panic may
+/// not unwind out of an `extern "C"` function, where it would abort the host
+/// process with it. Release the buffer with [`vertext_free`].
 ///
 /// # Safety
 /// `input` must address `len` initialized bytes, or be null with `len` 0, and
@@ -148,7 +150,21 @@ pub unsafe extern "C" fn vertext_layout(input: *const u8, len: usize, flags: u32
         unsafe { *out_len = 0 };
         return std::ptr::null_mut();
     };
-    let json = layout_json(text, flags).into_bytes().into_boxed_slice();
+    unsafe { export(|| layout_json(text, flags), out_len) }
+}
+
+/// Run `json` and hand its bytes over as [`vertext_layout`] does, or null and
+/// 0 if it panics.
+///
+/// # Safety
+/// `out_len` must be valid for a write.
+unsafe fn export(json: impl FnOnce() -> String + std::panic::UnwindSafe,
+                 out_len: *mut usize) -> *mut u8 {
+    let Ok(json) = std::panic::catch_unwind(json) else {
+        unsafe { *out_len = 0 };
+        return std::ptr::null_mut();
+    };
+    let json = json.into_bytes().into_boxed_slice();
     unsafe { *out_len = json.len() };
     Box::into_raw(json).cast()
 }
@@ -198,6 +214,14 @@ mod tests {
     #[test]
     fn input_that_is_not_utf8_returns_null() {
         assert!(call(&[0xe5, 0xb1], 0).is_none());
+    }
+
+    #[test]
+    fn a_layout_that_panics_returns_null_instead_of_unwinding() {
+        let mut len = usize::MAX;
+        let pointer = unsafe { export(|| panic!("a layout that fails"), &mut len) };
+        assert!(pointer.is_null());
+        assert_eq!(len, 0);
     }
 
     #[test]
