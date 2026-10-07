@@ -648,6 +648,18 @@ nothing in the core may foreclose it.
   returns, parsed with `serde_json`, with the page's spans column by column,
   so U+180E dropped in the JSON writing is red there now.
 
+  **The build hook rebuilds when a source changes, and only then.** It listed
+  the crates' directories as dependencies, without the trailing slash that
+  marks a directory, so the hook runner took each for a missing file and
+  reported "File modified during build" on every run, and a directory's hash
+  covers only the names in it, so an edit inside `src/` would not have
+  rebuilt. It now lists the manifests and every source file from the depfile
+  cargo writes beside the library: two runs in a row print nothing, and an
+  edit to a core source rebuilds the library. For the toolchain it uses
+  `RUSTUP_HOME` and `CARGO_HOME` as given when a hook runner passes them, and
+  infers them only when the cargo on PATH has a `rustup` beside it, so a
+  distribution's cargo is not handed `CARGO_HOME=/usr`.
+
 - **The page keeps CLReq's geometry** (#71, #72, #73, #74, #75, #77). `tools/page-geometry.py`,
   CI gate `page-geometry`: documents through pandoc, the real filter and the
   binary, in headless Chrome 152 with Noto Sans SC pinned by tag and sha256.

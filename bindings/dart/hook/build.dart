@@ -13,13 +13,15 @@ import 'package:hooks/hooks.dart';
 const _crate = 'vertext-ffi';
 const _library = 'vertext_ffi';
 
-/// The crates the library is compiled from: any change to them rebuilds it.
-const _sources = [
+/// The manifests the library is built from. Its source files are not listed
+/// here: cargo writes them to a depfile beside the library, and the hook
+/// reads them from there (see [_compiledFrom]).
+const _manifests = [
   'Cargo.toml',
   'Cargo.lock',
-  'crates/vertext-core',
-  'crates/vertext-html',
-  'crates/vertext-ffi',
+  'crates/vertext-core/Cargo.toml',
+  'crates/vertext-html/Cargo.toml',
+  'crates/vertext-ffi/Cargo.toml',
 ];
 
 void main(List<String> args) async {
@@ -91,24 +93,54 @@ void main(List<String> args) async {
       ),
     );
     output.dependencies.addAll([
-      for (final source in _sources) workspace.resolve(source),
+      for (final manifest in _manifests) workspace.resolve(manifest),
+      ..._compiledFrom(targetDir.resolve('$triple/release/lib$_library.d')),
     ]);
   });
 }
 
+/// Every source file cargo read to build the library, from the depfile it
+/// writes beside it (`<output>: <source> <source> ...`, spaces in a path
+/// escaped). A hook dependency must be a file: a directory is hashed by the
+/// names of its direct children only, so an edit inside `src/` would not
+/// rebuild, and a directory URI without its trailing slash is taken for a
+/// missing file that changes on every build.
+List<Uri> _compiledFrom(Uri depfile) {
+  final sources = <Uri>[];
+  for (final line in File.fromUri(depfile).readAsLinesSync()) {
+    final colon = line.indexOf(': ');
+    if (colon < 0) continue;
+    for (final path in line.substring(colon + 2).split(RegExp(r'(?<!\\) '))) {
+      if (path.isNotEmpty) sources.add(Uri.file(path.replaceAll(r'\ ', ' ')));
+    }
+  }
+  if (sources.isEmpty) {
+    throw StateError(
+      'vertext: cargo listed no sources in ${depfile.toFilePath()}',
+    );
+  }
+  return sources;
+}
+
 /// Where rustup keeps its toolchains, for the cargo it runs.
 ///
-/// A hook runs with a filtered environment that keeps HOME and PATH but drops
+/// The hook runner of the SDK this was written against (Dart 3.13) starts a
+/// hook with a filtered environment that keeps HOME and PATH but drops
 /// RUSTUP_HOME and CARGO_HOME, so a toolchain installed anywhere but
 /// `$HOME/.rustup` (a container's `/usr/local/rustup`, a home directory that
 /// is not $HOME) is invisible to the cargo the hook starts. In order:
 ///
 /// - `rustup_home` and `cargo_home` from the root pubspec's user-defines;
-/// - otherwise, the cargo on PATH: rustup installs its proxies in
-///   `$CARGO_HOME/bin`, which gives CARGO_HOME exactly, and RUSTUP_HOME is
-///   the sibling `.rustup` or `rustup` that holds `toolchains/` (the two
-///   layouts rustup's installer and the official images use);
-/// - otherwise nothing, and rustup falls back to `$HOME/.rustup` itself.
+/// - otherwise, either variable as the hook received it: a runner that passes
+///   them through knows better than a guess, and cargo inherits them;
+/// - otherwise, when the cargo on PATH is a rustup proxy (a `rustup` sits in
+///   the same directory): rustup installs its proxies in `$CARGO_HOME/bin`,
+///   which gives CARGO_HOME exactly, and RUSTUP_HOME is the sibling `.rustup`
+///   or `rustup` that holds `toolchains/` (the two layouts rustup's installer
+///   and the official images use);
+/// - otherwise nothing. A cargo that is not rustup's, a distribution's in
+///   `/usr/bin` say, needs neither variable, and guessing CARGO_HOME=/usr
+///   would only break it.
 Map<String, String> _rustupEnvironment(BuildInput input) {
   final definedRustup = input.userDefines.path('rustup_home');
   final definedCargo = input.userDefines.path('cargo_home');
@@ -118,7 +150,12 @@ Map<String, String> _rustupEnvironment(BuildInput input) {
       if (definedCargo != null) 'CARGO_HOME': definedCargo.toFilePath(),
     };
   }
-  final path = Platform.environment['PATH'] ?? '';
+  final inherited = Platform.environment;
+  if (inherited.containsKey('RUSTUP_HOME') ||
+      inherited.containsKey('CARGO_HOME')) {
+    return {};
+  }
+  final path = inherited['PATH'] ?? '';
   final bin = path
       .split(':')
       .firstWhere(
@@ -126,6 +163,7 @@ Map<String, String> _rustupEnvironment(BuildInput input) {
         orElse: () => '',
       );
   if (bin.isEmpty ||
+      !File('$bin/rustup').existsSync() ||
       Directory(bin).uri.pathSegments.lastWhere((s) => s.isNotEmpty) != 'bin') {
     return {};
   }

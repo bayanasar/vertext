@@ -33,9 +33,11 @@ The native half is `crates/vertext-ffi` in this repository. A build hook
 compiles it with cargo when the package is built, so a consumer places no
 library by hand; it needs a Rust toolchain on PATH. Linux only so far.
 
-Hooks run with a filtered environment that drops `RUSTUP_HOME` and
-`CARGO_HOME`. The hook recovers them from the cargo on PATH; where that guess
-is wrong, name them in the application's `pubspec.yaml`:
+In the Dart 3.13 SDK, hooks run with a filtered environment that drops
+`RUSTUP_HOME` and `CARGO_HOME`. Where the hook receives either, it uses it as
+given; otherwise, if the cargo on PATH is a rustup proxy, it recovers both from
+there, and a cargo that is not rustup's needs neither. Where that is wrong,
+name them in the application's `pubspec.yaml`:
 
 ```yaml
 hooks:
