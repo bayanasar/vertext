@@ -769,6 +769,15 @@ mod tests {
         // In code the marks are code, and no edge is kept.
         let code = render_document("x，(y)，", RenderOptions { whole_strip_code: true, ..Default::default() });
         assert!(!code.contains("vertext-nobreak"), "{code}");
+        // A run of opening marks holds to the box as a whole, as a run of
+        // closing marks does.
+        let html = render_document("永「（sayin）」永", RenderOptions::default());
+        assert!(html.contains(&kept(&[slot("vform", "「"), slot("vform", "（"), slot("latin", "sayin"),
+                                      slot("vform", "）"), slot("vform", "」")])), "{html}");
+        // A table cell is not prose, and keeps nothing together.
+        let table = render_document("\u{E008}名\u{E009}sayin，\u{E001}", RenderOptions::default());
+        assert!(table.contains(&slot("latin", "sayin")), "{table}");
+        assert!(!table.contains("vertext-nobreak"), "{table}");
     }
 
     #[test]
