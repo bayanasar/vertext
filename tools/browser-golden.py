@@ -64,6 +64,9 @@ No Python packages: the PNG is decoded with zlib from the standard library.
 """
 
 import argparse
+import contextlib
+import functools
+import http.server
 import importlib.util
 import json
 import pathlib
@@ -72,6 +75,7 @@ import struct
 import subprocess
 import sys
 import tempfile
+import threading
 import zlib
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -235,7 +239,27 @@ html, body {{ margin: 0; padding: 0; background: #fff; }}
 """
 
 
+class _QuietHandler(http.server.SimpleHTTPRequestHandler):
+    def log_message(self, *args):
+        pass
+
+
+@contextlib.contextmanager
+def serve(directory):
+    """Serve `directory` on a free local port for the length of a `with`, and
+    yield its base URL. A gate that asks a page what it loaded over http takes
+    its screenshot from the same server, so both loads fetch the same URLs."""
+    handler = functools.partial(_QuietHandler, directory=str(directory))
+    server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), handler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    try:
+        yield f"http://127.0.0.1:{server.server_address[1]}"
+    finally:
+        server.shutdown()
+
+
 def shoot(chrome, page, png, width, height):
+    """Screenshot `page`, a file or a URL, at `width` x `height`."""
     # --disable-dev-shm-usage is not boilerplate: a container gets a 64MB
     # /dev/shm by default, and at that size this grid (1728x3360) does not fail,
     # it HANGS -- measured inside the CI image, where the same shot is 1.0s
@@ -247,7 +271,8 @@ def shoot(chrome, page, png, width, height):
         [str(chrome), "--headless", "--disable-gpu", "--no-sandbox",
          "--disable-dev-shm-usage",
          "--force-device-scale-factor=1", "--hide-scrollbars",
-         f"--window-size={width},{height}", f"--screenshot={png}", page.as_uri()],
+         f"--window-size={width},{height}", f"--screenshot={png}",
+         page if isinstance(page, str) else page.as_uri()],
         capture_output=True, text=True, timeout=300)
     if not png.exists():
         raise SystemExit(f"chrome produced no screenshot:\n{done.stderr[-2000:]}")

@@ -42,6 +42,7 @@ Usage
 
 import argparse
 import importlib.util
+import json
 import pathlib
 import shutil
 import subprocess
@@ -88,10 +89,9 @@ def build(fonts, extra_css="", hide_marks=False):
     for style, lang, face in STYLES:
         for mark in MARKS:
             cells.append((style, lang, face, mark, column_html(f"口{mark}口")))
-    # Relative, so the page loads its faces the same way from file:// for the
-    # screenshot and over http for the report of which faces loaded.
     faces = "".join(f'@font-face {{ font-family: "{f}"; src: url("{p.name}"); }}\n'
                     for f, p in fonts.items())
+    used = list(dict.fromkeys(face for _, _, face in STYLES))
     body = "".join(
         f'<div class="box"{f" lang={lang}" if lang else ""} '
         f'style="font-family: &quot;{face}&quot;">{html}</div>'
@@ -107,12 +107,19 @@ body {{ display: grid; grid-template-columns: repeat({len(MARKS)}, {BOX_W}px); }
 .box .vertext {{ position: absolute; top: {TOP}px; right: 0; padding: 0; border: 0;
                  gap: 0; min-block-size: 0; overflow: visible; }}
 {".vertext-column > :nth-child(2) { visibility: hidden; }" if hide_marks else ""}
+#unproven {{ position: fixed; inset: 0; background: #000; }}
 {extra_css}
 </style>
 {body}
+<div id="unproven"></div>
 <script>
-document.fonts.ready.then(() => fetch('result', {{ method: 'POST', body: JSON.stringify(
-  [...document.fonts].filter(f => f.status === 'loaded').map(f => f.family)) }}));
+// Black until this load has every face the marks are set in, so a screenshot
+// taken in any other face shows nothing to judge rather than marks to pass.
+document.fonts.ready.then(() => {{
+  const loaded = [...document.fonts].filter(f => f.status === 'loaded').map(f => f.family);
+  if ({json.dumps(used)}.every(f => loaded.includes(f))) document.getElementById('unproven').remove();
+  fetch('result', {{ method: 'POST', body: JSON.stringify(loaded) }});
+}});
 </script>
 """
     return cells, page
@@ -200,18 +207,26 @@ def main():
     for path in fonts.values():
         shutil.copy(path, work / path.name)
     shots = []
-    for hide in (False, True):
-        cells, html = build(fonts, args.css, hide)
-        page, png = work / f"marks{int(hide)}.html", work / f"marks{int(hide)}.png"
-        page.write_text(html, encoding="utf-8")
-        _bg.shoot(chrome, page, png, len(MARKS) * BOX_W, len(STYLES) * BOX_H)
-        shots.append(_bg.read_png(png))
+    with _bg.serve(work) as base:
+        for hide in (False, True):
+            cells, html = build(fonts, args.css, hide)
+            page, png = work / f"marks{int(hide)}.html", work / f"marks{int(hide)}.png"
+            page.write_text(html, encoding="utf-8")
+            _bg.shoot(chrome, f"{base}/{page.name}", png,
+                      len(MARKS) * BOX_W, len(STYLES) * BOX_H)
+            shots.append(_bg.read_png(png))
     (width, height, rows, channels), (_, _, blank, _) = shots
 
     fails, report = [], []
     # Ink alone cannot tell the pinned faces from any other CJK face that
     # happens to be installed: the marks would land somewhere and be judged.
-    # So the same page, served, reports which of its faces actually loaded.
+    # Each page stays black until its own load has every face, so a shot in
+    # another face has no white to find; and the same page, served again,
+    # names the faces that loaded.
+    for hide, (_, _, shot, _) in zip((False, True), shots):
+        if min(shot[0][:3]) < 200:
+            fails.append(f"the screenshot{' with the marks hidden' if hide else ''} "
+                         f"was taken before its faces loaded, or without them")
     loaded = _pg._ps.measure(chrome, work, "marks0.html",
                              (len(MARKS) * BOX_W, len(STYLES) * BOX_H))
     for face in dict.fromkeys(face for _, _, face in STYLES):

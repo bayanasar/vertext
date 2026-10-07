@@ -35,6 +35,7 @@ Usage
 
 import argparse
 import importlib.util
+import json
 import pathlib
 import shutil
 import subprocess
@@ -78,17 +79,27 @@ LINES = [
 ]
 COLOURS = {"mongolian": (255, 0, 0), "upright": (0, 0, 255), "latin": (0, 160, 0)}
 
-REPORT = """<script>
-document.fonts.ready.then(() => fetch('result', { method: 'POST', body: JSON.stringify({
-  fonts: [...document.fonts].map(f => [f.family, f.status]),
-  lines: [...document.querySelectorAll('.box')].map(b => {
-    const c = b.querySelector('.vertext-column');
-    if (!c) return null;
-    const r = c.getBoundingClientRect();
-    return (r.left + r.right) / 2;
-  }),
-}) }));
-</script>"""
+# The page stays black until this load has the shipped face and the CJK one,
+# so a screenshot taken in any other face has no stem to find.
+REPORT = """<div id="unproven"></div>
+<script>
+document.fonts.ready.then(() => {
+  const fonts = [...document.fonts].map(f => [f.family, f.status]);
+  const loaded = fonts.filter(([, status]) => status === 'loaded').map(([family]) => family);
+  if (FACES.every(f => loaded.includes(f))) {
+    document.getElementById('unproven').remove();
+  }
+  fetch('result', { method: 'POST', body: JSON.stringify({
+    fonts,
+    lines: [...document.querySelectorAll('.box')].map(b => {
+      const c = b.querySelector('.vertext-column');
+      if (!c) return null;
+      const r = c.getBoundingClientRect();
+      return (r.left + r.right) / 2;
+    }),
+  }) });
+});
+</script>""".replace("FACES", json.dumps([SHIPPED_FACE, "Noto Sans SC"]))
 
 
 def strip(text, progression):
@@ -110,6 +121,7 @@ body {{ display: grid; grid-template-columns: repeat({len(LINES)}, {box_w}px); }
 .box {{ position: relative; width: {box_w}px; height: {box_h}px; overflow: hidden; }}
 .box .vertext {{ position: absolute; top: 0; left: 0; right: 0; padding: 0; border: 0;
                  justify-content: center; min-block-size: 0; overflow: visible; }}
+#unproven {{ position: fixed; inset: 0; background: #000; }}
 {colours}
 {extra_css}
 </style>
@@ -162,8 +174,12 @@ def run(chrome, cjk, cell, work, extra_css):
     if SHIPPED_FACE not in loaded:
         return [f"{cell}px: the shipped face, {SHIPPED_FACE}, did not load "
                 f"({served['fonts']}), so the stems measured are another face's"], []
-    _bg.shoot(chrome, page, png, len(LINES) * box_w, box_h)
+    with _bg.serve(work) as base:
+        _bg.shoot(chrome, f"{base}/{page.name}", png, len(LINES) * box_w, box_h)
     _, _, rows, channels = _bg.read_png(png)
+    if min(rows[0][:3]) < 200:
+        return [f"{cell}px: the screenshot was taken before its faces loaded, "
+                f"or without them"], []
     fails, report = [], []
     for i, (progression, text, scripts) in enumerate(LINES):
         where = f"{cell}px {progression} {text}"

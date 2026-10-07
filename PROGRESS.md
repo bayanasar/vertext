@@ -813,6 +813,16 @@ nothing in the core may foreclose it.
   line's box from the DOM, bichig alone in both progressions included: the
   box's centre lies 0.03 of a cell left of the stem at 48px and 0.04 at 24px.
   Both cells run in CI; at 24px the worst offset is 0.04.
+
+  **The screenshot is the load that was checked.** `script-centres` and
+  `punctuation-ink` asked a served copy of the page which faces loaded and
+  took the screenshot from `file://`, a second load nobody asked about. Both
+  now take it from the same local server, and each page stays black until its
+  own load has every face it is set in, so a shot in another face has nothing
+  to judge. With a face moved away while only the screenshot loads, both gates
+  are red and say so; `punctuation-ink` before the change judged the fallback
+  glyphs instead, red only on the 2 marks whose position happened to differ.
+  Green on 6 runs of `punctuation-ink` and 3 of `script-centres`.
   Under the same Quarto, `examples/test-extension.sh`, which needs `quarto
   render` and so had never run on any runner here, passed all 82 of its
   checks.
