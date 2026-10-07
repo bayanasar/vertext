@@ -144,9 +144,11 @@
 .vertext-column-heading .vertext-combine {
   font-size: calc(var(--vertext-cell) * var(--vertext-heading-scale));
 }
-.vertext-column-heading .vertext-latin,
-.vertext-column-heading .vertext-mongolian {
+.vertext-column-heading .vertext-latin {
   font-size: calc(var(--vertext-cell) * 14 / 18 * var(--vertext-heading-scale));
+}
+.vertext-column-heading .vertext-mongolian {
+  font-size: calc(var(--vertext-cell) * 15 / 18 * var(--vertext-heading-scale));
 }
 /* A heading opens a section, so it takes air on the side the columns advance
    from and a rule marking the section's start. */
