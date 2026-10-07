@@ -637,6 +637,16 @@ nothing in the core may foreclose it.
   green, and a mixed page screenshotted before and after differs only in the
   spacing of its lines.
 
+  The line-edge paragraphs (#75, #77) put a mark exactly at the end of a line,
+  which holds only for the column length they were built for. They were built
+  for 28 cells and never checked it: on a host whose 900x700 window gives
+  360px (20 cells), every one passed without asking anything, and kept passing
+  with `line-break: anywhere`. The gate now measures the column first, builds
+  the paragraphs for it, and fails if the column is another length; with that,
+  `line-break: anywhere` is red on all 16 marks. `punctuation-ink` now also
+  asks the page which of its faces loaded, since ink alone cannot tell a
+  pinned face from an installed one: red with Noto Sans TC emptied.
+
   **The pause and stop marks never turn, and sit where the face puts them**
   (#73). `tools/punctuation-ink.py`, CI gate `punctuation-ink`: `口<mark>口`
   for each of `、，。．；：！？`, as the binary renders it, at a 96px cell,

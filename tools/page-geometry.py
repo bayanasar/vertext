@@ -132,6 +132,20 @@ def page(pandoc, work, name, text, meta, family):
 FONTS_IN_WORK = {}
 
 
+def built_for(cells):
+    """The paragraphs below put a mark exactly where a line ends, which holds
+    only if the column is as many cells long as the text was built for. A
+    column of another length moves the mark off the break, and the check then
+    passes without having asked anything."""
+    def check(m, where):
+        heights = set(m["heights"])
+        if heights != {cells * m["cell"]}:
+            return [f"{where}: built for {cells}-cell columns, but the columns are "
+                    f"{sorted(heights)}px of a {m['cell']}px cell"]
+        return []
+    return check
+
+
 def whole_cells(m, where):
     """CLReq 7.1.1.5: a line is a whole number of characters long. The window
     is chosen so that the space is NOT a whole number of cells; a column that
@@ -190,10 +204,13 @@ TOGETHER = "真的？！不会吧！！谁？？？"
 
 # Each paragraph leaves the end of its first line just room for the number and
 # not its suffix, or for the prefix and not its number, so the break has to go
-# somewhere: between the two, or before both.
-FILL = "永" * 27
+# somewhere: between the two, or before both. `n` is the column's length in
+# cells, measured before the text is built.
 AFFIXED = [("50", "%"), ("30", "℃"), ("¥", "100"), ("-", "5")]
-AFFIXES = "\n\n".join(FILL + a + b + "永永" for a, b in AFFIXED)
+
+
+def affixes(n):
+    return "\n\n".join("永" * (n - 1) + a + b + "永永" for a, b in AFFIXED)
 
 
 def numbers_keep_affixes(m, where):
@@ -221,7 +238,10 @@ def numbers_keep_affixes(m, where):
 # A full first line, then marks that may not start a line: each paragraph puts
 # one of them exactly where the second line begins.
 PROHIBITED = "、，。．；：！？）」』》"
-LINE_START = "\n\n".join("永" * 28 + mark + "永永" for mark in PROHIBITED)
+
+
+def line_start(n):
+    return "\n\n".join("永" * n + mark + "永永" for mark in PROHIBITED)
 
 
 def no_mark_starts_a_line(m, where):
@@ -241,7 +261,10 @@ def no_mark_starts_a_line(m, where):
 
 # And the other end: an opening mark placed in the last cell of the first line.
 OPENING = "（「『《"
-LINE_END = "\n\n".join("永" * 27 + mark + "永永永" for mark in OPENING)
+
+
+def line_end(n):
+    return "\n\n".join("永" * (n - 1) + mark + "永永永" for mark in OPENING)
 
 
 def no_mark_ends_a_line(m, where):
@@ -261,14 +284,15 @@ def no_mark_ends_a_line(m, where):
 
 
 CASES = [
-    # name, text, metadata, window, the face, checks
-    ("document-short", PROSE, {}, (900, 700), "Noto Sans SC", [whole_cells, line_gap]),
-    ("page-short", PROSE, {"vertext-page": "true"}, (900, 500), "Noto Sans SC",
+    # name, text (or a builder given the column's cells), metadata, window,
+    # the faces that must load (the first is the body's), checks
+    ("document-short", PROSE, {}, (900, 700), ["Noto Sans SC"], [whole_cells, line_gap]),
+    ("page-short", PROSE, {"vertext-page": "true"}, (900, 500), ["Noto Sans SC"],
      [whole_cells, line_gap]),
-    ("marks-together", TOGETHER, {}, (900, 700), "Noto Sans SC", [marks_together]),
-    ("number-affixes", AFFIXES, {}, (900, 700), "Noto Sans SC", [numbers_keep_affixes]),
-    ("line-start", LINE_START, {}, (900, 700), "Noto Sans SC", [no_mark_starts_a_line]),
-    ("line-end", LINE_END, {}, (900, 700), "Noto Sans SC", [no_mark_ends_a_line]),
+    ("marks-together", TOGETHER, {}, (900, 700), ["Noto Sans SC"], [marks_together]),
+    ("number-affixes", affixes, {}, (900, 700), ["Noto Sans SC"], [numbers_keep_affixes]),
+    ("line-start", line_start, {}, (900, 700), ["Noto Sans SC"], [no_mark_starts_a_line]),
+    ("line-end", line_end, {}, (900, 700), ["Noto Sans SC"], [no_mark_ends_a_line]),
 ]
 
 
@@ -289,14 +313,29 @@ def main():
         shutil.copy(path, work / path.name)
         FONTS_IN_WORK[family] = path
     fails, lines = [], []
-    for name, text, meta, window, family, checks in CASES:
-        m = _ps.measure(chrome, work, page(args.pandoc, work, name, text, meta, family), window)
+    measured = {}
+    for name, text, meta, window, families, checks in CASES:
+        if callable(text):
+            # Measure the column this window and mode give, then build for it.
+            key = (window, tuple(sorted(meta.items())))
+            if key not in measured:
+                probe = _ps.measure(chrome, work, page(args.pandoc, work, f"{name}-probe",
+                                                       PROSE, meta, families[0]), window)
+                measured[key] = probe and round(max(probe["heights"]) / probe["cell"])
+            if not measured[key]:
+                fails.append(f"{name}: the probe page reported no column")
+                continue
+            cells = measured[key]
+            text, checks = text(cells), [built_for(cells), *checks]
+        m = _ps.measure(chrome, work, page(args.pandoc, work, name, text, meta, families[0]),
+                        window)
         if m is None:
             fails.append(f"{name}: the page reported nothing within 120s")
             continue
-        if family not in m["fonts"]:
-            fails.append(f"{name}: {family} did not load ({m['fonts']}), so nothing here "
-                         f"measured a real glyph")
+        missing = [f for f in families if f not in m["fonts"]]
+        if missing:
+            fails.append(f"{name}: {', '.join(missing)} did not load ({m['fonts']}), so "
+                         f"nothing here measured a real glyph")
             continue
         for check in checks:
             fails += check(m, name)

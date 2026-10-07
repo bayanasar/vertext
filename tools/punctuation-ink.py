@@ -88,7 +88,9 @@ def build(fonts, extra_css="", hide_marks=False):
     for style, lang, face in STYLES:
         for mark in MARKS:
             cells.append((style, lang, face, mark, column_html(f"口{mark}口")))
-    faces = "".join(f'@font-face {{ font-family: "{f}"; src: url("{p.as_uri()}"); }}\n'
+    # Relative, so the page loads its faces the same way from file:// for the
+    # screenshot and over http for the report of which faces loaded.
+    faces = "".join(f'@font-face {{ font-family: "{f}"; src: url("{p.name}"); }}\n'
                     for f, p in fonts.items())
     body = "".join(
         f'<div class="box"{f" lang={lang}" if lang else ""} '
@@ -108,6 +110,10 @@ body {{ display: grid; grid-template-columns: repeat({len(MARKS)}, {BOX_W}px); }
 {extra_css}
 </style>
 {body}
+<script>
+document.fonts.ready.then(() => fetch('result', {{ method: 'POST', body: JSON.stringify(
+  [...document.fonts].filter(f => f.status === 'loaded').map(f => f.family)) }}));
+</script>
 """
     return cells, page
 
@@ -191,6 +197,8 @@ def main():
     fonts = _pg.fetch_fonts(pathlib.Path(args.fonts))
 
     work = pathlib.Path(tempfile.mkdtemp(prefix="vertext-punctuation-"))
+    for path in fonts.values():
+        shutil.copy(path, work / path.name)
     shots = []
     for hide in (False, True):
         cells, html = build(fonts, args.css, hide)
@@ -201,6 +209,15 @@ def main():
     (width, height, rows, channels), (_, _, blank, _) = shots
 
     fails, report = [], []
+    # Ink alone cannot tell the pinned faces from any other CJK face that
+    # happens to be installed: the marks would land somewhere and be judged.
+    # So the same page, served, reports which of its faces actually loaded.
+    loaded = _pg._ps.measure(chrome, work, "marks0.html",
+                             (len(MARKS) * BOX_W, len(STYLES) * BOX_H))
+    for face in dict.fromkeys(face for _, _, face in STYLES):
+        if loaded is None or face not in loaded:
+            fails.append(f"{face} did not load ({loaded}), so the ink measured is "
+                         f"not that face's")
     for i, (style, lang, face, mark, _) in enumerate(cells):
         where = f"{mark} {style} ({lang or 'no lang'}, {face})"
         m, problem = measure(rows, blank, channels, i)
