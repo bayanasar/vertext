@@ -902,6 +902,16 @@ nothing in the core may foreclose it.
   `docs/ARCHITECTURE.md` gives the order, the approval condition and the
   repeated pull request run.
 
+  The gate's status now says whether `version` only awaits its tag
+  (`awaits its tag v0.3.1, nothing else`) or else names the first problem,
+  since this instance serves no log through the API. The gate runs after a
+  tag fetch that failed, and is red there with "no v* tags are visible"
+  rather than skipped. Both archives take their names from one rule,
+  `archive_suffix()`, whose cases state each outcome. In the same scratch
+  repository: a clean release commit was red on `version` alone with that
+  status; a broken release case and a wrong Dart checksum were each named in
+  their gate's status; a failed tag fetch was red on `version`.
+
 ## Not sealed
 
 
