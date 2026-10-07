@@ -170,6 +170,8 @@ fn measure_slots(text: &str) -> (usize, usize) {
     // nothing else, and a bracket continues a Latin word and nothing else.
     let mut in_latin = false;
     let mut in_bichig = false;
+    // A suffix separator has been read since the word's last letter.
+    let mut after_separator = false;
     for cluster in text.graphemes(true) {
         let Some(base) = cluster.chars().next() else { continue };
         if is_cjk(base) {
@@ -184,6 +186,7 @@ fn measure_slots(text: &str) -> (usize, usize) {
             }
             in_latin = false;
             in_bichig = true;
+            after_separator = false;
         } else if is_word_char(base) {
             // A whole Latin word is one slot; count only where it begins, and
             // a bichig run to the left does not make this its continuation.
@@ -196,11 +199,16 @@ fn measure_slots(text: &str) -> (usize, usize) {
             // Inside the word, as `layout_text` reads it: `kedU(n)`,
             // `gerel.net`. A connector with no Latin word open is punctuation
             // there and must be punctuation here too, so it falls through.
-        } else if in_bichig && is_suffix_separator(base) {
+        } else if in_bichig && is_suffix_separator(base) && !after_separator {
             // The word continues across the joint. A stem and its case ending
             // are one word and one slot — see `is_suffix_separator` — and
             // counting them twice weighs the same word twice, which is the
             // measure disagreeing with the layout about what a slot is.
+            //
+            // One joint, not two. Of two separators in a row neither has
+            // bichig on both sides, so the layout sets both as spaces and
+            // the letters after them open a run of their own.
+            after_separator = true;
         } else {
             in_latin = false;
             in_bichig = false;
@@ -1494,6 +1502,8 @@ mod tests {
             "山 (a() 川",
             "a(b()c",
             "(etc.)",
+            // Two suffix separators in a row: neither has bichig on both sides.
+            "\u{182E}\u{1823}\u{202F}\u{202F}\u{1823}",
         ];
 
         for text in cases {
@@ -1502,6 +1512,20 @@ mod tests {
                 census(&layout_text(text, &LayoutConfig::default())),
                 "measure and layout disagree on {text:?}"
             );
+        }
+    }
+
+    /// The same agreement over arbitrary arrangements of what ends a word: the
+    /// suffix and vowel separators among bichig, Latin, digits, signs, marks
+    /// and line breaks. A typed text is not always a well-formed one.
+    #[test]
+    fn the_measure_agrees_with_the_layout_on_any_input() {
+        let alphabet = ["\u{182E}", "\u{1823}", "\u{1820}", "\u{202F}", "\u{180E}", "\u{180B}",
+                        "a", "Z", "5", "_", "(", ")", "-", ".", "%", "$", "\u{2212}", "\u{B0}",
+                        "?", "!", " ", "\n", "\u{5C71}", "\u{3002}"];
+        for text in random_texts(&alphabet, 50_000) {
+            assert_eq!(measure_slots(&text), census(&layout_text(&text, &LayoutConfig::default())),
+                       "measure and layout disagree on {text:?}");
         }
     }
 

@@ -832,6 +832,17 @@ nothing in the core may foreclose it.
   JSON (red, null, without the fix), and `dart-parity` has them: 188 inputs,
   558 vertical layouts, 573 columns, 1812 slots.
 
+  **The census agrees with the layout on a doubled suffix separator** (#90).
+  `ᠮᠣ`, U+202F twice, `ᠣ` was one vertical slot to `measure_slots` and two
+  to the layout. The layout's reading stands: a separator joins a stem and a
+  suffix only with bichig on both sides, which neither of two in a row has,
+  so both are spaces and the letters after them open a run of their own. The
+  census now ends the word at the second, so only the vote changes, and only
+  for such text. A random test over bichig, both separators, a variation
+  selector, Latin, digits, signs, marks and line breaks (50,000 inputs, each
+  character escaped in the source) holds the two together: red on `97b300b`,
+  green now, and clean on 1,000,000 inputs over a wider alphabet.
+
 ## Not sealed
 
 
