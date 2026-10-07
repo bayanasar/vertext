@@ -227,8 +227,8 @@ def marks_together(m, where):
     than the line."""
     cell, pitch = m["cell"], m["cell"] * 1.5
     fails = []
-    if len(m["combined"]) != 3:
-        fails.append(f"{where}: {len(m['combined'])} paired marks, expected 3")
+    if len(m["combined"]) != 4:
+        fails.append(f"{where}: {len(m['combined'])} paired marks, expected 4")
     for width, height in m["combined"]:
         if abs(height - cell) > 0.5 or width > pitch + 0.5:
             fails.append(f"{where}: a pair takes {width:.1f}x{height:.1f}px, "
@@ -238,7 +238,7 @@ def marks_together(m, where):
     return fails
 
 
-TOGETHER = "真的？！不会吧！！谁？？？"
+TOGETHER = "真的？！不会吧！！谁？？？真的?!"
 
 # Each paragraph leaves the end of its first line just room for the number and
 # not its suffix, or for the prefix and not its number, so the break has to go

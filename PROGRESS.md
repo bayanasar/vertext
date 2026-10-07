@@ -678,10 +678,11 @@ nothing in the core may foreclose it.
   draw the vertical presentation forms, which sit in the corner regardless.
 
   **Question and exclamation marks used together share a cell** (#74). The
-  core pairs `？！`, `！？`, `？？` and `！！` into one slot, `combine`, and the
-  page sets it with `text-combine-upright: all`; three marks are a pair and a
-  single, so they take two cells as GB/T 15834 asks. Prose only. In the
-  `page-geometry` gate each of 3 pairs is one 18px cell along the line; red at
+  core pairs `？！`, `！？`, `？？` and `！！`, and their halfwidth forms, into
+  one slot, `combine`, and the page sets it with `text-combine-upright: all`;
+  three marks are a pair and a single, so they take two cells as GB/T 15834
+  asks. Prose only. In the `page-geometry` gate each of 4 pairs (one of them
+  `?!`) is one 18px cell along the line; red at
   36px with the property removed, and the core test red with the pairing pass
   skipped. The new kind reaches the Dart binding, and `dart-parity` holds it
   to the page's class (179 inputs, 1726 slots).

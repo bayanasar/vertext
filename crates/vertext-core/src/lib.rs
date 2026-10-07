@@ -240,8 +240,9 @@ pub enum Slot {
     /// Punctuation and other unsupported scripts remain upright for now.
     Neutral(String),
     /// Two question or exclamation marks used together (`？！`, `！？`, `？？`,
-    /// `！！`), set side by side in one character's space (CLReq 5.1.1.3, after
-    /// GB/T 15834). Three take two spaces: a pair and a single mark.
+    /// `！！`, fullwidth or halfwidth), set side by side in one character's
+    /// space (CLReq 5.1.1.3, after GB/T 15834). Three take two spaces: a pair
+    /// and a single mark.
     Combined(String),
 }
 
@@ -492,10 +493,13 @@ fn attach_affixes(slots: &mut Vec<Slot>) {
 /// GB/T 15834, which CLReq 5.1.1.3 follows: a question mark and an exclamation
 /// mark used together take one character's space, two of the same take one,
 /// and three take two. Pairing from the start gives exactly that: `？？？` is a
-/// pair and a single. Prose only. In code, `!!` and `?!` are operators, and
-/// setting them side by side would misquote the program.
+/// pair and a single. The halfwidth marks pair the same way, alone or with a
+/// fullwidth one: `?!` in a Chinese sentence is the same pair typed on another
+/// keyboard. Prose only. In code, `!!` and `?!` are operators, and setting
+/// them side by side would misquote the program.
 fn combine_marks(slots: &mut Vec<Slot>) {
-    let is_mark = |slot: &Slot| matches!(slot, Slot::Neutral(s) if s == "！" || s == "？");
+    let is_mark = |slot: &Slot| matches!(slot, Slot::Neutral(s)
+        if matches!(s.as_str(), "！" | "？" | "!" | "?"));
     let mut out = Vec::with_capacity(slots.len());
     let mut rest = std::mem::take(slots).into_iter().peekable();
     while let Some(slot) = rest.next() {
@@ -805,8 +809,8 @@ mod tests {
     #[test]
     fn question_and_exclamation_marks_used_together_share_a_space() {
         let slots = |text: &str| layout_text(text, &LayoutConfig::default()).columns[0].slots.clone();
-        // A pair in either order, or two of a kind: one slot.
-        for pair in ["？！", "！？", "？？", "！！"] {
+        // A pair in either order, or two of a kind, fullwidth or not: one slot.
+        for pair in ["？！", "！？", "？？", "！！", "?!", "!?", "??", "!!"] {
             assert_eq!(slots(&format!("好{pair}好"))[1], Slot::Combined(pair.into()), "{pair}");
         }
         // Three take two spaces: a pair, then a single mark.
