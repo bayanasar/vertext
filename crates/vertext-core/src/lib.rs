@@ -513,13 +513,21 @@ fn attach_affixes(slots: &mut Vec<Slot>) {
 /// fullwidth one: `?!` in a Chinese sentence is the same pair typed on another
 /// keyboard. Prose only. In code, `!!` and `?!` are operators, and setting
 /// them side by side would misquote the program.
+///
+/// Two halfwidth marks after a Latin word or a space stay apart. Inline code
+/// in a paragraph reaches the layout as prose, so `x!!` and `a ?? b` there are
+/// operators too, and `Really?!` is a Latin sentence's. A pair with a
+/// fullwidth mark in it was typed in Chinese wherever it stands.
 fn combine_marks(slots: &mut Vec<Slot>) {
     let is_mark = |slot: &Slot| matches!(slot, Slot::Neutral(s)
         if matches!(s.as_str(), "！" | "？" | "!" | "?"));
-    let mut out = Vec::with_capacity(slots.len());
+    let halfwidth = |slot: &Slot| matches!(slot.text(), "!" | "?");
+    let mut out: Vec<Slot> = Vec::with_capacity(slots.len());
     let mut rest = std::mem::take(slots).into_iter().peekable();
     while let Some(slot) = rest.next() {
-        if is_mark(&slot) && rest.peek().is_some_and(is_mark) {
+        let after_latin = matches!(out.last(), Some(Slot::LatinWord(_) | Slot::Space(_)));
+        if is_mark(&slot) && rest.peek().is_some_and(is_mark)
+            && !(after_latin && halfwidth(&slot) && rest.peek().is_some_and(halfwidth)) {
             let next = rest.next().unwrap();
             out.push(Slot::Combined(format!("{}{}", slot.text(), next.text())));
         } else {
@@ -851,6 +859,13 @@ mod tests {
         // One alone is a mark like any other, and so are marks apart.
         assert_eq!(slots("好？好")[1], Slot::Neutral("？".into()));
         assert_eq!(slots("好？好！好")[1], Slot::Neutral("？".into()));
+        // Halfwidth marks after a Latin word or a space are not a pair: that
+        // is a Latin sentence or an operator, and inline code in prose reaches
+        // the layout as text. A fullwidth mark is typed in Chinese, and pairs.
+        for text in ["在Kotlin里写x!!，在JS里写a ?? b", "Really?!", "共100?!"] {
+            assert!(!slots(text).iter().any(|s| matches!(s, Slot::Combined(_))), "{text}");
+        }
+        assert_eq!(slots("Really？！")[1], Slot::Combined("？！".into()));
         // In code they are operators, and are left exactly as written.
         let code = LayoutConfig { preserve_spaces: true, ..LayoutConfig::default() };
         assert!(!layout_text("x！！y", &code).columns[0].slots
