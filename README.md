@@ -150,6 +150,16 @@ contents keep working. `vertext-page: true` takes over the body and suits a
 standalone document. Either way no `::: {.vertext}` fence is needed; explicit
 fences still work for laying out one region of an otherwise horizontal page.
 
+### Fonts and region
+
+vertext ships no CJK face, and where the pause marks `、，。．；：` sit is the
+face's to decide. A Mainland face such as Noto Sans SC puts them in the upper
+right of their cell; a Taiwan or Hong Kong page wants them centred, which takes
+a Taiwan face such as Noto Sans TC and the language declared (`lang: zh-TW`,
+`zh-HK` or `zh-Hant` in the YAML). Without it pandoc writes `lang=""`, and a
+face that serves every region falls back to its own: Noto Sans SC keeps the
+corner under `zh-TW` too.
+
 ### What markdown survives
 
 The filter flattens each block to characters before handing it to the binary,

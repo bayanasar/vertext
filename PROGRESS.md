@@ -708,7 +708,8 @@ nothing in the core may foreclose it.
   `inline-block`, 10 of `、，。．；：！？）」』》` began a line and all 4 of `（「『《`
   ended one; only `！？`, already plain inline, held. An atomic inline box may
   break on either side, so the browser's rules never saw those characters. As
-  plain inline text, all 16 hold. Screenshots before and after: the brackets
+  plain inline text, all 16 hold beside Han characters. Beside a Latin, digit
+  or Mongolian slot they do not (see "Not sealed"). Screenshots before and after: the brackets
   keep their vertical forms and the arrows still turn, and a two-em dash that
   was split across two lines now moves whole.
 
@@ -775,10 +776,24 @@ nothing in the core may foreclose it.
   actually for: two consumers still install the two halves separately, so there
   is still a pair to mismatch. This is the second line of defence the issue
   asks for, built before the first.
+- **Line-edge rules fail beside a Latin, digit or Mongolian slot** (#85).
+  Those slots are inline-block, and a line may break on either side of an
+  atomic box, so a mark next to one escapes the rules that hold it beside Han
+  characters: measured, the comma of `sayin，` and the closing marks after
+  `50%`, `2026` and `sayin` began a line, and the opening brackets of
+  `（sayin）`, `「50%」` and `《ᠮᠣᠩᠭᠣᠯ》` ended one. CLReq 6.1.1 is Partial until it
+  is fixed.
+
 - **A sign between two words breaks from its number.** `30°C` is three slots,
   and a line may fall after `30`. Joining `°` to either word would set two
   Latin slots side by side, which the slot census forbids; CLReq 6.1.2.2 is
   Partial for it.
+
+- **The pause marks' regional placement is the page's to supply.** vertext
+  ships no CJK face, and pandoc writes `lang=""` for a document that declares
+  no language; Noto Sans SC keeps the Mainland corner under `zh-TW`. A Taiwan
+  or Hong Kong page needs a Taiwan face and its language declared, so CLReq
+  2.1.2 is Partial.
 
 - **The docs site still pins its two halves separately** (#9, step 2). It
   vendors the filter and pins the binary on its own; its switch to the release

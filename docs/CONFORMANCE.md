@@ -41,14 +41,16 @@ a verdict):
 
 | | Conforms | Partial | Not implemented | Informative |
 |---|---|---|---|---|
-| CLReq | 9 | 13 | 21 | 3 |
+| CLReq | 7 | 15 | 21 | 3 |
 | MLReq | 3 | 12 | 7 | 4 |
 
 The pattern is the same in both. Direction, orientation, keeping words whole
 and preserving the text are met and tested, and so are the page measurements
-CLReq gives numbers for (a line in whole characters, the line gap, where the
-pause marks sit, marks used together, a number with its sign), which are
-measured in a browser with a real CJK face. Anything that needs the engine to
+CLReq gives numbers for (a line in whole characters, the line gap, marks used
+together), which are measured in a browser with a real CJK face. Where the
+pause marks sit, a number with its sign, and the marks kept off line edges are
+measured too, and each holds only in part: the first on the page's own face
+and language, the other two not beside a Latin or Mongolian slot. Anything that needs the engine to
 measure (justification, punctuation compression, widows, hanging punctuation),
 anything that needs markup vertext does not carry (ruby, emphasis marks,
 interlinear lines, decoration), and anything print-only (pages, running heads,
@@ -90,7 +92,7 @@ Three findings are worth reading before the tables:
 |---|---|---|---|
 | 2.1.1 Writing modes in Chinese | Informative | Both modes exist: vertical columns, with horizontal blocks for Latin-majority prose, code and tables. | |
 | 2.1.2 Arrangement of characters and lines | Conforms | Characters run top to bottom and columns advance right to left. Progression is data, not a constant. | `a_newline_creates_the_column_to_the_left`, `progression_reaches_the_dom_as_data`, gate `progression-scroll` |
-| 2.1.2 Punctuation position | Conforms | `、，。．；：` and `！？` never turn. They are placed by the face's vertical forms: in Noto Sans SC to the right and, for the short marks, in the upper half (Mainland); in Noto Sans TC at the centre, under `zh-TW`, `zh-HK` and `zh-Hant`. A face that does not switch its forms with the language keeps its own region's placement. | `the_punctuation_contract`, gate `punctuation-ink` |
+| 2.1.2 Punctuation position | Partial | `、，。．；：` and `！？` never turn. They are placed by the face's vertical forms: in Noto Sans SC to the right and, for the short marks, in the upper half (Mainland); in Noto Sans TC at the centre, under `zh-TW`, `zh-HK` and `zh-Hant`. Both depend on what the page supplies, and vertext supplies neither: it ships no CJK face, and a document with no `lang` in its metadata gets `lang=""` from pandoc. A face that does not switch its forms with the language keeps its own region's placement: Noto Sans SC puts them in the corner under `zh-TW` too. So a Taiwan or Hong Kong page needs a Taiwan face and its language declared. | `the_punctuation_contract`, gate `punctuation-ink` |
 | 2.1.2 Western text in vertical | Partial | Only horizontal-in-vertical is used, for every Latin or digit run. No upright acronyms, no rotation, by decision (see the findings above). Runs longer than 12 characters break with a visible hyphen. | `long_latin_words_are_bounded`, `a_long_word_breaks_at_the_hyphen_it_already_has` |
 | 2.1.2 Table captions | Not implemented | The wire protocol carries no caption. | |
 | 2.1.2 Table header row on the right | Partial | Header cells are real `<th>` and the table is `vertical-rl`, so the header row falls on the right. Nothing measures where it lands. | `a_table_keeps_its_cells_apart` |
@@ -130,7 +132,7 @@ Three findings are worth reading before the tables:
 
 | Section | Status | Note | Evidence |
 |---|---|---|---|
-| 6.1.1 Line start and line end prohibition | Conforms | Line breaking is the browser's (UAX #14 and CSS `line-break`), by design: the engine does not measure, so it cannot own a break. The marks are plain inline text, so the browser's rules reach them: no closing or pause mark of `、，。．；：！？）」』》` begins a line and no opening mark of `（「『《` ends one. They were inline-block until October 2026, which let 14 of those 16 cases through. | gate `page-geometry` |
+| 6.1.1 Line start and line end prohibition | Partial | Line breaking is the browser's (UAX #14 and CSS `line-break`), by design: the engine does not measure, so it cannot own a break. The marks are plain inline text, so the browser's rules reach them beside Han characters: no closing or pause mark of `、，。．；：！？）」』》` begins a line and no opening mark of `（「『《` ends one. They were inline-block until October 2026, which let 14 of those 16 cases through. Beside a Latin, digit or Mongolian slot the rules still fail, because those slots are inline-block and a line may break on either side of one: the comma of `sayin，` can begin a line and the bracket of `（sayin）` end one. Not fixed yet. | gate `page-geometry` |
 | 6.1.2.1 Two-em dash and ellipsis unbroken | Partial | Each is one or two vertical-form slots; whether they stay together is the browser's. | |
 | 6.1.2.2 Digits and their prefixes and suffixes | Partial | A digit run is one slot and never splits. `%`, `‰`, `‱`, the degree signs and a trailing currency symbol join the number before them, and `+`, `-`, `±`, `−` and a leading currency symbol the number after them, so no line falls between them. Measured first: as separate slots, Chrome broke between them in all four cases tried. Prose only. Not handled: a sign with a word on its other side, as in `30°C`, `US$100` or `5−3`, joins neither, since a Latin word on each side of it is two slots and joining it to one would merge them. So `30°C` may break after the number. The fullwidth `－` is not a sign: between numbers in Chinese it marks a range (`1990－2000`) and keeps its vertical form. | `a_number_keeps_its_sign_and_unit`, gate `page-geometry` |
 | 6.1.2.3 Annotation marks | Not implemented | No superscript or note markup. | |
