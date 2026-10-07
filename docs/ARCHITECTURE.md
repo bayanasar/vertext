@@ -242,9 +242,12 @@ A release, new minor or patch, therefore goes out in this order:
    is red, as it should be: the commit claims a release no tag names yet.
    Every other step runs after that red, so the commit carries the evidence
    the review approves on. **A release commit is approved only when `version`
-   is its one red gate**, and its message says the release awaits its tag;
-   a version whose tag is already on another commit says so instead, and the
-   archives refuse it too.
+   is its one red gate and its status reads `awaits its tag v<version>,
+   nothing else`.** The gate writes that line only when the missing tag is
+   its one problem; anything else, a broken case of the release rule or a
+   version whose tag is already on another commit, puts the first problem in
+   the status instead, and the archives refuse the latter too. The status is
+   what to read: this instance serves no log through the API.
 2. Once the review approves, the tag goes on that same commit and is pushed.
    CI runs on a tag push too, on the same commit with HEAD on the tag, and
    every gate passes, `version` included; the archives take their release

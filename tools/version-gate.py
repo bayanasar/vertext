@@ -17,10 +17,16 @@ Three checks from tools/versions.py:
 
 Needs the tags; a shallow CI checkout fetches them first.
 
+A red writes one line for the gate's status (.forgejo/report-gates.py), since
+this instance serves no log through the API: `awaits its tag v<version>,
+nothing else` when the only problem is a release commit's missing tag, which
+is how a review tells that red from any other, or else the first problem.
+
 Usage:
     python3 tools/version-gate.py
 """
 
+import os
 import sys
 
 import versions
@@ -53,16 +59,28 @@ def case_problems():
     return problems
 
 
+def note(text):
+    """One line in the gate's status, through the step's `note` output."""
+    path = os.environ.get("GITHUB_OUTPUT")
+    if path:
+        with open(path, "a", encoding="utf-8") as out:
+            out.write("note=" + " ".join(text.split())[:120] + "\n")
+
+
 def main():
     problems = case_problems() + versions.wire_problems() + versions.check()
     version = versions.version()
+    awaiting = False
     if version:
-        problem = versions.release_problem(version)
+        suffix, problem = versions.archive_suffix_at_head(version)
         if problem:
             problems.append(problem)
+            awaiting = suffix == versions.UNTAGGED
     for p in problems:
         print("FAIL: " + p)
     if problems:
+        note(f"awaits its tag v{version}, nothing else"
+             if awaiting and len(problems) == 1 else problems[0])
         return 1
     print(f"PASS: every declaration says {version}, which this commit may "
           f"carry; the release rule agrees with {len(RELEASE_CASES)} cases and "

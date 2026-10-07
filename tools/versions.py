@@ -33,7 +33,7 @@ check the other three:
   same minor it is heading for. The cost: two checkouts of main between the
   same two tags both say `0.4.0-dev` and accept each other.
 
-A release version is only honest on its tag, so off a tag `release_problem()`
+A release version is only honest on its tag, so off a tag `release_refusal()`
 refuses every release version, a new minor's included: between setting
 `0.3.0` and cutting `v0.3.0`, every commit that lands builds halves claiming
 to be 0.3.0, and if the tag goes on a later commit they pair with the release.
@@ -127,20 +127,9 @@ def _tags():
     return _git("tag", "--list", "v*"), _git("tag", "--points-at", "HEAD")
 
 
-def release_problem(v):
-    """Why version `v` may not be built at HEAD, or None.
-
-    Needs the tags: in a shallow CI checkout, fetch them first. No tags at all
-    is an error rather than a pass, because a checkout without tags would let
-    every version through.
-    """
-    tags, at_head = _tags()
-    return release_refusal(v, tags, at_head) if tags else NO_TAGS
-
-
 def release_refusal(v, tags, at_head):
-    """`release_problem()` without git: `tags` are the v* tags, `at_head`
-    those on HEAD. version-gate.py runs its cases through this."""
+    """Why version `v` may not be built at HEAD, or None: `tags` are the v*
+    tags, `at_head` those on HEAD (`archive_suffix_at_head()` reads them)."""
     if f"v{v}" in at_head:
         return None
     if f"v{v}" in tags:
