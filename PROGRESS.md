@@ -617,7 +617,9 @@ nothing in the core may foreclose it.
   toolchain from PATH alone. Shown red three ways: U+180E dropped in the Dart
   decoding, 222 findings with `cargo test` all green; a code point above
   U+FFFF counted as one UTF-16 unit, caught on `𠀋` by the range check; U+180E
-  dropped in the FFI serialization, red here and in the crate's own tests.
+  dropped where the slot's text is taken, red here and in the crate's own
+  tests. (Dropped in the JSON writing instead, the crate's tests stayed
+  green, since none of them read the JSON back; see below.)
   The binding refuses a library from another release, naming both versions
   (shown with the binding set to `0.2.0`), and its wire rule is held to
   `tools/wire-pairs.json`.
@@ -625,6 +627,10 @@ nothing in the core may foreclose it.
   **The C boundary does not unwind.** A panic inside `vertext_layout` would
   have aborted the host process; it now returns null with length 0, as input
   that is not UTF-8 does, and the Dart binding throws.
+
+  **The crate's tests read the JSON back.** They compare the JSON the export
+  returns, parsed with `serde_json`, with the page's spans column by column,
+  so U+180E dropped in the JSON writing is red there now.
 
 - **The page keeps CLReq's geometry** (#71, #72, #73, #74, #75, #77). `tools/page-geometry.py`,
   CI gate `page-geometry`: documents through pandoc, the real filter and the

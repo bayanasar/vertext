@@ -231,7 +231,10 @@ mod tests {
     }
 
     /// The kinds and texts are the spans the page draws for the same input,
-    /// in order: a host painting these slots paints what the CLI renders.
+    /// column by column: a host painting these slots paints what the CLI
+    /// renders. Read back from the bytes the export returns, so the JSON
+    /// writing is on the path too: a character it drops is a slot that no
+    /// longer matches its span.
     #[test]
     fn the_slots_are_the_spans_the_page_draws() {
         for flags in [0, CODE, LEFT_TO_RIGHT] {
@@ -244,19 +247,30 @@ mod tests {
                     Progression::RightToLeft
                 },
             });
-            let mut spans = Vec::new();
-            let mut rest = html.as_str();
-            while let Some(at) = rest.find("<span class=\"vertext-") {
-                rest = &rest[at + "<span class=\"vertext-".len()..];
-                let (kind, after) = rest.split_once("\">").unwrap();
-                let (body, after) = after.split_once("</span>").unwrap();
-                spans.push((kind.to_owned(), body.to_owned()));
-                rest = after;
-            }
-            let (_, columns) = slots(MIXED, flags).unwrap();
-            let drawn: Vec<(String, String)> = columns.iter().flatten()
-                .map(|s| (s.kind.to_owned(), s.text.clone())).collect();
-            assert_eq!(drawn, spans, "flags {flags}");
+            let page: Vec<Vec<(String, String)>> = html.split("<div class=\"vertext-column")
+                .skip(1)
+                .map(|column| {
+                    let mut spans = Vec::new();
+                    let mut rest = column.split("</div>").next().unwrap();
+                    while let Some(at) = rest.find("<span class=\"vertext-") {
+                        rest = &rest[at + "<span class=\"vertext-".len()..];
+                        let (kind, after) = rest.split_once("\">").unwrap();
+                        let (body, after) = after.split_once("</span>").unwrap();
+                        spans.push((kind.to_owned(), body.to_owned()));
+                        rest = after;
+                    }
+                    spans
+                })
+                .collect();
+            let json: serde_json::Value =
+                serde_json::from_slice(&call(MIXED.as_bytes(), flags).unwrap()).unwrap();
+            let drawn: Vec<Vec<(String, String)>> = json["columns"].as_array().unwrap().iter()
+                .map(|column| column.as_array().unwrap().iter()
+                    .map(|slot| (slot["kind"].as_str().unwrap().to_owned(),
+                                 slot["text"].as_str().unwrap().to_owned()))
+                    .collect())
+                .collect();
+            assert_eq!(drawn, page, "flags {flags}");
         }
     }
 
