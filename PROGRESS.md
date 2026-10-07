@@ -677,8 +677,10 @@ nothing in the core may foreclose it.
   written by a download nobody checked, and restoring it skipped the check.
   The step says which happened in its status, as a note the reporter now adds
   to a gate's description, since this instance serves no log through the API:
-  the first run under the new key, in the scratch repository above, reads
-  `downloaded, sha256sum -c: /tmp/dart.zip: OK`.
+  the first run under the new key, in the scratch repository of the #88 entry
+  below, reads `downloaded, sha256sum -c: /tmp/dart.zip: OK`. A mismatch
+  writes its note before the step fails, since that is the case a reviewer
+  needs it for.
 
 - **The page keeps CLReq's geometry** (#71, #72, #73, #74, #75, #77). `tools/page-geometry.py`,
   CI gate `page-geometry`: documents through pandoc, the real filter and the

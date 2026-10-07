@@ -390,7 +390,7 @@ jobs:
       # a run whose download passed `sha256sum -c`; a key of the version alone
       # was first written by an unchecked download, and restoring it skipped
       # the check for as long as it lived. The step reports which happened in
-      # its status (`note`, read by the reporter below).
+      # its status (`note`, read by the reporter below), a mismatch included.
       - name: The pinned Dart SDK
         if: ${{ !cancelled() }}
         uses: actions/cache@v4
@@ -405,9 +405,16 @@ jobs:
           if [ ! -x /opt/dart-sdk/bin/dart ]; then
             curl -sSfL -o /tmp/dart.zip \
               "https://storage.googleapis.com/dart-archive/channels/stable/release/$DART_VERSION/sdk/dartsdk-linux-x64-release.zip"
-            echo "$DART_SHA256  /tmp/dart.zip" | sha256sum -c - > /tmp/dart-checksum
-            cat /tmp/dart-checksum
-            echo "note=downloaded, sha256sum -c: $(cat /tmp/dart-checksum)" >> "$GITHUB_OUTPUT"
+            # A mismatch is the case the status matters most for, so it
+            # writes its note before the step fails.
+            if echo "$DART_SHA256  /tmp/dart.zip" | sha256sum -c - > /tmp/dart-checksum 2>&1; then
+              echo "note=downloaded, sha256sum -c: $(head -1 /tmp/dart-checksum)" >> "$GITHUB_OUTPUT"
+              cat /tmp/dart-checksum
+            else
+              echo "note=checksum mismatch: $(head -1 /tmp/dart-checksum)" >> "$GITHUB_OUTPUT"
+              cat /tmp/dart-checksum
+              exit 1
+            fi
             unzip -q /tmp/dart.zip -d /opt
             rm -f /tmp/dart.zip
           else
