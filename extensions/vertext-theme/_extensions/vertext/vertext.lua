@@ -58,12 +58,18 @@ local column_chars = nil
 -- and will never select ours. The filter would then emit correct markup that
 -- nothing styles, and the page renders as flat horizontal text: the failure
 -- looks like the extension did nothing rather than like a missing stylesheet.
--- Declaring the dependency here means the CSS ships wherever the filter runs.
+-- Declaring the dependency here means the CSS ships wherever the filter runs,
+-- and the Mongolian face with it: the stylesheet names it by a relative URL,
+-- so it has to land in the same directory.
 local stylesheet_added = false
 local function ensure_stylesheet()
   if stylesheet_added then return end
   stylesheet_added = true
-  quarto.doc.add_html_dependency({ name = 'vertext', stylesheets = { 'vertext.css' } })
+  quarto.doc.add_html_dependency({
+    name = 'vertext',
+    stylesheets = { 'vertext.css' },
+    resources = { 'NotoSansMongolian-Regular.ttf' },
+  })
 end
 
 -- Runs the binary over one marker-tagged string. Kept in one place so the

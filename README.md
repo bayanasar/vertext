@@ -160,6 +160,16 @@ a Taiwan face such as Noto Sans TC and the language declared (`lang: zh-TW`,
 face that serves every region falls back to its own: Noto Sans SC keeps the
 corner under `zh-TW` too.
 
+The Mongolian face does ship: Noto Sans Mongolian sits beside `vertext.css`
+under the SIL Open Font License (`NotoSansMongolian-OFL.txt`), and the
+stylesheet loads it under a family name of its own. Every Mongolian
+measurement behind this project was taken in that face, including where a run
+sits across its line: its stem is 0.19 em off the centre of its box, and the
+stylesheet moves each run by `--vertext-mongolian-stem-shift` to put the stem
+on the line's centre. A theme that sets bichig in another face declares its own
+value on `.vertext`, not on `:root`, where it would depend on which stylesheet
+loads last.
+
 ### What markdown survives
 
 The filter flattens each block to characters before handing it to the binary,

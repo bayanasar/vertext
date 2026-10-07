@@ -741,6 +741,17 @@ nothing in the core may foreclose it.
   0.05, and with the shift removed 7 checks are red. The other browser gates
   stay green, the caret clicks on bichig included.
 
+  **The face the shift was measured in ships with it** (#86). The shift holds
+  for Noto Sans Mongolian only, and the stylesheet used to name that face and
+  ship nothing: a reader without it got a fallback face, 0.03 of a cell off
+  the stem unshifted and 0.20 with the shift. The extension now carries the
+  golden font file and its OFL licence beside `vertext.css` and loads it
+  under a family of its own, the filter lists the file as a resource of its
+  HTML dependency, and the release archive refuses a font that differs from
+  `goldens/fonts/` by a byte. Rendered with Quarto 1.10.19, a standalone
+  document and a website both put the font next to the stylesheet they link,
+  and Chrome reports the face loaded in each.
+
 ## Not sealed
 
 

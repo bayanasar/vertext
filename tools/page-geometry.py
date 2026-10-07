@@ -38,7 +38,9 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 BINARY = ROOT / "target" / "release" / "vertext"
 SHIM = ROOT / "tools" / "quarto-shim.lua"
 STYLESHEET = ROOT / "extensions" / "vertext" / "vertext.css"
-MONGOLIAN = ROOT / "goldens" / "fonts" / "NotoSansMongolian-Regular.ttf"
+# The Mongolian face ships beside the stylesheet, which names it by a relative
+# URL; it is copied next to the stylesheet here as Quarto copies it.
+MONGOLIAN = STYLESHEET.parent / "NotoSansMongolian-Regular.ttf"
 
 _spec = importlib.util.spec_from_file_location(
     "progression_scroll", ROOT / "tools" / "progression-scroll.py")
@@ -345,7 +347,7 @@ CASES = [
     ("line-start", line_start, {}, (900, 700), ["Noto Sans SC"], [no_mark_starts_a_line]),
     ("line-end", line_end, {}, (900, 700), ["Noto Sans SC"], [no_mark_ends_a_line]),
     ("bichig-lines", BICHIG, {"vertext-progression": "lr"}, (900, 700),
-     ["Noto Sans SC", "Noto Sans Mongolian"], [line_pitch(["mongolian"])]),
+     ["Noto Sans SC", "Vertext Noto Sans Mongolian"], [line_pitch(["mongolian"])]),
     ("latin-lines", short_latin, {}, (900, 700), ["Noto Sans SC"],
      [line_pitch(["latin", "upright"])]),
 ]
@@ -364,7 +366,8 @@ def main():
 
     work = pathlib.Path(tempfile.mkdtemp(prefix="vertext-geometry-"))
     shutil.copy(STYLESHEET, work / STYLESHEET.name)
-    for family, path in [*fonts.items(), ("Noto Sans Mongolian", MONGOLIAN)]:
+    shutil.copy(MONGOLIAN, work / MONGOLIAN.name)
+    for family, path in fonts.items():
         shutil.copy(path, work / path.name)
         FONTS_IN_WORK[family] = path
     fails, lines = [], []

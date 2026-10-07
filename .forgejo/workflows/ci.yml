@@ -122,8 +122,9 @@ jobs:
       # `quarto add` installs the filter from a release zip built out of
       # extensions/vertext, not from a third copy in the tree. Building it on
       # every run keeps the one thing that goes out buildable, and the builder
-      # refuses when the three version declarations disagree or the source is
-      # no longer exactly the three files the archive ships.
+      # refuses when the version declarations disagree, the source is no longer
+      # exactly the files the archive ships, or the Mongolian face is not the
+      # golden one.
       - name: The quarto add archive builds from the one source
         id: quarto-archive
         run: python3 tools/quarto-archive.py

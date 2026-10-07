@@ -12,6 +12,8 @@ artifact instead, built from the one source:
 
     vertext-quarto-<version>.zip
       _extensions/vertext/_extension.yml
+      _extensions/vertext/NotoSansMongolian-OFL.txt
+      _extensions/vertext/NotoSansMongolian-Regular.ttf
       _extensions/vertext/vertext.css
       _extensions/vertext/vertext.lua
 
@@ -33,6 +35,10 @@ binary whose wire version differs (see tools/versions.py), so the two halves
 must come from one release: the archive carries the version in its name for
 that reason.
 
+The Mongolian face ships with the stylesheet, and it must be the face the
+goldens were measured in: the archive refuses a font that differs by a byte
+from goldens/fonts/.
+
 The zip is byte-reproducible: entries are sorted, timestamps are fixed and the
 permission bits are constant, so the same tree always gives the same sha256.
 
@@ -53,7 +59,9 @@ import versions  # noqa: E402  (tools/versions.py)
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SOURCE = ROOT / "extensions" / "vertext"
-FILES = ["_extension.yml", "vertext.css", "vertext.lua"]
+FILES = ["_extension.yml", "NotoSansMongolian-OFL.txt", "NotoSansMongolian-Regular.ttf",
+         "vertext.css", "vertext.lua"]
+GOLDEN_FACE = ROOT / "goldens" / "fonts" / "NotoSansMongolian-Regular.ttf"
 # 1980-01-01 is the earliest time a zip entry can carry.
 EPOCH = (1980, 1, 1, 0, 0, 0)
 
@@ -77,8 +85,11 @@ def main():
     missing = [name for name in FILES if not (SOURCE / name).is_file()]
     extra = sorted(p.name for p in SOURCE.iterdir() if p.name not in FILES)
     if missing or extra:
-        sys.exit(f"extensions/vertext is not the three files this archive ships\n"
+        sys.exit(f"extensions/vertext is not the {len(FILES)} files this archive ships\n"
                  f"  missing: {missing}\n  unexpected: {extra}")
+    if (SOURCE / "NotoSansMongolian-Regular.ttf").read_bytes() != GOLDEN_FACE.read_bytes():
+        sys.exit("extensions/vertext/NotoSansMongolian-Regular.ttf is not the golden face "
+                 "in goldens/fonts/, so nothing measured describes what ships")
 
     out = pathlib.Path(args.out)
     out.mkdir(parents=True, exist_ok=True)

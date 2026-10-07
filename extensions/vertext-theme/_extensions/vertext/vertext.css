@@ -22,13 +22,28 @@
    another value inside the range. */
 :root { --vertext-line-gap: .5; }
 
+/* The Mongolian face ships beside this stylesheet: Noto Sans Mongolian, the
+   face every Mongolian measurement in this project was taken in (the joining
+   goldens, the line pitch, the stem shift below), under the SIL Open Font
+   License (NotoSansMongolian-OFL.txt). Left to the reader's machine, the
+   browser falls back to whatever is installed, and the measurements no longer
+   describe the page. The family name is the stylesheet's own, so what loads
+   under it is the shipped file, never whatever an installed font of the usual
+   name happens to be. */
+@font-face {
+  font-family: "Vertext Noto Sans Mongolian";
+  src: url("NotoSansMongolian-Regular.ttf") format("truetype");
+}
+
 /* How far a Mongolian run moves across its line so that its stem, the line
    every letter of a word hangs from, falls on the line's centre, where the
    Han and Latin slots are centred (MLReq 7.3.2-7.3.4). A run's box is centred
    on its face's content area, and where the stem sits inside that area is a
-   matter of the face's design, not of a metric. Measured for the golden face,
+   matter of the face's design, not of a metric. Measured for the shipped face,
    Noto Sans Mongolian: 0.19 of the run's own em, at cells from 18 to 192px.
-   A page that sets bichig in another face declares its own value. */
+   A theme that sets bichig in another face declares its own value on
+   `.vertext`, not on `:root`: there it applies whatever order the stylesheets
+   load in. */
 :root { --vertext-mongolian-stem-shift: .19em; }
 
 .vertext {
@@ -314,7 +329,7 @@
   height: max-content;
   max-height: none;
   font-feature-settings: "vert" 1, "vrt2" 1;
-  font-family: "Noto Sans Mongolian", "Mongolian Baiti", serif;
+  font-family: "Vertext Noto Sans Mongolian", "Noto Sans Mongolian", "Mongolian Baiti", serif;
   font-size: calc(var(--vertext-cell) * 15 / 18);
   /* The run is one line, so its width across the column is its line height:
      one pitch, with the face's content area centred in it, as an upright
@@ -335,7 +350,7 @@
    with the grammar severed is the one failure this project exists to stop, and
    it was living on the path nothing rendered. */
 .vertext-mongolian-inline {
-  font-family: "Noto Sans Mongolian", "Mongolian Baiti", serif;
+  font-family: "Vertext Noto Sans Mongolian", "Noto Sans Mongolian", "Mongolian Baiti", serif;
 }
 /* ── Horizontal blocks ───────────────────────────────────────────────────
    Latin-majority prose and program source are set horizontally: an
