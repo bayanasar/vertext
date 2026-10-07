@@ -692,8 +692,13 @@ nothing in the core may foreclose it.
   across lines, because the number and the sign were two boxes. The core now
   joins a sign or unit to the number's own slot (CLReq 6.1.2.2's list, and the
   currency symbols either side). The same four cases in `page-geometry` now
-  keep each pair on one line. No word is created, so the slot census behind
-  the horizontal decision is unchanged and its invariant test stays green.
+  keep each pair on one line. A sign with a word on its other side joins
+  neither (`30°C`, `US$100`, `5−3`): joined, it set two Latin slots side by
+  side, which the slot census behind the horizontal decision counts as two
+  words and the layout as one. Six such inputs broke that invariant while its
+  test stayed green, because the test had none of them; with them added it was
+  red on all six and on `1990－2000年`, whose fullwidth hyphen-minus was read
+  as the sign of `2000`. It is a range mark and keeps its vertical form.
 
   **No closing mark starts a line, no opening mark ends one** (#77). Found in
   a screenshot taken for #73: `。` at the top of a column. Each paragraph in
@@ -769,6 +774,11 @@ nothing in the core may foreclose it.
   actually for: two consumers still install the two halves separately, so there
   is still a pair to mismatch. This is the second line of defence the issue
   asks for, built before the first.
+- **A sign between two words breaks from its number.** `30°C` is three slots,
+  and a line may fall after `30`. Joining `°` to either word would set two
+  Latin slots side by side, which the slot census forbids; CLReq 6.1.2.2 is
+  Partial for it.
+
 - **The docs site still pins its two halves separately** (#9, step 2). It
   vendors the filter and pins the binary on its own; its switch to the release
   is #43, which belongs to that site's owner.

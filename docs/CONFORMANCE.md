@@ -41,7 +41,7 @@ a verdict):
 
 | | Conforms | Partial | Not implemented | Informative |
 |---|---|---|---|---|
-| CLReq | 10 | 12 | 21 | 3 |
+| CLReq | 9 | 13 | 21 | 3 |
 | MLReq | 3 | 12 | 7 | 4 |
 
 The pattern is the same in both. Direction, orientation, keeping words whole
@@ -132,7 +132,7 @@ Three findings are worth reading before the tables:
 |---|---|---|---|
 | 6.1.1 Line start and line end prohibition | Conforms | Line breaking is the browser's (UAX #14 and CSS `line-break`), by design: the engine does not measure, so it cannot own a break. The marks are plain inline text, so the browser's rules reach them: no closing or pause mark of `、，。．；：！？）」』》` begins a line and no opening mark of `（「『《` ends one. They were inline-block until October 2026, which let 14 of those 16 cases through. | gate `page-geometry` |
 | 6.1.2.1 Two-em dash and ellipsis unbroken | Partial | Each is one or two vertical-form slots; whether they stay together is the browser's. | |
-| 6.1.2.2 Digits and their prefixes and suffixes | Conforms | A digit run is one slot and never splits. `%`, `‰`, `‱`, the degree signs and a trailing currency symbol join the number before them, and `+`, `-`, `±`, `−` and a leading currency symbol the number after them, so no line falls between them. Measured first: as separate slots, Chrome broke between them in all four cases tried. Prose only. | `a_number_keeps_its_sign_and_unit`, gate `page-geometry` |
+| 6.1.2.2 Digits and their prefixes and suffixes | Partial | A digit run is one slot and never splits. `%`, `‰`, `‱`, the degree signs and a trailing currency symbol join the number before them, and `+`, `-`, `±`, `−` and a leading currency symbol the number after them, so no line falls between them. Measured first: as separate slots, Chrome broke between them in all four cases tried. Prose only. Not handled: a sign with a word on its other side, as in `30°C`, `US$100` or `5−3`, joins neither, since a Latin word on each side of it is two slots and joining it to one would merge them. So `30°C` may break after the number. The fullwidth `－` is not a sign: between numbers in Chinese it marks a range (`1990－2000`) and keeps its vertical form. | `a_number_keeps_its_sign_and_unit`, gate `page-geometry` |
 | 6.1.2.3 Annotation marks | Not implemented | No superscript or note markup. | |
 | 6.1.3 Hanging punctuation | Not implemented | Nothing hangs. | |
 | 6.1.4 Western words unbroken | Partial | A Latin word is one slot, set with `white-space: nowrap`, prefers a hyphen it already has, and no character is changed by a break. But a word longer than 12 characters is cut at the cap by count, with a visible hyphen, not at a syllable: CLReq allows a break only where the word is hyphenated, and a count is not a hyphenation. | `long_latin_words_are_bounded`, `breaking_at_a_hyphen_alters_no_character`, `a_hard_hyphen_never_splits_a_cluster` |

@@ -440,8 +440,13 @@ fn is_currency(ch: char) -> bool {
 /// slots are two boxes, and a browser measured breaking between them in all
 /// four cases tried, so the sign is joined to the number's own slot, where no
 /// line can fall between them. Only a slot that is a number on that side takes
-/// a sign: no new word is made, so the slot census `measure_slots` keeps is
-/// unchanged. Prose only, as the pairing of marks is.
+/// a sign, and only a sign with no word on its other side: in `30°C`, `US$100`
+/// or `5−3` the sign stands between two words and belongs to neither, and
+/// joining it to one would set two Latin slots side by side, which the slot
+/// census `measure_slots` keeps counts as two words and the layout as one.
+/// The fullwidth hyphen-minus is not a sign: between numbers in Chinese it is
+/// a range mark (`1990－2000`), and it keeps its vertical form. Prose only, as
+/// the pairing of marks is.
 fn attach_affixes(slots: &mut Vec<Slot>) {
     fn single(slot: &Slot) -> Option<char> {
         match slot {
@@ -452,21 +457,26 @@ fn attach_affixes(slots: &mut Vec<Slot>) {
             _ => None,
         }
     }
-    let prefix = |ch: char| matches!(ch, '+' | '-' | '±' | '−' | '＋' | '－') || is_currency(ch);
+    let prefix = |ch: char| matches!(ch, '+' | '-' | '±' | '−' | '＋') || is_currency(ch);
     let suffix = |ch: char| matches!(ch, '%' | '％' | '‰' | '‱' | '°' | '℃' | '℉') || is_currency(ch);
+    let is_word = |slot: Option<&Slot>| matches!(slot, Some(Slot::LatinWord(_)));
     let mut out: Vec<Slot> = Vec::with_capacity(slots.len());
-    for slot in std::mem::take(slots) {
+    let mut rest = std::mem::take(slots).into_iter().peekable();
+    while let Some(slot) = rest.next() {
+        let before_sign = out.len().checked_sub(2).map(|i| &out[i]);
         match (&slot, out.last()) {
             (Slot::LatinWord(word), Some(last))
                 if word.starts_with(|c: char| c.is_ascii_digit())
-                    && single(last).is_some_and(prefix) =>
+                    && single(last).is_some_and(prefix)
+                    && !is_word(before_sign) =>
             {
                 let sign = out.pop().unwrap();
                 out.push(Slot::LatinWord(format!("{}{word}", sign.text())));
             }
             (_, Some(Slot::LatinWord(word)))
                 if word.ends_with(|c: char| c.is_ascii_digit())
-                    && single(&slot).is_some_and(suffix) =>
+                    && single(&slot).is_some_and(suffix)
+                    && !is_word(rest.peek()) =>
             {
                 let Some(Slot::LatinWord(word)) = out.pop() else { unreachable!() };
                 out.push(Slot::LatinWord(format!("{word}{}", slot.text())));
@@ -827,6 +837,20 @@ mod tests {
         // A word that is not a number on that side takes nothing.
         assert_eq!(slots("用abc%表示")[1..3],
                    [Slot::LatinWord("abc".into()), Slot::Neutral("%".into())]);
+        // Nor does a number whose sign has a word on its other side: the sign
+        // sits between two words and belongs to neither.
+        assert_eq!(slots("售价US$100")[2..5],
+                   [Slot::LatinWord("US".into()), Slot::Neutral("$".into()),
+                    Slot::LatinWord("100".into())]);
+        assert_eq!(slots("温度T−5℃")[2..5],
+                   [Slot::LatinWord("T".into()), Slot::VerticalPunctuation("−".into()),
+                    Slot::LatinWord("5℃".into())]);
+        assert_eq!(slots("气温30°C左右")[2..5],
+                   [Slot::LatinWord("30".into()), Slot::Neutral("°".into()),
+                    Slot::LatinWord("C".into())]);
+        // A fullwidth hyphen-minus between numbers is a range mark, not a sign.
+        assert_eq!(slots("1990－2000年")[1],
+                   Slot::VerticalPunctuation("－".into()));
         // In code the characters stay as the lexer would see them.
         let code = LayoutConfig { preserve_spaces: true, ..LayoutConfig::default() };
         assert!(layout_text("x%50", &code).columns[0].slots
@@ -1366,6 +1390,15 @@ mod tests {
             "山川异域，风月同天",
             "ᠢᠢ",
             "",
+            // A sign between two words belongs to neither: joining it to one
+            // would leave two Latin slots side by side.
+            "气温30°C左右",
+            "售价US$100",
+            "5−3等于2",
+            "误差x±2",
+            "增长5%5倍",
+            "温度T−5℃",
+            "1990－2000年",
         ];
 
         for text in cases {
