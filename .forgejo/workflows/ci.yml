@@ -47,8 +47,10 @@ jobs:
       # line. It is the version the golden's evidence line was recorded with.
       CHROME_VERSION: "152.0.7977.75"
       # Pinned for the same reason, and the version the Dart binding's tests
-      # were first run with.
+      # were first run with. The checksum is the one the Dart archive publishes
+      # beside the zip, as the browser and the CJK faces are pinned by theirs.
       DART_VERSION: "3.13.2"
+      DART_SHA256: "28951c9f6bcca005a73aa24cd5e11478dd6555f53e8e96a33ef4d868b6efa9eb"
     steps:
       - uses: actions/checkout@v4
 
@@ -363,14 +365,18 @@ jobs:
           if [ ! -x /opt/dart-sdk/bin/dart ]; then
             curl -sSfL -o /tmp/dart.zip \
               "https://storage.googleapis.com/dart-archive/channels/stable/release/$DART_VERSION/sdk/dartsdk-linux-x64-release.zip"
+            echo "$DART_SHA256  /tmp/dart.zip" | sha256sum -c -
             unzip -q /tmp/dart.zip -d /opt
             rm -f /tmp/dart.zip
           fi
           export PATH="/opt/dart-sdk/bin:$PATH"
-          dart --version
+          # A cached SDK skips the checksum, so it must at least be the version
+          # the key names.
+          dart --version 2>&1 | tee /tmp/dart-version
+          grep -q "Dart SDK version: $DART_VERSION " /tmp/dart-version
           cargo build --release -p vertext-cli
           cd bindings/dart
-          dart pub get
+          dart pub get --enforce-lockfile
           dart test
           dart run tool/parity.dart
 

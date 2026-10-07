@@ -660,6 +660,11 @@ nothing in the core may foreclose it.
   infers them only when the cargo on PATH has a `rustup` beside it, so a
   distribution's cargo is not handed `CARGO_HOME=/usr`.
 
+  **CI pins the Dart toolchain and the binding's dependencies.** It checks the
+  Dart SDK against the archive's published sha256 (checked against a download
+  of the zip) and its version when the cache serves it, and resolves the
+  binding from a committed `pubspec.lock` with `--enforce-lockfile`.
+
 - **The page keeps CLReq's geometry** (#71, #72, #73, #74, #75, #77). `tools/page-geometry.py`,
   CI gate `page-geometry`: documents through pandoc, the real filter and the
   binary, in headless Chrome 152 with Noto Sans SC pinned by tag and sha256.

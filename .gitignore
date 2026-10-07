@@ -34,7 +34,8 @@
 # tools/shaping-golden.py through importlib, which writes one of these.
 __pycache__/
 
-# The Dart binding's resolution and hook output. A library package leaves its
-# lock file to the application that depends on it.
+# The Dart binding's resolution and hook output. Its pubspec.lock is
+# committed, unusually for a library package: an application that depends on
+# the binding still resolves its own, but CI holds the gate to one resolution,
+# so a new release of `hooks` or `test` cannot change what the gate ran.
 /bindings/dart/.dart_tool/
-/bindings/dart/pubspec.lock
