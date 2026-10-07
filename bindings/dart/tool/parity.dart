@@ -90,8 +90,10 @@ Future<void> main(List<String> args) async {
     'a(b()c',
     '见 (etc.) 一节',
     // A box and the marks that may not leave it at a line edge share a span
-    // on the page; the slots inside it are slots like any other.
+    // on the page, as do a slot and a connector, interpunct or solidus after
+    // it; the slots inside it are slots like any other.
     '《ᠮᠣᠩᠭᠣᠯ》即 mongɣol，见（2026）。sayin！？',
+    '北京—上海，列夫·托尔斯泰，2000～2010年，〝sayin〞，是／否，永——永',
     // Latin-majority: the page sets these horizontally, and so must a host.
     'this paragraph is plainly English and goes horizontal',
     'the word ᠮᠣᠩᠭᠣᠯ is written in bichig and read here in English',

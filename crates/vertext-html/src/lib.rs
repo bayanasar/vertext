@@ -497,9 +497,12 @@ pub fn slot_kind(slot: &Slot) -> &'static str {
 /// and a line may break on either side of a box wherever it falls: the
 /// browser's line-start and line-end rules (CLReq 6.1.1) look at the
 /// characters beside a mark, and a box is not one. So in prose (`keep_edges`)
-/// a box goes into one `vertext-nobreak` span with the closing and pause
-/// marks right after it and the opening marks right before it, and that span
-/// does not wrap. Only the breaks change: the slots, their order and their
+/// a box goes into one `vertext-nobreak` span with the marks right after it
+/// that may not begin a line and the opening marks right before it, and that
+/// span does not wrap. Connector marks, interpuncts and solidi may not begin
+/// a line either, and the browser lets most of them even beside Han, so any
+/// slot they follow is held to them the same way. Only the breaks change:
+/// the slots, their order and their
 /// text are what they were, and a slot span's parent is its column or such a
 /// span. In code no line edge is kept, as the marks there are code.
 fn render_slots(html: &mut String, slots: &[Slot], keep_edges: bool) {
@@ -527,36 +530,57 @@ fn render_slots(html: &mut String, slots: &[Slot], keep_edges: bool) {
 
 /// The slots from `i` on that must share a line: `i..i + 1` unless opening
 /// marks from `i` lead up to a box, or the slot at `i` is a box; then the
-/// opening marks, the box, and the closing and pause marks after it.
+/// opening marks, the box, and the marks after it that may not begin a line.
+/// Or unless the slot after `i` is a connector mark, an interpunct or a
+/// solidus: the browser lets those begin a line beside Han too, so the slot
+/// at `i` holds them, and the marks after them, the same way.
 fn keep_together(slots: &[Slot], i: usize) -> (usize, usize) {
     let is_box = |slot: &Slot| matches!(slot, Slot::LatinWord(_) | Slot::MongolianRun(_));
     let mut b = i;
     while b < slots.len() && may_not_end_a_line(&slots[b]) {
         b += 1;
     }
-    if b == slots.len() || !is_box(&slots[b]) {
+    let held = if b < slots.len() && is_box(&slots[b]) {
+        b
+    } else if i + 1 < slots.len() && !matches!(slots[i], Slot::Space(_)) && joins(slots, i + 1) {
+        i
+    } else {
         return (i, i + 1);
-    }
-    let mut end = b + 1;
-    while end < slots.len() && may_not_start_a_line(&slots[end]) {
+    };
+    let mut end = held + 1;
+    while end < slots.len() && may_not_start_a_line(slots, end) {
         end += 1;
     }
     (i, end)
 }
 
-/// A closing bracket or quotation mark, or a pause or stop mark, fullwidth
-/// or halfwidth: CLReq 6.1.1's marks that do not begin a line. A pair of
-/// question and exclamation marks is one of them.
-fn may_not_start_a_line(slot: &Slot) -> bool {
-    match slot {
+/// CLReq 6.1.1's marks that do not begin a line: a closing bracket or
+/// quotation mark, or a pause or stop mark, fullwidth or halfwidth, and a
+/// pair of question and exclamation marks; and a connector mark, an
+/// interpunct or a solidus (`joins`).
+fn may_not_start_a_line(slots: &[Slot], i: usize) -> bool {
+    joins(slots, i) || match &slots[i] {
         Slot::Combined(_) => true,
         Slot::VerticalPunctuation(s) | Slot::CornerPunctuation(s) | Slot::Neutral(s) =>
             matches!(s.as_str(),
                 "）" | "］" | "｝" | "〕" | "〉" | "》" | "」" | "』" | "】" | "〙" | "〗" | "｠"
-                | ")" | "]" | "}" | "’" | "”"
+                | "〞" | "〟" | ")" | "]" | "}" | "’" | "”"
                 | "、" | "，" | "。" | "．" | "；" | "：" | "！" | "？"
                 | "," | "." | ";" | ":" | "!" | "?"),
         _ => false,
+    }
+}
+
+/// A connector mark, an interpunct or a solidus, as CLReq's tables of marks
+/// list them: none may begin a line, and the browser keeps few of them off
+/// one even beside Han. A lone `—` is a connector; two are a dash, which may
+/// begin a line, and which the browser keeps whole.
+fn joins(slots: &[Slot], i: usize) -> bool {
+    let dash = |j: Option<usize>| j.and_then(|j| slots.get(j)).is_some_and(|s| s.text() == "—");
+    match &slots[i] {
+        Slot::LatinWord(_) | Slot::MongolianRun(_) | Slot::Space(_) => false,
+        slot if slot.text() == "—" => !dash(Some(i + 1)) && !dash(i.checked_sub(1)),
+        slot => matches!(slot.text(), "～" | "〜" | "-" | "–" | "·" | "・" | "‧" | "/" | "／"),
     }
 }
 
@@ -567,7 +591,7 @@ fn may_not_end_a_line(slot: &Slot) -> bool {
         Slot::VerticalPunctuation(s) | Slot::CornerPunctuation(s) | Slot::Neutral(s) =>
             matches!(s.as_str(),
                 "（" | "［" | "｛" | "〔" | "〈" | "《" | "「" | "『" | "【" | "〘" | "〖" | "｟"
-                | "(" | "[" | "{" | "‘" | "“"),
+                | "〝" | "(" | "[" | "{" | "‘" | "“"),
         _ => false,
     }
 }
@@ -739,6 +763,26 @@ mod tests {
     /// CLReq 6.1.1 beside a box. A line may break on either side of a Latin
     /// word, a number or a Mongolian run, so each shares a span that does not
     /// wrap with the marks that may not leave it at a line edge.
+    #[test]
+    fn a_connector_an_interpunct_or_a_solidus_holds_to_the_slot_before_it() {
+        let slot = |kind: &str, text: &str| format!("<span class=\"vertext-{kind}\">{text}</span>");
+        let kept = |slots: &[String]| format!("<span class=\"vertext-nobreak\">{}</span>", slots.concat());
+        let html = render_document("永～永·永／永・见2000～2010与〝sayin〞", RenderOptions::default());
+        // Beside Han, where the browser lets them begin a line.
+        assert!(html.contains(&kept(&[slot("upright", "永"), slot("vform", "～")])), "{html}");
+        assert!(html.contains(&kept(&[slot("upright", "永"), slot("neutral", "·")])), "{html}");
+        assert!(html.contains(&kept(&[slot("upright", "永"), slot("neutral", "／")])), "{html}");
+        assert!(html.contains(&kept(&[slot("upright", "永"), slot("upright", "・")])), "{html}");
+        // Beside a box, and the vertical quotation marks around one.
+        assert!(html.contains(&kept(&[slot("latin", "2000"), slot("vform", "～")])), "{html}");
+        assert!(html.contains(&kept(&[slot("neutral", "〝"), slot("latin", "sayin"),
+                                      slot("neutral", "〞")])), "{html}");
+        // A lone `—` is a connector; two are a dash, which may begin a line.
+        let html = render_document("北京—上海，永——永", RenderOptions::default());
+        assert!(html.contains(&kept(&[slot("upright", "京"), slot("vform", "—")])), "{html}");
+        assert_eq!(html.matches("vertext-nobreak").count(), 1, "{html}");
+    }
+
     #[test]
     fn a_box_and_the_marks_that_hold_to_it_share_a_span() {
         let slot = |kind: &str, text: &str| format!("<span class=\"vertext-{kind}\">{text}</span>");

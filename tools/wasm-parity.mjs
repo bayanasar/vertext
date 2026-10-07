@@ -36,8 +36,10 @@ const inputs = [
   'ᠮᠣᠩᠭᠣᠯ\u202fᠤᠨ (mongɣol-un) ᠨᠣᠮ᠃',
   'the genitive ᠮᠣᠩᠭᠣᠯ\u202fᠤᠨ is a single word in this English sentence',
   'internationalization 与 use-after-free',
-  // A box and the marks that may not leave it at a line edge share a span.
+  // A box and the marks that may not leave it at a line edge share a span,
+  // as do a slot and a connector, interpunct or solidus after it.
   '《ᠮᠣᠩᠭᠣᠯ》即 mongɣol，见（2026）。sayin！？',
+  '北京—上海，列夫·托尔斯泰，2000～2010年，〝sayin〞，是／否，永——永',
   'e\u0301cole 葛\ufe00城 👩\u200d💻 <b>&amp;</b>',
   // The wire protocol: a heading, prose, a table, list items and code.
   '\ue002標題\ue001正文，接着寫。\ue008名\ue009意\ue00aᠨᠣᠮ\ue009書\ue001\ue00b一項\ue00c二項\ue000fn main() {}\n\ue001完。',

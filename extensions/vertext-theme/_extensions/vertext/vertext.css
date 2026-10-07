@@ -288,7 +288,9 @@
    line, but a Latin word, a number or a Mongolian run beside them is a box,
    and a line may break on either side of a box: `sayin，` could put the comma
    at the top of a line and `（sayin）` leave the bracket at the foot of one.
-   The renderer puts the box and the marks that hold to it in this span.
+   The renderer puts the box and the marks that hold to it in this span, and
+   likewise a Han character and the connector mark, interpunct or solidus
+   after it (`永～`, `夫·`), which the browser would let begin a line.
    A group longer than the column then runs past the column's end, where a
    box alone would overrun by less: `《ᠮᠣᠩᠭᠣᠯᠪᠢᠴᠢᠭ》。` in a column of three
    cells. It stays on its own line and the page does not scroll for it, so
