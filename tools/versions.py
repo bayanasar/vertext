@@ -157,7 +157,12 @@ def archive_suffix(v, tags, at_head):
     `(UNTAGGED, refusal)` when the only refusal is that `v` is a release no
     tag names yet -- a release commit under review, built and checked in
     full under a name no release uses -- and `(None, refusal)`, no archive,
-    for anything else. version-gate.py runs its cases through this."""
+    for anything else. No v* tags at all is anything else: nothing about `v`
+    can be known then, and a release commit whose tags failed to arrive must
+    not read as one awaiting its tag. version-gate.py runs its cases through
+    this."""
+    if not tags:
+        return None, NO_TAGS
     refusal = release_refusal(v, tags, at_head)
     if refusal is None:
         return "", None
@@ -167,7 +172,5 @@ def archive_suffix(v, tags, at_head):
 
 
 def archive_suffix_at_head(v):
-    """`archive_suffix()` against the repository's tags; no archive when
-    none are visible, since then nothing about `v` is known."""
-    tags, at_head = _tags()
-    return archive_suffix(v, tags, at_head) if tags else (None, NO_TAGS)
+    """`archive_suffix()` against the repository's tags."""
+    return archive_suffix(v, *_tags())

@@ -44,6 +44,8 @@ RELEASE_CASES = [
     ("0.3.0-dev", ["v0.2.0"], [], "named"),         # main between releases
     ("0.3.0-rc.1", ["v0.2.0", "v0.3.0-rc.1"], [], "refused"),  # tag names it
     ("0.3.0-rc.1", ["v0.2.0", "v0.3.0-rc.1"], ["v0.3.0-rc.1"], "named"),
+    ("0.3.0", [], [], "refused"),                   # the tags did not arrive
+    ("0.3.0-dev", [], [], "refused"),
 ]
 OUTCOME = {"": "named", versions.UNTAGGED: "untagged", None: "refused"}
 
