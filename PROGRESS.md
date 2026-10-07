@@ -750,7 +750,20 @@ nothing in the core may foreclose it.
   HTML dependency, and the release archive refuses a font that differs from
   `goldens/fonts/` by a byte. Rendered with Quarto 1.10.19, a standalone
   document and a website both put the font next to the stylesheet they link,
-  and Chrome reports the face loaded in each.
+  and Chrome reports the face loaded in each. `script-centres` now sets every
+  line from the shipped stylesheet and font alone, asks the page which faces
+  loaded, and is red, naming the face, with the font file missing.
+
+  The gate also checks more since review. Each line names the scripts it must
+  show, so a script that stops drawing is red rather than skipped (red on 4
+  lines with Latin made transparent). Digits are measured in both
+  progressions, and every line's stem is compared with the centre of the
+  line's box from the DOM, bichig alone in both progressions included: the
+  box's centre lies 0.03 of a cell left of the stem at 48px and 0.04 at 24px.
+  Both cells run in CI; at 24px the worst offset is 0.04.
+  Under the same Quarto, `examples/test-extension.sh`, which needs `quarto
+  render` and so had never run on any runner here, passed all 82 of its
+  checks.
 
 ## Not sealed
 

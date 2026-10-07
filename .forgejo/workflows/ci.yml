@@ -301,9 +301,10 @@ jobs:
           python3 tools/punctuation-ink.py --chrome /opt/chrome/chrome-linux64/chrome \
             --fonts /opt/vertext-fonts
 
-      # MLReq 7.3.2-7.3.4: Han, Latin and digits are centred on the Mongolian
-      # stem. The stem is found in the pixels, the densest line of a word's ink,
-      # because where a face puts it is design, not a metric.
+      # MLReq 7.3.1-7.3.4: the Mongolian stem sits on the line's centre, and
+      # Han, Latin and digits on the stem, in the face the extension ships, at
+      # two cells. The stem is found in the pixels, the densest line of a
+      # word's ink, because where a face puts it is design, not a metric.
       - name: Mixed scripts share the Mongolian centre line
         id: script-centres
         run: |
