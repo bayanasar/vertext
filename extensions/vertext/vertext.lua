@@ -99,7 +99,7 @@ end
 -- lists and reads them all, and CI requires them to be one string, because a
 -- handshake built on a constant that drifted from the version it claims would
 -- refuse correct pairs.
-local VERSION = "0.3.0-dev"
+local VERSION = "0.3.0"
 
 local function wire_of(version)
   if version:find("-", 1, true) then return version end

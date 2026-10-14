@@ -37,12 +37,13 @@ a fix applied to one of them fails there.
 The filter and the binary are two halves of one release and must come from
 the same one: the filter refuses a binary whose wire version differs and leaves
 the document horizontal with a warning. A release's wire version is its
-MAJOR.MINOR and a pre-release's is its whole version, so a build from `main`
-(`0.3.0-dev`) pairs with no release; see `docs/ARCHITECTURE.md`.
+MAJOR.MINOR and a pre-release's is its whole version, so a build from `main`,
+which carries the next minor's pre-release, pairs with no release; see
+`docs/ARCHITECTURE.md`.
 
 ```sh
-cargo install vertext-cli --version 0.2.0
-quarto add https://github.com/bayanasar/vertext/releases/download/v0.2.0/vertext-quarto-0.2.0.zip
+cargo install vertext-cli --version 0.3.0
+quarto add https://github.com/bayanasar/vertext/releases/download/v0.3.0/vertext-quarto-0.3.0.zip
 ```
 
 The zip holds `_extensions/vertext/` and nothing else. It is built from

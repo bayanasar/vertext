@@ -16,7 +16,7 @@ export const CODE = 1;
 export const PAGE = 2;
 export const LEFT_TO_RIGHT = 4;
 
-export const VERSION = '0.3.0-dev';
+export const VERSION = '0.3.0';
 
 /** The wire version a half with version `v` speaks. */
 export const wireOf = v => v.includes('-') ? v : v.split('.').slice(0, 2).join('.');
