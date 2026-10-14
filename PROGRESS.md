@@ -1,7 +1,7 @@
 # PROGRESS — vertext
 
 <!-- progress -->
-updated: 2026-10-04
+updated: 2026-10-14
 owner: maintainer
 stage: Quarto path works end to end; Mongolian joining proven in the font, proven to reach the page in one piece, and proven by CI to be applied by a real browser — no reader has looked at a page yet
 <!-- /progress -->
@@ -976,6 +976,18 @@ nothing in the core may foreclose it.
   every `—` taken as a connector. The wasm and Dart parity inputs gain a
   line with each kind. CONFORMANCE 6.1.1 conforms again, now measured
   against the whole basic rule.
+
+- **`~` and `－` do not begin a line either** (#97). The set above missed two
+  connectors: the `~` CLReq's text on the connector mark gives beside `～`
+  as Taiwan's second form, and the `－` this repository sets as a range mark
+  between numbers (`1990－2000`). Both began a line beside Han, and beside a
+  number or a word one cell from the line end. `joins()` now holds them too.
+  `page-geometry` places them where the second line begins (34 marks) and
+  adds `1990~2000`, `1990－2000` and `sayin~` beside a box (34 probes, 257
+  placements): red in 5 places before (`~` and `－` beside Han, all three
+  probes at 1 cell), green after, every column copying as written. The
+  renderer test renders each of the 12 marks after a Han character and is
+  red with any one of them taken out of `joins()`.
 
 ## Not sealed
 

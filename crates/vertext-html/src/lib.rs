@@ -572,15 +572,18 @@ fn may_not_start_a_line(slots: &[Slot], i: usize) -> bool {
 }
 
 /// A connector mark, an interpunct or a solidus, as CLReq's tables of marks
-/// list them: none may begin a line, and the browser keeps few of them off
-/// one even beside Han. A lone `—` is a connector; two are a dash, which may
-/// begin a line, and which the browser keeps whole.
+/// list them, with the `~` its text on the connector mark names beside `～`
+/// and the `－` this repository sets as a range mark between numbers: none
+/// may begin a line, and the browser keeps few of them off one even beside
+/// Han. A lone `—` is a connector; two are a dash, which may begin a line, and
+/// which the browser keeps whole.
 fn joins(slots: &[Slot], i: usize) -> bool {
     let dash = |j: Option<usize>| j.and_then(|j| slots.get(j)).is_some_and(|s| s.text() == "—");
     match &slots[i] {
         Slot::LatinWord(_) | Slot::MongolianRun(_) | Slot::Space(_) => false,
         slot if slot.text() == "—" => !dash(Some(i + 1)) && !dash(i.checked_sub(1)),
-        slot => matches!(slot.text(), "～" | "〜" | "-" | "–" | "·" | "・" | "‧" | "/" | "／"),
+        slot => matches!(slot.text(),
+                         "～" | "〜" | "~" | "-" | "–" | "－" | "·" | "・" | "‧" | "/" | "／"),
     }
 }
 
@@ -781,6 +784,17 @@ mod tests {
         let html = render_document("北京—上海，永——永", RenderOptions::default());
         assert!(html.contains(&kept(&[slot("upright", "京"), slot("vform", "—")])), "{html}");
         assert_eq!(html.matches("vertext-nobreak").count(), 1, "{html}");
+        // Every mark, one at a time, beside Han: the Han before it and the
+        // mark are the one group, whatever kind of slot the mark is.
+        for mark in ["～", "〜", "~", "-", "–", "—", "－", "·", "・", "‧", "/", "／"] {
+            let html = render_document(&format!("永{mark}永"), RenderOptions::default());
+            let group = html.split("<span class=\"vertext-nobreak\">").skip(1)
+                .map(|rest| rest.split("</span></span>").next().unwrap_or_default()
+                    .split("</span>").map(|s| s.rsplit('>').next().unwrap_or_default())
+                    .collect::<String>())
+                .collect::<Vec<_>>();
+            assert_eq!(group, [format!("永{mark}")], "{mark}: {html}");
+        }
     }
 
     /// CLReq 6.1.1 beside a box. A line may break on either side of a Latin

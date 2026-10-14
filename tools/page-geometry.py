@@ -296,10 +296,12 @@ def numbers_keep_affixes(m, where):
 # with the characters from CLReq's tables of marks: the pause and stop marks;
 # the closing quotation marks, brackets and title marks; and the connector
 # marks, interpuncts and solidi. A lone `—` is a connector; two are a dash,
-# which may begin a line.
+# which may begin a line. CLReq's text on the connector mark gives `~` beside
+# `～` as Taiwan's second form, and `－` is the range mark this repository sets
+# between numbers.
 PROHIBITED = ("、，。．；：！？"
               "」』”’〞〟）］｝〕】〗〉》"
-              "～〜-–—·・‧/／")
+              "～〜~-–—－·・‧/／")
 
 
 def line_start(n):
@@ -357,8 +359,8 @@ BOX_CLOSING = ["sayin，", "sayin。", "sayin）", "sayin！？", "50%。", "202
                # the next.
                "〝sayin〞", "〝sayin〟", "“sayin”", "‘sayin’", "［sayin］", "｛sayin｝",
                "〔sayin〕", "【sayin】", "〖sayin〗", "〈sayin〉",
-               "2000～2010", "sayin〜", "sayin-", "sayin–", "sayin—", "sayin·", "sayin・",
-               "sayin‧", "sayin/", "sayin／"]
+               "2000～2010", "1990~2000", "1990－2000", "sayin〜", "sayin~", "sayin-",
+               "sayin–", "sayin—", "sayin·", "sayin・", "sayin‧", "sayin/", "sayin／"]
 BOX_OPENING = ["（sayin）", "「50%」", "《ᠮᠣᠩᠭᠣᠯ》"]
 BOX_PROBES = ([(probe, k) for probe in BOX_CLOSING for k in range(1, 9)]
               + [(probe, k) for probe in BOX_OPENING for k in range(1, 4)])
