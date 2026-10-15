@@ -500,11 +500,11 @@ pub fn slot_kind(slot: &Slot) -> &'static str {
 /// a box goes into one `vertext-nobreak` span with the marks right after it
 /// that may not begin a line and the opening marks right before it, and that
 /// span does not wrap. Connector marks, interpuncts and solidi may not begin
-/// a line either, and the browser lets most of them even beside Han, so any
-/// slot they follow is held to them the same way. Only the breaks change:
-/// the slots, their order and their text are what they were, and a slot
-/// span's parent is its column or such a span. In code no line edge is kept,
-/// as the marks there are code.
+/// a line either, and the browser lets most of them even beside Han, so the
+/// slot one follows is held to it the same way (`joins`). Only the breaks
+/// change: the slots, their order and their text are what they were, and a
+/// slot span's parent is its column or such a span. In code no line edge is
+/// kept, as the marks there are code.
 fn render_slots(html: &mut String, slots: &[Slot], keep_edges: bool) {
     let mut i = 0;
     while i < slots.len() {
@@ -576,14 +576,18 @@ fn may_not_start_a_line(slots: &[Slot], i: usize) -> bool {
 /// and the `－` this repository sets as a range mark between numbers: none
 /// may begin a line, and the browser keeps few of them off one even beside
 /// Han. A lone `—` is a connector; two are a dash, which may begin a line, and
-/// which the browser keeps whole.
+/// which the browser keeps whole. Likewise only the first of a run of one
+/// mark (`好～～～`) joins: held whole, a run could be any length, and one
+/// longer than the column would run past its end.
 fn joins(slots: &[Slot], i: usize) -> bool {
-    let dash = |j: Option<usize>| j.and_then(|j| slots.get(j)).is_some_and(|s| s.text() == "—");
+    let text = |j: Option<usize>| j.and_then(|j| slots.get(j)).map(Slot::text);
     match &slots[i] {
         Slot::LatinWord(_) | Slot::MongolianRun(_) | Slot::Space(_) => false,
-        slot if slot.text() == "—" => !dash(Some(i + 1)) && !dash(i.checked_sub(1)),
+        slot if slot.text() == "—" =>
+            text(Some(i + 1)) != Some("—") && text(i.checked_sub(1)) != Some("—"),
         slot => matches!(slot.text(),
-                         "～" | "〜" | "~" | "-" | "–" | "－" | "·" | "・" | "‧" | "/" | "／"),
+                         "～" | "〜" | "~" | "-" | "–" | "－" | "·" | "・" | "‧" | "/" | "／")
+            && text(i.checked_sub(1)) != Some(slot.text()),
     }
 }
 
@@ -785,16 +789,26 @@ mod tests {
         assert!(html.contains(&kept(&[slot("upright", "京"), slot("vform", "—")])), "{html}");
         assert_eq!(html.matches("vertext-nobreak").count(), 1, "{html}");
         // Every mark, one at a time, beside Han: the Han before it and the
-        // mark are the one group, whatever kind of slot the mark is.
+        // mark are the one group, whatever kind of slot the mark is. Of a run
+        // of one mark only the first joins, so the group stays that long.
         for mark in ["～", "〜", "~", "-", "–", "—", "－", "·", "・", "‧", "/", "／"] {
-            let html = render_document(&format!("永{mark}永"), RenderOptions::default());
-            let group = html.split("<span class=\"vertext-nobreak\">").skip(1)
-                .map(|rest| rest.split("</span></span>").next().unwrap_or_default()
-                    .split("</span>").map(|s| s.rsplit('>').next().unwrap_or_default())
-                    .collect::<String>())
-                .collect::<Vec<_>>();
-            assert_eq!(group, [format!("永{mark}")], "{mark}: {html}");
+            assert_eq!(groups(&format!("永{mark}永")), [format!("永{mark}")], "{mark}");
+            let run: &[String] = if mark == "—" { &[] } else { &[format!("好{mark}")] };
+            assert_eq!(groups(&format!("好{mark}{mark}{mark}")), run, "{mark}");
         }
+        // The vertical quotation marks around a box: `〝` opens, and either
+        // of `〞` and `〟` closes.
+        assert_eq!(groups("永〝sayin〞永〝sayin〟永"), ["〝sayin〞", "〝sayin〟"]);
+    }
+
+    /// The text of each `vertext-nobreak` span in a rendered paragraph.
+    fn groups(input: &str) -> Vec<String> {
+        let html = render_document(input, RenderOptions::default());
+        html.split("<span class=\"vertext-nobreak\">").skip(1)
+            .map(|rest| rest.split("</span></span>").next().unwrap_or_default()
+                .split("</span>").map(|s| s.rsplit('>').next().unwrap_or_default())
+                .collect::<String>())
+            .collect()
     }
 
     /// CLReq 6.1.1 beside a box. A line may break on either side of a Latin

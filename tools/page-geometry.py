@@ -104,6 +104,11 @@ document.fonts.ready.then(() => {
       return [e.textContent, Math.round((r.left + r.right) / 2)];
     })),
     copied: columns.map(copied),
+    // How far each column's slots run past its end, along the line.
+    overrun: columns.map(c => {
+      const end = c.getBoundingClientRect().bottom;
+      return Math.max(0, ...slotsOf(c).map(e => e.getBoundingClientRect().bottom - end));
+    }),
     combined: [...document.querySelectorAll('.vertext-combine')]
       .map(e => { const r = e.getBoundingClientRect(); return [r.width, r.height]; }),
     fonts: [...document.fonts].filter(f => f.status === 'loaded').map(f => f.family),
@@ -425,6 +430,38 @@ def no_mark_beside_a_box_breaks(m, where):
     return fails
 
 
+# A run of one connector mark, interpunct or solidus, twice as long as the
+# column, between Han. The renderer holds a run's first mark to the slot
+# before it and no more, so a run longer than the column breaks inside it
+# rather than running past the column's end.
+RUNS = "～〜~-–—－·・‧/／"
+
+
+def runs(n):
+    # Escaped where Markdown would read a run: `~~` as strikeout, `--` as a dash.
+    return "\n\n".join("永" * 5 + ("\\" * (mark in "~-") + mark) * (2 * n) + "永" * 5
+                       for mark in RUNS)
+
+
+def no_run_overruns(m, where):
+    """No slot of a run runs past the end of its column, and each column
+    copies as written."""
+    fails = []
+    n = round(m["heights"][0] / m["cell"]) if m["heights"] else 0
+    if len(m["slots"]) != len(RUNS):
+        return [f"{where}: {len(m['slots'])} columns for {len(RUNS)} runs"]
+    for mark, copied, overrun in zip(RUNS, m["copied"], m["overrun"]):
+        if overrun > 0.5:
+            fails.append(f"{where}: a run of `{mark}` runs {overrun:.0f}px past the column's end")
+        written = "永" * 5 + mark * (2 * n) + "永" * 5
+        if copied != written:
+            fails.append(f"{where}: copying the run of `{mark}` gives {copied!r}")
+    if not fails:
+        m["gap"] = (m.get("gap", "") + f"no run of {RUNS} runs past a column's end, "
+                    f"and each copies as written").strip()
+    return fails
+
+
 # Bichig alone, in its own progression: no upright mark on any line.
 BICHIG = "ᠮᠣᠩᠭᠣᠯ ᠪᠢᠴᠢᠭ " * 24
 
@@ -450,6 +487,7 @@ CASES = [
     ("line-end", line_end, {}, (900, 700), ["Noto Sans SC"], [no_mark_ends_a_line]),
     ("beside-a-box", beside_boxes, {}, (900, 700),
      ["Noto Sans SC", "Vertext Noto Sans Mongolian"], [no_mark_beside_a_box_breaks]),
+    ("runs", runs, {}, (900, 700), ["Noto Sans SC"], [no_run_overruns]),
     ("bichig-lines", BICHIG, {"vertext-progression": "lr"}, (900, 700),
      ["Noto Sans SC", "Vertext Noto Sans Mongolian"], [line_pitch(["mongolian"])]),
     ("latin-lines", short_latin, {}, (900, 700), ["Noto Sans SC"],
@@ -512,8 +550,9 @@ def main():
     print("PASS: every column on a short window is a whole number of cells long, "
           "the lines of a paragraph sit within CLReq's usual gap, and one pitch "
           "apart when they hold only Mongolian or only Latin, marks used "
-          "together share a cell, a number keeps its sign and unit, and no "
-          "closing mark starts a line or opening mark ends one")
+          "together share a cell, a number keeps its sign and unit, no "
+          "closing mark starts a line or opening mark ends one, and no run of "
+          "one mark runs past a column's end")
     for line in lines:
         print("      " + line)
     return 0

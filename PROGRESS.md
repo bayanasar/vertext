@@ -989,7 +989,29 @@ nothing in the core may foreclose it.
   renderer test renders each of the 12 marks after a Han character and is
   red with any one of them taken out of `joins()`.
 
+- **A run of one connector mark is held at its first mark only** (#100).
+  Held whole, `好～～～` was one `vertext-nobreak` span as long as the run, and
+  the renderer does not know the column's length, so a run longer than the
+  column ran past its end. Now only the first mark of a run of one mark
+  joins, as a second `—` makes a dash. `page-geometry`'s `runs` case puts a
+  run of each of the 12 marks, twice the column's length, between Han:
+  before, 11 ran past the column's end, by 378px and `–` by 44px (a run of
+  `—` is a dash and was never held); after, none, and every column copies
+  as written. The browser breaks each run once it is not held, `·` and `・`
+  included. The `~` and `-` runs are escaped in the Markdown: pandoc reads
+  `~~` as strikeout and `--` as a dash, so written plain neither reaches
+  the renderer. The renderer test renders `好` and three of each mark, red
+  with the cap taken off any one of the 11; and `〝`, `〞` and `〟` around a
+  box, red with any of the three out of its set. CONFORMANCE 6.1.1 is
+  Partial again: a later mark of such a run may begin a line, which CLReq's
+  rule does not allow.
+
 ## Not sealed
+
+- **A run of two marks in turn is still held whole.** Only a mark that
+  repeats the one before it is let go (#100), so `～·～·…` is still one span,
+  as long as the author made it; no case measures it. Longer than the
+  column, it would run past the column's end.
 
 
 
