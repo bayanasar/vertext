@@ -304,13 +304,14 @@ jobs:
       # What CLReq asks of a page that only a browser with a real CJK face can
       # answer: whether a column is a whole number of characters long, and
       # (as later checks join it) how the lines and marks sit. The faces are
-      # pinned by tag and sha256 and cached like the browser.
+      # pinned by tag and sha256 and cached like the browser, with one Latin
+      # face beside them for a body that puts Latin first.
       - name: The pinned CJK faces
         if: ${{ !cancelled() }}
         uses: actions/cache@v4
         with:
           path: /opt/vertext-fonts
-          key: noto-cjk-Sans2.004-sc-tc-cjksc
+          key: noto-cjk-Sans2.004-sc-tc-cjksc-noto-sans-2026.10.01
 
       - name: The page keeps CLReq's geometry
         if: ${{ !cancelled() }}

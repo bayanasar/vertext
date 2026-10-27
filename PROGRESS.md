@@ -1034,10 +1034,10 @@ nothing in the core may foreclose it.
   `inline-block` box, and a line may break before a box as well as after it:
   the browser broke before the space, which then began the next line and
   stood its first word half a cell down from the line's head. In prose the
-  space is now text, `white-space: pre-wrap`, with `word-spacing: -.5em` for
-  its half cell (the face's vertical advance for U+0020 is a whole cell,
-  18px). The line breaks after it, and at a line's end it hangs past the
-  column's end, taking none of the line; the strip does not scroll for it.
+  space is now text, `white-space: pre-wrap`, half a cell long (the entry on
+  its face, below). The line breaks after it, and at a line's end it hangs
+  past the column's end, taking none of the line; the strip does not scroll
+  for it.
   Code keeps the box. `page-geometry` adds three cases: Chinese with
   romanized words; bichig in two paragraphs and in one with Han words; and
   bichig with doubled spaces, rendered by the binary itself as a wasm or Dart
@@ -1064,6 +1064,23 @@ nothing in the core may foreclose it.
   stretched. Red without `inter-word`, with 28 Han characters taller than a
   cell; red with the last line justified too. CONFORMANCE MLReq 7.2
   conforms, and the summary is MLReq 5/10/7/4.
+
+- **A space is half a cell whatever face the page's body puts first**
+  (#109). As text, a space takes its length from the face it is set in, and
+  the page chose the face: a body whose stack puts a Latin face first, as
+  Bootstrap's and Quarto's do, made the prose space 15px in Noto Sans, which
+  has no vertical metrics, where Noto Sans SC made it 9px; and the gate set
+  the body in Noto Sans SC alone. The space is now set in the Mongolian face
+  the stylesheet ships, whose vertical advance for U+0020 is one em, less
+  half an em of word spacing, so a page with a space loads that face.
+  `page-geometry` runs the three space cases again with Noto Sans first in
+  the body's stack, pinned like the CJK faces, and checks that every space
+  of a line that is not justified, a paragraph's last line and every line
+  of the Chinese case, is half a cell. With the stylesheet of `9ba13bd`, red
+  in 18 places, every space 15px; green after. Setting the space at no size,
+  with all of its half cell as word spacing, was tried and dropped: it
+  measured half a cell in every stack, but the space then has no box across
+  the line, and `wasm-caret` clicked 59 graphemes instead of 61.
 
 ## Not sealed
 

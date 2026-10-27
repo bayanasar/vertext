@@ -214,12 +214,20 @@
    `pre-wrap` keeps every space the author typed, as `pre` does. `normal`
    collapses the second of two, and a copy then loses it: measured, all 19
    doubled spaces of a paragraph a host passed as it was copied as single
-   ones. Half an em, as the box is: the face's vertical advance for U+0020 is
-   a whole cell (18px measured), and the word spacing takes half of it back.
-   Code keeps the box: its spaces are indentation. */
+   ones. Code keeps the box: its spaces are indentation.
+   Half a cell, as the box is, whatever face the page's body puts first. A
+   space's advance is its face's: with a Latin face first in the body's
+   stack, as Bootstrap and Quarto have it, the space measured 15px in Noto
+   Sans and 12px in DejaVu Sans, where a CJK face made it 9px. So the space
+   is set in the face this stylesheet ships, whose vertical advance for
+   U+0020 is one em (18px measured), and the word spacing takes half of it
+   back. A page with a space then loads that face, Mongolian or not. At no
+   size the space needs no face, but it then has no box across the line:
+   the caret test could no longer click it. */
 .vertext-column-prose .vertext-space {
   display: inline;
   white-space: pre-wrap;
+  font-family: "Vertext Noto Sans Mongolian", "Noto Sans Mongolian";
   word-spacing: -.5em;
 }
 /* A Mongolian paragraph is justified top and bottom (MLReq 7.2): every line

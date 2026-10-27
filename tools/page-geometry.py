@@ -59,6 +59,12 @@ FONTS = {
         "https://github.com/notofonts/noto-cjk/raw/Sans2.004/Sans/OTF/"
         "SimplifiedChinese/NotoSansCJKsc-Regular.otf",
         "2c76254f6fc379fddfce0a7e84fb5385bb135d3e399294f6eeb6680d0365b74b"),
+    # A Latin face, with no vertical metrics, for a body whose stack puts a
+    # Latin face first, as Bootstrap's and Quarto's do.
+    "Noto Sans": (
+        "https://github.com/notofonts/notofonts.github.io/raw/noto-monthly-release-2026.10.01/"
+        "fonts/NotoSans/unhinted/ttf/NotoSans-Regular.ttf",
+        "f3961a9cde016d41a4879aecda1474d3a36d6bf54fa0e4643de029cc2248b0e8"),
 }
 
 PROSE = "山川异域，风月同天。寄诸佛子，共结来缘。" * 12
@@ -151,8 +157,10 @@ class Raw(str):
     the binary itself, set in the page pandoc and the filter build."""
 
 
-def page(pandoc, work, name, text, meta, family):
-    """A document through the real filter, set the way a Quarto page sets it."""
+def page(pandoc, work, name, text, meta, body_faces, stylesheet="vertext.css"):
+    """A document through the real filter, set the way a Quarto page sets it:
+    `body_faces` are the body's font stack, and `stylesheet` the stylesheet
+    the page links."""
     source = work / f"{name}.md"
     front = "".join(f"{key}: {value}\n" for key, value in meta.items())
     written = "永" if isinstance(text, Raw) else text
@@ -174,10 +182,11 @@ def page(pandoc, work, name, text, meta, family):
             sys.exit(f"{name}: the page has no single strip to replace")
         body = re.sub(r'<div class="vertext".*</div>', lambda _: strip, body, count=1,
                       flags=re.S)
-    faces ="".join(f'@font-face {{ font-family: "{f}"; src: url("{p.name}"); }}\n'
+    faces = "".join(f'@font-face {{ font-family: "{f}"; src: url("{p.name}"); }}\n'
                     for f, p in FONTS_IN_WORK.items())
-    head = head.replace("</head>", '<link rel="stylesheet" href="vertext.css">\n'
-                        f'<style>{faces}body {{ font-family: "{family}"; }}</style>\n'
+    stack = ", ".join(f'"{f}"' for f in body_faces)
+    head = head.replace("</head>", f'<link rel="stylesheet" href="{stylesheet}">\n'
+                        f'<style>{faces}body {{ font-family: {stack}; }}</style>\n'
                         '</head>', 1)
     html = (f'{head}<body><main class="content" id="quarto-document-content">'
             f'{body}</main>{MEASURE}</body>{tail}')
@@ -562,17 +571,19 @@ def no_line_begins_with_a_space(text):
     return check
 
 
-def justified(m, where):
-    """MLReq 7.2: the lines of a paragraph are justified top and bottom, by
-    stretching the spaces between words, a line's spaces alike; 7.3.4: never
-    by spacing Han characters apart. Every line begins at the head of its
-    column, and every line but the last ends at the column's end, its last
-    slot that is not a space there: a space after it hangs past the end and
-    is not stretched. A line's other spaces are one width and no narrower
-    than half a cell, a Han character is one cell, and the last line's spaces
-    are half a cell. Lines that all happened to fill the column would prove
-    nothing, so some spaces must have grown."""
-    fails, stretched, lines_seen = [], 0, 0
+def set_lines(m, where, justify):
+    """Each column's lines, checked as justified where `justify(c)` says
+    column `c` is, and as not justified elsewhere. Either way every line
+    begins at the head of its column and a Han character is one cell
+    (MLReq 7.3.4: no space is added between Han). Justified (MLReq 7.2),
+    every line but the last ends at the column's end, its last slot that is
+    not a space there (a space after it hangs past the end and is not
+    stretched), and a line's other spaces are one width, no narrower than
+    half a cell. Any other space, a paragraph's last line's among them, is
+    half a cell, whatever face the page sets it in. Where some column is
+    justified, lines that all happened to fill it would prove nothing, so
+    some spaces must have grown."""
+    fails, justified_lines, stretched, plain = [], 0, 0, 0
     cell = m["cell"]
     for c, (spans, (top, bottom)) in enumerate(zip(m["spans"], m["ends"])):
         lines = lines_with_kinds(spans, cell)
@@ -581,34 +592,56 @@ def justified(m, where):
             words = [s for s in line if s[0] != "space"]
             last = max(j for j, s in enumerate(line) if s[0] != "space")
             spaces = [s[3] - s[2] for s in line[:last] if s[0] == "space"]
+            widths = sorted({round(s, 1) for s in spaces})
             if abs(line[0][2] - top) > 0.5:
                 fails.append(f"{at} begins {line[0][2] - top:.1f}px from the column's head")
-            if i < len(lines) - 1:
-                lines_seen += 1
-                if abs(words[-1][3] - bottom) > 0.5:
-                    fails.append(f"{at} ends {bottom - words[-1][3]:.1f}px from the column's end")
-                if spaces and max(spaces) - min(spaces) > 0.1:
-                    fails.append(f"{at}: its spaces are {sorted({round(s, 1) for s in spaces})}px")
-                if spaces and min(spaces) < cell / 2 - 0.1:
-                    fails.append(f"{at}: a space is {min(spaces):.1f}px, under half a cell")
-                stretched += any(s > cell / 2 + 1 for s in spaces)
-            elif any(abs(s - cell / 2) > 0.1 for s in spaces):
-                fails.append(f"{at}, the last: its spaces are "
-                             f"{sorted({round(s, 1) for s in spaces})}px, not half a cell")
             for kind, text, start, end in words:
                 if kind == "upright" and abs(end - start - cell) > 0.1:
                     fails.append(f"{at}: `{text}` is {end - start:.1f}px, not one cell")
-    if not stretched:
+            if justify(c) and i < len(lines) - 1:
+                justified_lines += 1
+                if abs(words[-1][3] - bottom) > 0.5:
+                    fails.append(f"{at} ends {bottom - words[-1][3]:.1f}px from the column's end")
+                if spaces and max(spaces) - min(spaces) > 0.1:
+                    fails.append(f"{at}: its spaces are {widths}px")
+                if spaces and min(spaces) < cell / 2 - 0.1:
+                    fails.append(f"{at}: a space is {min(spaces):.1f}px, under half a cell")
+                stretched += any(s > cell / 2 + 1 for s in spaces)
+                continue
+            plain += len(spaces)
+            if any(abs(s - cell / 2) > 0.1 for s in spaces):
+                fails.append(f"{at}{', the last,' if justify(c) else ''} has spaces of "
+                             f"{widths}px, not half a cell")
+    if any(justify(c) for c in range(len(m["spans"]))) and not stretched:
         fails.append(f"{where}: no line's spaces grew, so nothing was justified")
     if not fails:
-        m["gap"] = (m.get("gap", "") + f"; {lines_seen} lines justified at their "
-                    f"spaces, {stretched} of them stretched").strip("; ")
+        m["gap"] = (m.get("gap", "") + (f"; {justified_lines} lines justified at their "
+                    f"spaces, {stretched} of them stretched," if justified_lines else ";")
+                    + f" {plain} other spaces half a cell").strip("; ")
     return fails
+
+
+def justified(m, where):
+    """Every column justified: a page of Mongolian paragraphs."""
+    return set_lines(m, where, lambda c: True)
+
+
+def not_justified(m, where):
+    """No column justified: a page of Chinese, which CLReq 6.2.2 would adjust
+    in an order of its own."""
+    return set_lines(m, where, lambda c: False)
+
+
+# A body that sets Latin first: a space is then the Latin face's, which has
+# no vertical metrics, unless the stylesheet sizes the space itself.
+LATIN_FIRST = {"body": ["Noto Sans", "Noto Sans SC"]}
 
 
 CASES = [
     # name, text (or a builder given the column's cells), metadata, window,
-    # the faces that must load (the first is the body's), checks
+    # the faces that must load (the first is the body's), checks, and options:
+    # `body`, the body's font stack instead; `stylesheet`, a change to the
+    # stylesheet the page links
     ("document-short", PROSE, {}, (900, 700), ["Noto Sans SC"], [whole_cells, line_gap]),
     ("page-short", PROSE, {"vertext-page": "true"}, (900, 500), ["Noto Sans SC"],
      [whole_cells, line_gap]),
@@ -624,13 +657,23 @@ CASES = [
     ("latin-lines", short_latin, {}, (900, 700), ["Noto Sans SC"],
      [line_pitch(["latin", "upright"])]),
     ("spaces-chinese", SPACED_CHINESE, {}, (900, 700), ["Noto Sans SC"],
-     [no_line_begins_with_a_space(SPACED_CHINESE)]),
+     [no_line_begins_with_a_space(SPACED_CHINESE), not_justified]),
     ("spaces-bichig", SPACED_BICHIG, {"vertext-progression": "lr"}, (900, 700),
      ["Noto Sans SC", "Vertext Noto Sans Mongolian"],
      [no_line_begins_with_a_space(SPACED_BICHIG), justified]),
     ("doubled-spaces", DOUBLED, {"vertext-progression": "lr"}, (900, 700),
      ["Noto Sans SC", "Vertext Noto Sans Mongolian"],
      [no_line_begins_with_a_space(DOUBLED), justified]),
+    # The same, in a body whose font stack puts a Latin face first, as
+    # Bootstrap's and Quarto's do.
+    ("spaces-chinese-latin-first", SPACED_CHINESE, {}, (900, 700), ["Noto Sans", "Noto Sans SC"],
+     [no_line_begins_with_a_space(SPACED_CHINESE), not_justified], LATIN_FIRST),
+    ("spaces-bichig-latin-first", SPACED_BICHIG, {"vertext-progression": "lr"}, (900, 700),
+     ["Noto Sans", "Noto Sans SC", "Vertext Noto Sans Mongolian"],
+     [no_line_begins_with_a_space(SPACED_BICHIG), justified], LATIN_FIRST),
+    ("doubled-spaces-latin-first", DOUBLED, {"vertext-progression": "lr"}, (900, 700),
+     ["Noto Sans", "Vertext Noto Sans Mongolian"],
+     [no_line_begins_with_a_space(DOUBLED), justified], LATIN_FIRST),
 ]
 
 
@@ -653,21 +696,28 @@ def main():
         FONTS_IN_WORK[family] = path
     fails, lines = [], []
     measured = {}
-    for name, text, meta, window, families, checks in CASES:
+    for name, text, meta, window, families, checks, *options in CASES:
+        options = options[0] if options else {}
+        body = options.get("body", families[:1])
+        stylesheet = STYLESHEET.name
+        if "stylesheet" in options:
+            stylesheet = f"{name}.css"
+            (work / stylesheet).write_text(options["stylesheet"](
+                STYLESHEET.read_text(encoding="utf-8")), encoding="utf-8")
         if callable(text):
             # Measure the column this window and mode give, then build for it.
             key = (window, tuple(sorted(meta.items())))
             if key not in measured:
                 probe = _ps.measure(chrome, work, page(args.pandoc, work, f"{name}-probe",
-                                                       PROSE, meta, families[0]), window)
+                                                       PROSE, meta, families[:1]), window)
                 measured[key] = probe and round(max(probe["heights"]) / probe["cell"])
             if not measured[key]:
                 fails.append(f"{name}: the probe page reported no column")
                 continue
             cells = measured[key]
             text, checks = text(cells), [built_for(cells), *checks]
-        m = _ps.measure(chrome, work, page(args.pandoc, work, name, text, meta, families[0]),
-                        window)
+        m = _ps.measure(chrome, work, page(args.pandoc, work, name, text, meta, body,
+                                           stylesheet), window)
         if m is None:
             fails.append(f"{name}: the page reported nothing within 120s")
             continue
@@ -692,7 +742,8 @@ def main():
           "together share a cell, a number keeps its sign and unit, no "
           "closing mark starts a line or opening mark ends one, no run of "
           "one mark runs past a column's end, no line begins with a word space, "
-          "and a Mongolian paragraph is justified at its spaces")
+          "a space is half a cell whatever face the body puts first, and a "
+          "Mongolian paragraph is justified at its spaces")
     for line in lines:
         print("      " + line)
     return 0
