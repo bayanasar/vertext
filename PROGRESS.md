@@ -1,9 +1,9 @@
 # PROGRESS — vertext
 
 <!-- progress -->
-updated: 2026-10-14
+updated: 2026-10-26
 owner: maintainer
-stage: Quarto path works end to end; Mongolian joining proven in the font, proven to reach the page in one piece, and proven by CI to be applied by a real browser — no reader has looked at a page yet
+stage: 0.3.0 released on crates.io, its GitHub release not up yet (#101); main is 0.4.0-dev
 <!-- /progress -->
 
 ## What this is
@@ -1006,12 +1006,43 @@ nothing in the core may foreclose it.
   Partial again: a later mark of such a run may begin a line, which CLReq's
   rule does not allow.
 
+- **0.3.0 is released** (#98). The review approved `1d060c2` on #99 with
+  `version` its only red gate, reading `awaits its tag v0.3.0, nothing
+  else`. `v0.3.0`, a lightweight tag like `v0.2.0`, was pushed on that
+  commit and its run was green throughout; #99 was closed and reopened and
+  its new run was green, `version` included; main was fast-forwarded to it.
+  That is the order `docs/ARCHITECTURE.md` gives (#88), run on a release for
+  the first time. The public mirror's main and `v0.3.0` are at `1d060c2`.
+  `cargo publish --workspace` from a clean checkout of the tag put all three
+  crates on crates.io at 0.3.0, 2026-10-27 02:09 UTC. Each `.crate`,
+  downloaded back, names `1d060c2` in its `.cargo_vcs_info.json`, and
+  `cargo install vertext-cli --version 0.3.0 --locked` into an empty root
+  prints `vertext 0.3.0`. Both archives were built in a clean checkout of
+  the tag, `vertext-quarto-0.3.0.zip` (sha256 `bb10bcf5…`) and
+  `vertext-wasm-0.3.0.zip` (`6f5796f1…`), the same bytes as the `+untagged`
+  pair the review built.
+
+  `1bb6113` (`release: 0.3.0`) also declares 0.3.0 and is not the release.
+  #100 was found in its review and fixed on top of it (Decisions), so the
+  tag went to `1d060c2`. The release archives now refuse to build there
+  (`already tagged v0.3.0 on another commit`), but a binary built from it
+  with cargo prints `vertext 0.3.0`, which a 0.3 filter accepts, and holds a
+  run of one connector mark whole. 0.3.0 is the tag or crates.io, never that
+  commit.
+
 ## Not sealed
 
-- **A run of two marks in turn is still held whole.** Only a mark that
-  repeats the one before it is let go (#100), so `～·～·…` is still one span,
-  as long as the author made it; no case measures it. Longer than the
-  column, it would run past the column's end.
+- **Two kinds of group still have no bound.** Only a mark that repeats the
+  one before it is let go (#100), so a run of two marks in turn is still one
+  span as long as the author made it: `～·` thirty times between Han ran 594px
+  past a 28-cell column at `1d060c2`. And the loop at the end of
+  `keep_together()` takes every closing mark after a box, as it has since
+  #93: `sayin` and then 80 of `。`, `！`, `」` or `）` ran 230–239px past the
+  column; 40 did not, as Chromium sets consecutive fullwidth marks half a
+  cell each. Both measured by a reviewer, neither by a gate. Missing: a
+  bound for either, and a measurement of whether the browser would break a
+  run of closing marks that is not held; until then a long enough one runs
+  past the column's end. Neither is common in prose.
 
 
 
@@ -1089,9 +1120,12 @@ nothing in the core may foreclose it.
   vendors the filter and pins the binary on its own; its switch to the release
   is #43, which belongs to that site's owner.
 
-- **No release carries the wasm archive yet** (#46). The `v0.2.0` tag
-  predates it; the next tag should attach `vertext-wasm-<version>.zip` beside
-  the filter's zip, and until then a browser host has only a build from source.
+- **The `v0.3.0` GitHub release is not up yet** (#101). Its notes and both
+  archives are in #101 for the public mirror's owner to publish, as for
+  `v0.2.0`; its precondition, the crates on crates.io, holds. Missing: the
+  release, and its two download URLs answering 200. Until then the README's
+  `quarto add` command answers 404, and a browser host has only a build from
+  source, since no release carries the wasm archive yet (#46).
 
 - **The Dart binding builds for Linux only.** Its build hook refuses other
   targets with a message. Android, iOS, macOS and Windows each need a Rust
@@ -1099,6 +1133,15 @@ nothing in the core may foreclose it.
   has not been started (#67).
 
 ## Decisions
+
+- 2026-10-14 **A defect found in a release commit's review is fixed on top
+  of it, and the tag goes to the new head** (#100, Bayanasar's call).
+  Putting the fix before `1bb6113` and rebuilding the release commit would
+  have meant force-pushing a branch under review and reviewing again hashes
+  already checked. Fixing forward leaves one commit that declares 0.3.0 and
+  is not 0.3.0; the version gate refuses to name an archive for it once the
+  tag is elsewhere, and the Sealed entry for 0.3.0 names the commit that is
+  the release.
 
 - 2026-10-07 **A host finds slots by class, never by their place among a
   column's children** (#85). Each slot is one `span.vertext-<kind>`, in
