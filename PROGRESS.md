@@ -1049,6 +1049,22 @@ nothing in the core may foreclose it.
   browser gates are green: `browser-golden`, `progression-scroll`,
   `punctuation-ink`, `script-centres`, `wasm-parity`, `wasm-caret`.
 
+- **A Mongolian paragraph is justified top and bottom at its spaces**
+  (#105). MLReq 7.2's default for multi-line text, with 7.3.4's rule that a
+  mixed line is stretched at its spaces and never between Han characters. A
+  `vertical-lr` prose column, headings aside, is `text-align: justify` with
+  `text-justify: inter-word`, which works because the spaces are text (the
+  entry above). The `spaces-bichig` and `doubled-spaces` cases now also check
+  that every line begins at the column's head, that every line but the last
+  ends at its end within half a pixel, that a line's spaces are one width
+  and no narrower than half a cell, that a Han character is one cell, that
+  the last line's spaces are half a cell, and that some spaces grew. Red in
+  25 places before: 23 lines ending 1.8 to 33.7px short, and no line
+  stretched in either case. Green after: 23 lines justified, 18 of them
+  stretched. Red without `inter-word`, with 28 Han characters taller than a
+  cell; red with the last line justified too. CONFORMANCE MLReq 7.2
+  conforms, and the summary is MLReq 5/10/7/4.
+
 ## Not sealed
 
 - **Two kinds of group still have no bound.** Only a mark that repeats the
@@ -1146,12 +1162,32 @@ nothing in the core may foreclose it.
   `quarto add` command answers 404, and a browser host has only a build from
   source, since no release carries the wasm archive yet (#46).
 
+- **Justification is measured in Chrome only.** `text-justify: inter-word`
+  is what keeps the Han characters of a mixed Mongolian line from being
+  spaced apart, and Chrome 152 applies it. Missing: a run in another engine.
+  A browser that ignores `text-justify` justifies as with `auto`, which in
+  Chrome spaces Han apart, so a mixed line there would stretch where MLReq
+  7.3.4 says it must not.
+
 - **The Dart binding builds for Linux only.** Its build hook refuses other
   targets with a message. Android, iOS, macOS and Windows each need a Rust
   target and a test on that platform. The theme itself, in the wabisabi kit,
   has not been started (#67).
 
 ## Decisions
+
+- 2026-10-26 **A Mongolian paragraph is justified by the browser at its
+  spaces; a Chinese one is not** (#104, #105). The browser breaks the lines,
+  so it justifies them too, as the split in CONFORMANCE has it, and the
+  stylesheet now asks it to for `vertical-lr` prose. That took the space out
+  of its box: the browser stretches text and not boxes, and a box let a line
+  begin with a space. `pre-wrap` rather than `normal`, because `normal`
+  collapses a doubled space and a copy loses it. `inter-word` rather than
+  `auto`, because `auto` spaces Han apart, which MLReq 7.3.4 rules out.
+  Chinese stays unjustified: CLReq 6.2.2 reduces first, a mark at a line's
+  end to half a character among them, and only then adds space, while
+  `text-justify` only adds; and justifying Chinese would change every
+  Chinese page. Revisit if the engine ever measures.
 
 - 2026-10-14 **A defect found in a release commit's review is fixed on top
   of it, and the tag goes to the new head** (#100, Bayanasar's call).

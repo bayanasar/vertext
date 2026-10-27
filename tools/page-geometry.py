@@ -112,6 +112,8 @@ document.fonts.ready.then(() => {
       return [e.className.replace('vertext-', ''), e.textContent, r.top, r.bottom,
               Math.round((r.left + r.right) / 2)];
     })),
+    // Where each column begins and ends along the line.
+    ends: columns.map(c => { const r = c.getBoundingClientRect(); return [r.top, r.bottom]; }),
     // How far each column's slots run past its end, along the line.
     overrun: columns.map(c => {
       const end = c.getBoundingClientRect().bottom;
@@ -560,6 +562,50 @@ def no_line_begins_with_a_space(text):
     return check
 
 
+def justified(m, where):
+    """MLReq 7.2: the lines of a paragraph are justified top and bottom, by
+    stretching the spaces between words, a line's spaces alike; 7.3.4: never
+    by spacing Han characters apart. Every line begins at the head of its
+    column, and every line but the last ends at the column's end, its last
+    slot that is not a space there: a space after it hangs past the end and
+    is not stretched. A line's other spaces are one width and no narrower
+    than half a cell, a Han character is one cell, and the last line's spaces
+    are half a cell. Lines that all happened to fill the column would prove
+    nothing, so some spaces must have grown."""
+    fails, stretched, lines_seen = [], 0, 0
+    cell = m["cell"]
+    for c, (spans, (top, bottom)) in enumerate(zip(m["spans"], m["ends"])):
+        lines = lines_with_kinds(spans, cell)
+        for i, line in enumerate(lines):
+            at = f"{where}: column {c}, line {i}"
+            words = [s for s in line if s[0] != "space"]
+            last = max(j for j, s in enumerate(line) if s[0] != "space")
+            spaces = [s[3] - s[2] for s in line[:last] if s[0] == "space"]
+            if abs(line[0][2] - top) > 0.5:
+                fails.append(f"{at} begins {line[0][2] - top:.1f}px from the column's head")
+            if i < len(lines) - 1:
+                lines_seen += 1
+                if abs(words[-1][3] - bottom) > 0.5:
+                    fails.append(f"{at} ends {bottom - words[-1][3]:.1f}px from the column's end")
+                if spaces and max(spaces) - min(spaces) > 0.1:
+                    fails.append(f"{at}: its spaces are {sorted({round(s, 1) for s in spaces})}px")
+                if spaces and min(spaces) < cell / 2 - 0.1:
+                    fails.append(f"{at}: a space is {min(spaces):.1f}px, under half a cell")
+                stretched += any(s > cell / 2 + 1 for s in spaces)
+            elif any(abs(s - cell / 2) > 0.1 for s in spaces):
+                fails.append(f"{at}, the last: its spaces are "
+                             f"{sorted({round(s, 1) for s in spaces})}px, not half a cell")
+            for kind, text, start, end in words:
+                if kind == "upright" and abs(end - start - cell) > 0.1:
+                    fails.append(f"{at}: `{text}` is {end - start:.1f}px, not one cell")
+    if not stretched:
+        fails.append(f"{where}: no line's spaces grew, so nothing was justified")
+    if not fails:
+        m["gap"] = (m.get("gap", "") + f"; {lines_seen} lines justified at their "
+                    f"spaces, {stretched} of them stretched").strip("; ")
+    return fails
+
+
 CASES = [
     # name, text (or a builder given the column's cells), metadata, window,
     # the faces that must load (the first is the body's), checks
@@ -580,9 +626,11 @@ CASES = [
     ("spaces-chinese", SPACED_CHINESE, {}, (900, 700), ["Noto Sans SC"],
      [no_line_begins_with_a_space(SPACED_CHINESE)]),
     ("spaces-bichig", SPACED_BICHIG, {"vertext-progression": "lr"}, (900, 700),
-     ["Noto Sans SC", "Vertext Noto Sans Mongolian"], [no_line_begins_with_a_space(SPACED_BICHIG)]),
+     ["Noto Sans SC", "Vertext Noto Sans Mongolian"],
+     [no_line_begins_with_a_space(SPACED_BICHIG), justified]),
     ("doubled-spaces", DOUBLED, {"vertext-progression": "lr"}, (900, 700),
-     ["Noto Sans SC", "Vertext Noto Sans Mongolian"], [no_line_begins_with_a_space(DOUBLED)]),
+     ["Noto Sans SC", "Vertext Noto Sans Mongolian"],
+     [no_line_begins_with_a_space(DOUBLED), justified]),
 ]
 
 
@@ -643,7 +691,8 @@ def main():
           "apart when they hold only Mongolian or only Latin, marks used "
           "together share a cell, a number keeps its sign and unit, no "
           "closing mark starts a line or opening mark ends one, no run of "
-          "one mark runs past a column's end, and no line begins with a word space")
+          "one mark runs past a column's end, no line begins with a word space, "
+          "and a Mongolian paragraph is justified at its spaces")
     for line in lines:
         print("      " + line)
     return 0

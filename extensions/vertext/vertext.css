@@ -222,6 +222,20 @@
   white-space: pre-wrap;
   word-spacing: -.5em;
 }
+/* A Mongolian paragraph is justified top and bottom (MLReq 7.2): every line
+   but the last ends at the column's end, and the spaces between its words
+   take up the slack, all of a line's spaces alike. Only the spaces: in a line
+   of bichig with Han words in it, nothing is added between the Han (MLReq
+   7.3.4). With `text-justify: auto` Chrome spaced the Han apart as well,
+   measured, a character growing from 18px to 20.5px. A heading is left as it
+   is, and a paragraph's last line keeps to the head of the column.
+   Chinese is not justified here. CLReq 6.2.2 adjusts a line by reducing
+   first, a mark at a line's end to half a cell, and only then adding space,
+   and `text-justify` does neither in that order. */
+.vertext[data-column-advance="right"] .vertext-column-prose:not(.vertext-column-heading) {
+  text-align: justify;
+  text-justify: inter-word;
+}
 /* Punctuation in a vertical column.
    These rules change only how a mark LOOKS. The character in the markup is
    always the one the author typed — never a U+FE10–FE4F presentation form.
