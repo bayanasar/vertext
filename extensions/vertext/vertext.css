@@ -205,6 +205,23 @@
   background: color-mix(in srgb, currentColor 12%, transparent);
   border-radius: 1px;
 }
+/* In prose the space is text, not a box. A line may break before a box as
+   well as after it, and the browser broke before the space: the space then
+   began the next line and stood its first word half a cell down from the
+   line's head, in 7 lines of Chinese with romanized words and of bichig
+   (`page-geometry`, the `spaces-` cases). As text, the line breaks after a
+   space, and a space at a line's end hangs past it, taking none of its length.
+   `pre-wrap` keeps every space the author typed, as `pre` does. `normal`
+   collapses the second of two, and a copy then loses it: measured, all 19
+   doubled spaces of a paragraph a host passed as it was copied as single
+   ones. Half an em, as the box is: the face's vertical advance for U+0020 is
+   a whole cell (18px measured), and the word spacing takes half of it back.
+   Code keeps the box: its spaces are indentation. */
+.vertext-column-prose .vertext-space {
+  display: inline;
+  white-space: pre-wrap;
+  word-spacing: -.5em;
+}
 /* Punctuation in a vertical column.
    These rules change only how a mark LOOKS. The character in the markup is
    always the one the author typed — never a U+FE10–FE4F presentation form.

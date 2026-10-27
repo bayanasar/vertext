@@ -28,6 +28,7 @@ import hashlib
 import importlib.util
 import os
 import pathlib
+import re
 import shutil
 import subprocess
 import sys
@@ -104,6 +105,13 @@ document.fonts.ready.then(() => {
       return [e.textContent, Math.round((r.left + r.right) / 2)];
     })),
     copied: columns.map(copied),
+    // Each column's slots with their kind, their extent along the line and
+    // the centre of their line.
+    spans: columns.map(c => slotsOf(c).map(e => {
+      const r = e.getBoundingClientRect();
+      return [e.className.replace('vertext-', ''), e.textContent, r.top, r.bottom,
+              Math.round((r.left + r.right) / 2)];
+    })),
     // How far each column's slots run past its end, along the line.
     overrun: columns.map(c => {
       const end = c.getBoundingClientRect().bottom;
@@ -135,11 +143,18 @@ def fetch_fonts(directory):
     return paths
 
 
+class Raw(str):
+    """Text as a wasm or Dart host hands it to the renderer. Through pandoc a
+    doubled space would arrive as one, so the strip of this text comes from
+    the binary itself, set in the page pandoc and the filter build."""
+
+
 def page(pandoc, work, name, text, meta, family):
     """A document through the real filter, set the way a Quarto page sets it."""
     source = work / f"{name}.md"
     front = "".join(f"{key}: {value}\n" for key, value in meta.items())
-    source.write_text(f"---\nvertext: true\n{front}---\n\n{text}\n", encoding="utf-8")
+    written = "永" if isinstance(text, Raw) else text
+    source.write_text(f"---\nvertext: true\n{front}---\n\n{written}\n", encoding="utf-8")
     env = dict(os.environ, PATH=f"{BINARY.parent}:{os.environ['PATH']}")
     done = subprocess.run([pandoc, "-s", "-f", "markdown", "-t", "html", "--wrap=none",
                            "--metadata", f"title={name}", f"--lua-filter={SHIM}",
@@ -148,7 +163,16 @@ def page(pandoc, work, name, text, meta, family):
         sys.exit(f"pandoc failed:\n{done.stderr[-2000:]}")
     head, _, rest = done.stdout.partition("<body>")
     body, _, tail = rest.partition("</body>")
-    faces = "".join(f'@font-face {{ font-family: "{f}"; src: url("{p.name}"); }}\n'
+    if isinstance(text, Raw):
+        flags = (["--progression", meta["vertext-progression"]]
+                 if "vertext-progression" in meta else [])
+        strip = subprocess.run([str(BINARY), "html", *flags], input=text, capture_output=True,
+                               text=True, check=True, timeout=120).stdout.strip()
+        if body.count('<div class="vertext"') != 1:
+            sys.exit(f"{name}: the page has no single strip to replace")
+        body = re.sub(r'<div class="vertext".*</div>', lambda _: strip, body, count=1,
+                      flags=re.S)
+    faces ="".join(f'@font-face {{ font-family: "{f}"; src: url("{p.name}"); }}\n'
                     for f, p in FONTS_IN_WORK.items())
     head = head.replace("</head>", '<link rel="stylesheet" href="vertext.css">\n'
                         f'<style>{faces}body {{ font-family: "{family}"; }}</style>\n'
@@ -475,6 +499,67 @@ def short_latin(n):
     return "永" * n + " ".join(words) + "永" * (2 * n)
 
 
+# Prose whose lines break at word spaces: Chinese with romanized words, as the
+# lesson pages have them; bichig of words of every length, in two orders, so
+# that the lines end at different distances from the column's end; and bichig
+# with Han words in it. And bichig with doubled spaces, which only a host that
+# hands the renderer its text as it is can give.
+SPACED_CHINESE = ("“sayin baina uu”是问候语，意思是“你好”。回答时说 sayin baina 即可。"
+                  "表示感谢说 bayarlalaa ，告别时说 bayartai 。" * 6)
+WORDS = ("ᠮᠣᠩᠭᠣᠯ ᠪᠢᠴᠢᠭ ᠦᠨ ᠬᠡᠯᠡ ᠪᠣᠯ ᠡᠪᠦᠭᠡ ᠡᠮᠡᠭᠡ ᠬᠦᠮᠦᠨ ᠦ ᠭᠠᠵᠠᠷ ᠣᠯᠠᠨ ᠨᠣᠮ ᠢᠷᠡᠬᠦ ᠦᠵᠡᠬᠦ "
+         "ᠮᠣᠷᠢ ᠲᠠᠪᠤᠨ ᠬᠣᠶᠠᠷ ᠭᠤᠷᠪᠠ ᠳᠥᠷᠪᠡ ᠨᠢᠭᠡ ᠪᠢᠳᠡᠨ ᠡᠭᠦᠳᠡ ᠨᠠᠢᠮᠠ ᠰᠠᠶᠢᠨ ᠤᠷᠲᠤ ᠬᠣᠲᠠ "
+         "ᠡᠨᠡ ᠲᠡᠷᠡ ᠶᠠᠭᠤ ᠮᠢᠨᠦ ᠴᠢᠨᠦ ᠪᠠᠭᠰᠢ ᠨᠣᠮᠤᠳ ᠤᠰᠤᠨ ᠠᠷᠪᠠ ᠶᠢᠰᠦ ᠨᠣᠬᠠᠢ ᠮᠣᠷᠢᠰ ᠳᠡᠭᠦᠦ "
+         "ᠡᠭᠡᠴᠢ ᠢᠳᠡᠬᠦ ᠠᠶᠢᠯ ᠣᠬᠣᠷ ᠥᠭᠬᠦ ᠦᠭᠡᠢ ᠨᠠᠳᠠ ᠪᠠᠲᠤ ᠬᠡᠳᠦᠨ ᠵᠢᠵᠢᠭ").split()
+SPACED_BICHIG = "\n\n".join(
+    [" ".join(WORDS[i:] + WORDS[:i]) + "᠃" for i in (0, 17)]
+    + [" ".join(w if i % 7 else f"{w} 蒙古文字" for i, w in enumerate(WORDS)) + "᠃"])
+DOUBLED = Raw("  ".join(WORDS[:20]) + " " + " ".join(WORDS[20:]) + "᠃")
+
+
+def lines_with_kinds(spans, cell):
+    """A column's slots as lines, as `lines_of` makes them, each slot as its
+    kind, text and extent along the line."""
+    lines, previous = [], None
+    for kind, text, top, bottom, x in spans:
+        if previous is None or abs(x - previous) > cell / 2:
+            lines.append([])
+        lines[-1].append((kind, text, top, bottom))
+        previous = x
+    return lines
+
+
+def no_line_begins_with_a_space(text):
+    """No line begins with a word space, and each column copies as written. A
+    line that broke before a space would begin with it, and its first word
+    would stand half a cell down from the head of the line (MLReq 7.2: the
+    words at a paragraph's upper boundary align). The page must break at a
+    space somewhere, a line ending in one or the next beginning with one, or
+    the check proves nothing."""
+    def check(m, where):
+        fails, breaks = [], 0
+        paragraphs = text.split("\n\n")
+        if len(m["spans"]) != len(paragraphs):
+            return [f"{where}: {len(m['spans'])} columns for {len(paragraphs)} paragraphs"]
+        for spans, copied, written in zip(m["spans"], m["copied"], paragraphs):
+            lines = lines_with_kinds(spans, m["cell"])
+            for line in lines[1:]:
+                if line[0][0] == "space":
+                    fails.append(f"{where}: a line begins with a space, before "
+                                 f"{''.join(t for _, t, _, _ in line[1:4])!r}")
+            breaks += sum(a[-1][0] == "space" or b[0][0] == "space"
+                          for a, b in zip(lines, lines[1:]))
+            if copied != written:
+                fails.append(f"{where}: copying a column gives {copied[:40]!r}…, "
+                             f"not {written[:40]!r}…")
+        if not breaks:
+            fails.append(f"{where}: no line broke at a space")
+        if not fails:
+            m["gap"] = (m.get("gap", "") + f"{breaks} breaks at a space, no line "
+                        f"beginning with one, and every column copies as written").strip()
+        return fails
+    return check
+
+
 CASES = [
     # name, text (or a builder given the column's cells), metadata, window,
     # the faces that must load (the first is the body's), checks
@@ -492,6 +577,12 @@ CASES = [
      ["Noto Sans SC", "Vertext Noto Sans Mongolian"], [line_pitch(["mongolian"])]),
     ("latin-lines", short_latin, {}, (900, 700), ["Noto Sans SC"],
      [line_pitch(["latin", "upright"])]),
+    ("spaces-chinese", SPACED_CHINESE, {}, (900, 700), ["Noto Sans SC"],
+     [no_line_begins_with_a_space(SPACED_CHINESE)]),
+    ("spaces-bichig", SPACED_BICHIG, {"vertext-progression": "lr"}, (900, 700),
+     ["Noto Sans SC", "Vertext Noto Sans Mongolian"], [no_line_begins_with_a_space(SPACED_BICHIG)]),
+    ("doubled-spaces", DOUBLED, {"vertext-progression": "lr"}, (900, 700),
+     ["Noto Sans SC", "Vertext Noto Sans Mongolian"], [no_line_begins_with_a_space(DOUBLED)]),
 ]
 
 
@@ -551,8 +642,8 @@ def main():
           "the lines of a paragraph sit within CLReq's usual gap, and one pitch "
           "apart when they hold only Mongolian or only Latin, marks used "
           "together share a cell, a number keeps its sign and unit, no "
-          "closing mark starts a line or opening mark ends one, and no run of "
-          "one mark runs past a column's end")
+          "closing mark starts a line or opening mark ends one, no run of "
+          "one mark runs past a column's end, and no line begins with a word space")
     for line in lines:
         print("      " + line)
     return 0

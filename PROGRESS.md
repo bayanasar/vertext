@@ -1030,6 +1030,25 @@ nothing in the core may foreclose it.
   run of one connector mark whole. 0.3.0 is the tag or crates.io, never that
   commit.
 
+- **A word space never begins a line** (#104). The space was an
+  `inline-block` box, and a line may break before a box as well as after it:
+  the browser broke before the space, which then began the next line and
+  stood its first word half a cell down from the line's head. In prose the
+  space is now text, `white-space: pre-wrap`, with `word-spacing: -.5em` for
+  its half cell (the face's vertical advance for U+0020 is a whole cell,
+  18px). The line breaks after it, and at a line's end it hangs past the
+  column's end, taking none of the line; the strip does not scroll for it.
+  Code keeps the box. `page-geometry` adds three cases: Chinese with
+  romanized words; bichig in two paragraphs and in one with Han words; and
+  bichig with doubled spaces, rendered by the binary itself as a wasm or Dart
+  host passes them, since pandoc collapses them. Red in 7 places before, each
+  a line beginning with a space; green after, with 4, 17 and 6 breaks at a
+  space and every column copying as written. With `white-space: normal` the
+  doubled spaces copy as single ones, and the third case is red. A paragraph
+  with spaces may now break its lines in other places than before. The other
+  browser gates are green: `browser-golden`, `progression-scroll`,
+  `punctuation-ink`, `script-centres`, `wasm-parity`, `wasm-caret`.
+
 ## Not sealed
 
 - **Two kinds of group still have no bound.** Only a mark that repeats the
