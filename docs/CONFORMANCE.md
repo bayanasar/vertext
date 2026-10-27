@@ -42,20 +42,20 @@ a verdict):
 | | Conforms | Partial | Not implemented | Informative |
 |---|---|---|---|---|
 | CLReq | 7 | 15 | 21 | 3 |
-| MLReq | 5 | 10 | 7 | 4 |
+| MLReq | 4 | 11 | 7 | 4 |
 
 The pattern is the same in both. Direction, orientation, keeping words whole
 and preserving the text are met and tested, and so are the page measurements
 CLReq gives numbers for (a line in whole characters, the line gap, marks used
-together), measured in a browser with a real CJK face, and a Mongolian
-paragraph justified top and bottom at its spaces. Where the pause marks
-sit, the marks kept off line edges and a number with its sign are measured
-too, and each holds only in part: the first on the page's own face and
-language, the second not inside a run of one connector mark (`好的～～～`), the
-third not where a sign has a word on its other side (`30°C`). Anything that needs the engine to
-measure (Chinese line adjustment, punctuation compression, widows, hanging
-punctuation),
-anything that needs markup vertext does not carry (ruby, emphasis marks,
+together), measured in a browser with a real CJK face. Where the pause marks
+sit, the marks kept off line edges, a number with its sign and a Mongolian
+paragraph justified top and bottom are measured too, and each holds only in
+part: the first on the page's own face and language, the second not inside a
+run of one connector mark (`好的～～～`), the third not where a sign has a word
+on its other side (`30°C`), the fourth not in a browser without
+`text-justify` when the paragraph holds Han. Anything that needs the engine
+to measure (Chinese line adjustment, punctuation compression, widows,
+hanging punctuation), anything that needs markup vertext does not carry (ruby, emphasis marks,
 interlinear lines, decoration), and anything print-only (pages, running heads,
 page numbers) is not met.
 
@@ -189,11 +189,11 @@ would eventually need its own measurement. See "Beyond both documents" below.
 | 6.2.2 Width, height and spacing | Partial | The run is shaped whole, so letter heights balance as the font designed. The gap before a suffix is not distinct from a word space: in Noto Sans Mongolian, `nnbsp` and `space` have the same advance, and vertext adjusts neither, by decision (see the findings above). | `tools/shaping-golden.py` records both advances |
 | 6.3 Emphasis | Not implemented | Emphasis is flattened. | |
 | 7.1 Words not split | Conforms | A Mongolian run is never split by the engine and never wraps in the browser. Every golden run arrives on the page as one span, and the browser joins it. | gates `delivery-golden` and `browser-golden` |
-| 7.2 Alignment and justification | Conforms | Each slot is centred across its column (the default MLReq names). The lines of a paragraph are justified top and bottom, MLReq's default for multi-line text, by stretching the spaces between words, a line's spaces alike: every line begins at the head of its column and every line but the last ends at its end, within half a pixel. A word space never begins a line, and at a line's end it hangs past the end; before it is stretched it is half a cell, whatever face the page's body puts first. The last line keeps to the head of the column, and a heading is not justified. The other alignments MLReq names (top, centred, bottom) are a page's to choose with `text-align`. Measured in bichig, in bichig with Han words and in bichig with doubled spaces as a host passes them, each with a CJK face and with a Latin face first in the body's stack: before, 23 lines ended up to 34px short of the column's end. And 7 lines of these and of Chinese with romanized words began with a space, which stood their first word half a cell down. Measured in Chrome 152, which applies `text-justify: inter-word`; a browser that ignores it justifies as with `auto`, which in Chrome spaces Han characters apart too. | gate `page-geometry` |
+| 7.2 Alignment and justification | Partial | Each slot is centred across its column (the default MLReq names). The lines of a paragraph are justified top and bottom, MLReq's default for multi-line text, by stretching the spaces between words, a line's spaces alike: every line begins at the head of its column and every line but the last ends at its end, within half a pixel. A word space never begins a line, and at a line's end it hangs past the end; before it is stretched it is half a cell, whatever face the page's body puts first. The last line keeps to the head of the column, and a heading is not justified. The other alignments MLReq names (top, centred, bottom) are a page's to choose with `text-align`. One part is not met: in a browser that does not apply `text-justify`, a paragraph with Han, a mark or a symbol in it is not justified, since justifying it there spaces the Han apart (7.3.4). Per caniuse (#108) that is Safari, and so every browser on iOS, and Chrome and Edge before 145. A paragraph of bichig, Latin words and numbers, whose only text is its spaces, is justified in such a browser too. Measured in Chrome 152 in bichig, in bichig with Han words and in bichig with doubled spaces as a host passes them, with a CJK face and with a Latin face first in the body's stack, and once more with `text-justify` taken out of the stylesheet. Before any of this, 23 lines ended up to 34px short of the column's end, and 7 lines of these and of Chinese with romanized words began with a space, which stood their first word half a cell down. | gate `page-geometry` |
 | 7.3 Line height | Informative | MLReq names line height in this section's title and states no requirement for it. vertext sets a line of Mongolian one pitch from the next, as it does a line of Chinese (see CLReq 7.1.1.5): measured on a paragraph of bichig alone, in `vertical-lr`, where there is no Han character to hold the pitch. | gate `page-geometry` (27px apart) |
 | 7.3.1 Baseline position | Conforms | MLReq: Mongolian is aligned to a baseline running down the centre of the writing, and all text is aligned to it. The stem of a Mongolian run, its baseline, sits on the centre of the line's box, in both progressions and in a line of bichig alone. Centring the run's box does not do that: in Noto Sans Mongolian the stem is 0.19 em off the content area's centre, measured, so the run is moved by `--vertext-mongolian-stem-shift`. The value holds for that face, and the extension ships it beside the stylesheet; a theme that sets bichig in another face declares its own value on `.vertext`. | gate `script-centres` (within 0.05 of a cell, at 48px and 24px cells) |
 | 7.3.2–7.3.3 Mixed with other scripts, numbers and Latin | Partial | MLReq takes half the text height of Latin and digits as their centre line, with the text turned along the line, and asks for an adjustment because digits look larger at the same size. vertext sets Latin and digits as horizontal boxes across the column instead (CLReq 2.1.2), so what the gate measures is the centre of the word's width: it falls on the Mongolian stem within 0.05 of a cell in both progressions. That is a stand-in for the requirement's line, not the line itself. Digits are not adjusted. Latin and Mongolian are sized in proportion to the CJK cell (14 and 15 against 18), so changing the cell keeps the three in step. | gate `script-centres`, `examples/test-column-budget.js` |
-| 7.3.4 Mixed with Chinese and Japanese | Partial | Four requirements. Han characters stand upright inside a `vertical-lr` column, and their centre line falls on the Mongolian stem within 0.05 of a cell in both progressions: both met. A mixed line is balanced top and bottom at its spaces, and no space is added between Han characters: met (see 7.2). Mongolian looking smaller than Chinese at one size is not compensated: bichig is set at 15/18 of the cell. | gate `script-centres` |
+| 7.3.4 Mixed with Chinese and Japanese | Partial | Four requirements. Han characters stand upright inside a `vertical-lr` column, and their centre line falls on the Mongolian stem within 0.05 of a cell in both progressions: both met. No space is added between Han characters, in any browser, and a mixed line is balanced top and bottom at its spaces where the browser applies `text-justify` (see 7.2). Mongolian looking smaller than Chinese at one size is not compensated: bichig is set at 15/18 of the cell. | gate `script-centres` |
 | 7.4 Lists and counters | Partial | An ordered item carries its number as text, and that number reads left to right as a horizontal slot. Not measured. | |
 | 8.1.1–8.1.2 Binding, page turning, paper | Not implemented | No pagination. | |
 | 8.1.3–8.1.4 Scrolling direction and scroll bar | Partial | In document mode a Mongolian document opens at its first column and scrolls left to right, and the region scrolls horizontally, so its scroll bar runs along the bottom. Page mode sets its writing mode by the same rule, but no gate opens a page-mode document. The wheel direction is not tested (see 5.1.4). | gate `progression-scroll` |

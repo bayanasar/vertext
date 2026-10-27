@@ -1063,7 +1063,7 @@ nothing in the core may foreclose it.
   stretched in either case. Green after: 23 lines justified, 18 of them
   stretched. Red without `inter-word`, with 28 Han characters taller than a
   cell; red with the last line justified too. CONFORMANCE MLReq 7.2
-  conforms, and the summary is MLReq 5/10/7/4.
+  records it, Partial for one browser's sake (#108, below).
 
 - **A space is half a cell whatever face the page's body puts first**
   (#109). As text, a space takes its length from the face it is set in, and
@@ -1081,6 +1081,25 @@ nothing in the core may foreclose it.
   with all of its half cell as word spacing, was tried and dropped: it
   measured half a cell in every stack, but the space then has no box across
   the line, and `wasm-caret` clicked 59 graphemes instead of 61.
+
+- **A browser without `text-justify` leaves a paragraph with Han in it
+  unjustified** (#108). `inter-word` is what keeps the Han of a mixed line
+  unspaced, and per caniuse Safari, so every browser on iOS, does not apply
+  it, nor did Chrome before 145; the review measured Chromium 141 spacing
+  such Han from 18px to 24.1px. A column with any text the browser could
+  space apart (an `upright`, `neutral`, `vform`, `corner` or `combine` slot)
+  is now justified only under `@supports (text-justify: inter-word)`. A
+  column of bichig, Latin words and numbers holds no text but its spaces,
+  so a rule without `text-justify` justifies it in any browser that knows
+  `:has()`. `page-geometry` adds `spaces-bichig-no-text-justify`: the bichig
+  page, its stylesheet as such a browser reads it, every `@supports
+  (text-justify: ...)` false and the property dropped. The two columns of
+  bichig alone must be justified and the mixed one not, its Han one cell and
+  its spaces half a cell. With the stylesheet of `2cfcbb2`, red in 35
+  places: 28 Han taller than a cell and 7 lines stretched. Green after, with
+  10 lines justified. Red without the `@supports`, in the same 35 places;
+  red without the `:has()` rule, 10 lines short and none stretched.
+  CONFORMANCE MLReq 7.2 is Partial again, and the summary MLReq 4/11/7/4.
 
 ## Not sealed
 
@@ -1179,12 +1198,13 @@ nothing in the core may foreclose it.
   `quarto add` command answers 404, and a browser host has only a build from
   source, since no release carries the wasm archive yet (#46).
 
-- **Justification is measured in Chrome only.** `text-justify: inter-word`
-  is what keeps the Han characters of a mixed Mongolian line from being
-  spaced apart, and Chrome 152 applies it. Missing: a run in another engine.
-  A browser that ignores `text-justify` justifies as with `auto`, which in
-  Chrome spaces Han apart, so a mixed line there would stretch where MLReq
-  7.3.4 says it must not.
+- **Justification is measured in Chrome only.** The gate sets a page as a
+  browser without `text-justify` would by taking the property out of the
+  stylesheet, but it is still Chrome's justification that runs. Missing: a
+  run in WebKit, which is Safari and every browser on iOS. Chromium 141
+  without `text-justify` stretched only the spaces of a column of bichig
+  alone (#108); a WebKit that stretched anything else there would justify
+  such a column somewhere other than its spaces.
 
 - **The Dart binding builds for Linux only.** Its build hook refuses other
   targets with a message. Android, iOS, macOS and Windows each need a Rust
@@ -1204,7 +1224,11 @@ nothing in the core may foreclose it.
   Chinese stays unjustified: CLReq 6.2.2 reduces first, a mark at a line's
   end to half a character among them, and only then adds space, while
   `text-justify` only adds; and justifying Chinese would change every
-  Chinese page. Revisit if the engine ever measures.
+  Chinese page. Revisit if the engine ever measures. A column with text in
+  it is justified only where `inter-word` applies (#108): elsewhere it would
+  space the Han, which main never did, so there it keeps main's setting. And
+  the space is set in the Mongolian face the stylesheet ships (#109) rather
+  than at no size, which left it no box across the line.
 
 - 2026-10-14 **A defect found in a release commit's review is fixed on top
   of it, and the tag goes to the new head** (#100, Bayanasar's call).

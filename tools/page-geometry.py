@@ -632,6 +632,33 @@ def not_justified(m, where):
     return set_lines(m, where, lambda c: False)
 
 
+# Slots set as inline text, which a browser may space apart when it justifies
+# a line. A Mongolian run, a Latin word and a number are boxes.
+TEXT_KINDS = {"upright", "neutral", "vform", "corner", "combine"}
+
+
+def justified_without_text_justify(m, where):
+    """As a browser that does not apply `text-justify` sets the page (#108):
+    a column of bichig alone, whose only text is its spaces, is justified
+    still, and a column with Han in it is not, so that nothing is added
+    between the Han (MLReq 7.3.4). The page must hold both kinds."""
+    kinds = [{s[0] for s in spans} for spans in m["spans"]]
+    plain = [not k & TEXT_KINDS for k in kinds]
+    if all(plain) or not any(plain):
+        return [f"{where}: no column of each kind, bichig alone and with Han"]
+    return set_lines(m, where, lambda c: plain[c])
+
+
+def without_text_justify(css):
+    """The stylesheet as a browser that does not know `text-justify` reads it:
+    every `@supports (text-justify: ...)` false, and the property dropped.
+    Comments go first, as they name the property too."""
+    css = re.sub(r"/\*.*?\*/", "", css, flags=re.S)
+    css = re.sub(r"@supports\s*\(\s*text-justify\s*:[^)]*\)", "@supports (not (display: block))",
+                 css)
+    return re.sub(r"text-justify\s*:[^;}]*;?", "", css)
+
+
 # A body that sets Latin first: a space is then the Latin face's, which has
 # no vertical metrics, unless the stylesheet sizes the space itself.
 LATIN_FIRST = {"body": ["Noto Sans", "Noto Sans SC"]}
@@ -674,6 +701,11 @@ CASES = [
     ("doubled-spaces-latin-first", DOUBLED, {"vertext-progression": "lr"}, (900, 700),
      ["Noto Sans", "Vertext Noto Sans Mongolian"],
      [no_line_begins_with_a_space(DOUBLED), justified], LATIN_FIRST),
+    # The bichig again, as Safari or a Chrome before 145 sets it.
+    ("spaces-bichig-no-text-justify", SPACED_BICHIG, {"vertext-progression": "lr"}, (900, 700),
+     ["Noto Sans SC", "Vertext Noto Sans Mongolian"],
+     [no_line_begins_with_a_space(SPACED_BICHIG), justified_without_text_justify],
+     {"stylesheet": without_text_justify}),
 ]
 
 
@@ -743,7 +775,8 @@ def main():
           "closing mark starts a line or opening mark ends one, no run of "
           "one mark runs past a column's end, no line begins with a word space, "
           "a space is half a cell whatever face the body puts first, and a "
-          "Mongolian paragraph is justified at its spaces")
+          "Mongolian paragraph is justified at its spaces, one with Han in it "
+          "only where the browser applies `text-justify`")
     for line in lines:
         print("      " + line)
     return 0
