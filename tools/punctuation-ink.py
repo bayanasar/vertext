@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Where each pause or stop mark's ink lands in its character frame.
+"""Where each pause or stop mark's ink, and each curly quote's, lands in its
+character frame.
 
 CLReq 2.1.2 and appendix A: the pause and stop marks (、，。．；：！？) keep the
 direction of a character in vertical writing, so none of them turns. In the
@@ -32,6 +33,16 @@ the frame's left and top edges, and checked against its style:
   * either: a colon's two dots one above the other (its ink taller than wide),
     since a turned colon lays them side by side.
 
+The curly quotes (‘ ’ “ ”) are set the same way and must be the face's
+vertical form, its ink within 5% of where HarfBuzz puts that glyph: a corner
+bracket in Noto Sans SC and Noto Sans CJK SC, a small mark in a corner in
+Noto Sans TC. A quote turned on its side, or standing in its horizontal form,
+lands far from either. They are set twice: with the shipped stylesheet, and
+with every `text-orientation: mixed` in it turned into `sideways`, which is
+what a browser on Unicode 15's data does to a quote left to `mixed`
+(`as_unicode_15`), as Firefox 140 and Chromium 141 do. Chrome 152 alone
+would draw the face's form either way.
+
 Run with --report to print every measurement instead of judging it.
 
 Usage
@@ -44,6 +55,7 @@ import argparse
 import importlib.util
 import json
 import pathlib
+import re
 import shutil
 import subprocess
 import sys
@@ -74,6 +86,15 @@ STYLES = [
     ("centred", "zh-HK", "Noto Sans TC"),
     ("centred", "zh-Hant", "Noto Sans TC"),
 ]
+# The curly quotes, and the vertical form each face draws for them: a
+# Mainland face the corner brackets GB/T 15834 sets vertical quotes in, a
+# Taiwan face a small upright mark in a corner of the frame.
+QUOTES = "“”‘’"
+QUOTE_STYLES = [
+    ("bracket", None, "Noto Sans SC"),
+    ("bracket", "zh-CN", "Noto Sans CJK SC"),
+    ("corner", "zh-Hant", "Noto Sans TC"),
+]
 BOX_W, BOX_H = 3 * CELL, 4 * CELL
 TOP = CELL // 2
 
@@ -84,14 +105,28 @@ def column_html(text):
     return done.stdout
 
 
-def build(fonts, extra_css="", hide_marks=False):
+def as_unicode_15(css):
+    """The stylesheet as a browser on Unicode 15's orientation data sets it.
+
+    Unicode 15 gave the curly quotes the orientation R, turn on the side, and
+    Unicode 17 changed them to Tr, the face's vertical form where it has one.
+    Firefox 140 and Chromium 141 still turn them under `text-orientation:
+    mixed`, and Chrome 152 takes the vertical form, so in Chrome 152 alone a
+    quote left to `mixed` looks right whatever the stylesheet says. Turning
+    every `mixed` into `sideways` turns what the stylesheet leaves to the
+    browser, as those browsers turn these."""
+    return re.sub(r"text-orientation:\s*mixed", "text-orientation: sideways", css)
+
+
+def build(fonts, marks=MARKS, styles=STYLES, extra_css="", hide_marks=False,
+          stylesheet=None):
     cells = []
-    for style, lang, face in STYLES:
-        for mark in MARKS:
+    for style, lang, face in styles:
+        for mark in marks:
             cells.append((style, lang, face, mark, column_html(f"口{mark}口")))
     faces = "".join(f'@font-face {{ font-family: "{f}"; src: url("{p.name}"); }}\n'
                     for f, p in fonts.items())
-    used = list(dict.fromkeys(face for _, _, face in STYLES))
+    used = list(dict.fromkeys(face for _, _, face in styles))
     body = "".join(
         f'<div class="box"{f" lang={lang}" if lang else ""} '
         f'style="font-family: &quot;{face}&quot;">{html}</div>'
@@ -99,10 +134,10 @@ def build(fonts, extra_css="", hide_marks=False):
     page = f"""<!doctype html><meta charset="utf-8">
 <style>
 {faces}
-{STYLESHEET.read_text(encoding="utf-8")}
+{stylesheet if stylesheet is not None else STYLESHEET.read_text(encoding="utf-8")}
 :root {{ --vertext-cell: {CELL}px; }}
 html, body {{ margin: 0; padding: 0; background: #fff; color: #000; }}
-body {{ display: grid; grid-template-columns: repeat({len(MARKS)}, {BOX_W}px); }}
+body {{ display: grid; grid-template-columns: repeat({len(marks)}, {BOX_W}px); }}
 .box {{ position: relative; width: {BOX_W}px; height: {BOX_H}px; overflow: hidden; }}
 .box .vertext {{ position: absolute; top: {TOP}px; right: 0; padding: 0; border: 0;
                  gap: 0; min-block-size: 0; overflow: visible; }}
@@ -152,8 +187,8 @@ def dark(rows, channels, x0, y0, x1, y1):
     return min(xs), max(xs) + 1
 
 
-def measure(rows, blank, channels, index):
-    bx, by = (index % len(MARKS)) * BOX_W, (index // len(MARKS)) * BOX_H
+def measure(rows, blank, channels, index, columns=len(MARKS)):
+    bx, by = (index % columns) * BOX_W, (index // columns) * BOX_H
     # The first 口 occupies the first cell of the line; its ink fixes the
     # centre of the frames across the line.
     ref = dark(rows, channels, bx, by + TOP, bx + BOX_W, by + TOP + CELL)
@@ -190,6 +225,65 @@ def judge(style, mark, m):
     return fails
 
 
+# Where each face's vertical form of a quote puts its ink: HarfBuzz's extents
+# of the glyph `vert` substitutes, per mille of the em, the frame's top at the
+# vertical origin (880). A Mainland face draws a corner bracket across most of
+# the frame; a Taiwan face a small mark, opening ones in the lower right and
+# closing ones in the upper left. A quote turned on its side, or standing in
+# its horizontal form, lands far from both.
+QUOTE_FORMS = {
+    # (cx, cy, w, h) as fractions of the frame
+    ("bracket", "“"): (0.63, 0.79, 0.66, 0.35),
+    ("bracket", "”"): (0.37, 0.21, 0.66, 0.35),
+    ("bracket", "‘"): (0.62, 0.81, 0.71, 0.32),
+    ("bracket", "’"): (0.38, 0.20, 0.71, 0.32),
+    ("corner", "“"): (0.77, 0.83, 0.41, 0.28),
+    ("corner", "”"): (0.23, 0.18, 0.41, 0.28),
+    ("corner", "‘"): (0.83, 0.83, 0.22, 0.28),
+    ("corner", "’"): (0.17, 0.18, 0.22, 0.28),
+}
+
+
+def judge_quote(style, mark, m):
+    want = QUOTE_FORMS[(style, mark)]
+    got = (m["cx"], m["cy"], m["w"], m["h"])
+    if all(abs(a - b) <= 0.05 for a, b in zip(got, want)):
+        return []
+    return [f"ink at ({got[0]:.2f}, {got[1]:.2f}), {got[2]:.2f} x {got[3]:.2f}: not the "
+            f"face's vertical form, at ({want[0]:.2f}, {want[1]:.2f}), "
+            f"{want[2]:.2f} x {want[3]:.2f}"]
+
+
+def quote_problems(fonts, work, base, chrome, stylesheet, tag, report):
+    """Set the quotes with `stylesheet`, and judge each one's ink."""
+    shots = []
+    for hide in (False, True):
+        cells, html = build(fonts, QUOTES, QUOTE_STYLES, hide_marks=hide,
+                            stylesheet=stylesheet)
+        name = f"quotes-{tag.replace(' ', '-')}{int(hide)}"
+        page, png = work / f"{name}.html", work / f"{name}.png"
+        page.write_text(html, encoding="utf-8")
+        _bg.shoot(chrome, f"{base}/{page.name}", png,
+              len(QUOTES) * BOX_W, len(QUOTE_STYLES) * BOX_H)
+        shots.append(_bg.read_png(png))
+    (_, _, rows, channels), (_, _, blank, _) = shots
+    fails = []
+    for hide, (_, _, shot, _) in zip((False, True), shots):
+        if min(shot[0][:3]) < 200:
+            return [f"{tag}: the screenshot{' with the quotes hidden' if hide else ''} "
+                    f"was taken before its faces loaded, or without them"]
+    for i, (style, lang, face, mark, _) in enumerate(cells):
+        where = f"{tag}: {mark} {style} ({lang or 'no lang'}, {face})"
+        m, problem = measure(rows, blank, channels, i, len(QUOTES))
+        if problem:
+            fails.append(f"{where}: {problem}")
+            continue
+        report.append(f"{where}: centre ({m['cx']:.2f}, {m['cy']:.2f}), "
+                      f"{m['w']:.2f} x {m['h']:.2f} of the frame")
+        fails += [f"{where}: {f}" for f in judge_quote(style, mark, m)]
+    return fails
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--chrome")
@@ -206,18 +300,21 @@ def main():
     work = pathlib.Path(tempfile.mkdtemp(prefix="vertext-punctuation-"))
     for path in fonts.values():
         shutil.copy(path, work / path.name)
-    shots = []
+    shots, fails, report = [], [], []
+    shipped = STYLESHEET.read_text(encoding="utf-8") + args.css
+    legs = [("shipped", shipped), ("as Unicode 15", as_unicode_15(shipped))]
     with _bg.serve(work) as base:
         for hide in (False, True):
-            cells, html = build(fonts, args.css, hide)
+            cells, html = build(fonts, extra_css=args.css, hide_marks=hide)
             page, png = work / f"marks{int(hide)}.html", work / f"marks{int(hide)}.png"
             page.write_text(html, encoding="utf-8")
             _bg.shoot(chrome, f"{base}/{page.name}", png,
                       len(MARKS) * BOX_W, len(STYLES) * BOX_H)
             shots.append(_bg.read_png(png))
+        for tag, stylesheet in legs:
+            fails += quote_problems(fonts, work, base, chrome, stylesheet, tag, report)
     (width, height, rows, channels), (_, _, blank, _) = shots
 
-    fails, report = [], []
     # Ink alone cannot tell the pinned faces from any other CJK face that
     # happens to be installed: the marks would land somewhere and be judged.
     # Each page stays black until its own load has every face, so a shot in
@@ -254,7 +351,10 @@ def main():
     if fails:
         return 1
     print(f"PASS: none of the {len(MARKS)} pause and stop marks turns, and each sits "
-          f"where its style puts it, in {len(STYLES)} language settings")
+          f"where its style puts it, in {len(STYLES)} language settings; the "
+          f"{len(QUOTES)} curly quotes take the face's vertical form in "
+          f"{len(QUOTE_STYLES)} faces, also where the browser would turn what "
+          f"`mixed` leaves to it")
     return 0
 
 

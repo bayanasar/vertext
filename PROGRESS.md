@@ -1225,6 +1225,32 @@ nothing in the core may foreclose it.
   document mode's 26px, the link to the last heading landing its column at
   x=306..343 of 1300; document mode is unchanged.
 
+- **A curly quote takes the face's vertical form in every browser** (#118).
+  It was reported as a Taiwan face having no vertical form for `“ ” ‘ ’`.
+  HarfBuzz says otherwise: every face tried has one, the Google Fonts slices
+  and `text=` subsets included. A Mainland face's is a corner bracket, a
+  Taiwan face's a small upright mark in a corner of the frame, and the
+  Taiwan one is what was reported. What did go wrong was the browsers'
+  data. The quotes were left to `text-orientation: mixed`, and Unicode gave
+  them R, turn on the side, until 17.0 made them Tr, the face's form.
+  Chrome 152 draws the face's form; Firefox 140 turned them, so the docs
+  site's quotes lay on their side whatever face it tried. The renderer now
+  names a curly quote's slot `quote` (the layout's slot is unchanged), and
+  the stylesheet stands it upright, so the face's form is the only one asked
+  for. `punctuation-ink` sets the 4 quotes in Noto Sans SC, Noto Sans CJK SC
+  and Noto Sans TC and requires each one's ink within 5% of the face's
+  vertical form as HarfBuzz puts it, also with every `mixed` turned into
+  `sideways`, as a browser on Unicode 15 sets them. Before, that leg was red
+  in all 12; after, green, and the shipped leg green before and after in
+  Chrome 152. Review ran the gate in Chromium 141 and found it turning the
+  quotes too: the shipped leg red in all 12 before, both legs green after.
+  By hand in Firefox 140, the same faces now draw the same forms as
+  Chrome 152, and Chrome 152 draws what it drew. A Latin face first in the
+  font stack draws the quote upright in its horizontal form, as Chrome 152
+  did before and Firefox 140 now does too; the README says to put the CJK
+  face first. Firefox gives a bracket or quote in Noto Sans SC half a cell,
+  not a whole one, as it did before (#122); Safari was not run.
+
 ## Not sealed
 
 - **Two kinds of group still have no bound.** Only a mark that repeats the

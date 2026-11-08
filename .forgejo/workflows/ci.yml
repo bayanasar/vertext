@@ -323,9 +323,11 @@ jobs:
 
       # The pause and stop marks never turn, and sit where the face puts them
       # for its region: the Mainland corner, the Taiwan and Hong Kong centre.
-      # Located by ink in a screenshot, since a box says nothing about where
-      # the glyph inside it was drawn.
-      - name: The pause and stop marks keep their place
+      # The curly quotes are the face's vertical form, also where a browser
+      # would turn what `mixed` leaves to it, as Firefox 140 does. Located by
+      # ink in a screenshot, since a box says nothing about where the glyph
+      # inside it was drawn.
+      - name: The pause and stop marks keep their place, the quotes the face's form
         if: ${{ !cancelled() }}
         id: punctuation-ink
         run: |

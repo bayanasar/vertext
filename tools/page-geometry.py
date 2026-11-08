@@ -674,7 +674,7 @@ def not_justified(m, where):
 
 # Slots set as inline text, which a browser may space apart when it justifies
 # a line. A Mongolian run, a Latin word and a number are boxes.
-TEXT_KINDS = {"upright", "neutral", "vform", "corner", "combine"}
+TEXT_KINDS = {"upright", "neutral", "vform", "quote", "corner", "combine"}
 
 
 def justified_without_text_justify(m, where):

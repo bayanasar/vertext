@@ -131,12 +131,14 @@
 .vertext-latin,
 .vertext-mongolian,
 .vertext-vform,
+.vertext-quote,
 .vertext-corner,
 .vertext-combine,
 .vertext-space { vertical-align: middle; }
 .vertext-upright,
 .vertext-neutral,
 .vertext-vform,
+.vertext-quote,
 .vertext-corner,
 .vertext-combine,
 .vertext-space { line-height: var(--vertext-line-pitch); }
@@ -158,6 +160,7 @@
 .vertext-column-heading .vertext-upright,
 .vertext-column-heading .vertext-neutral,
 .vertext-column-heading .vertext-vform,
+.vertext-column-heading .vertext-quote,
 .vertext-column-heading .vertext-corner,
 .vertext-column-heading .vertext-combine {
   font-size: calc(var(--vertext-cell) * var(--vertext-heading-scale));
@@ -250,7 +253,8 @@
    first, a mark at a line's end to half a cell, and only then adding space,
    and `text-justify` does neither in that order. */
 .vertext[data-column-advance="right"] .vertext-column-prose:not(.vertext-column-heading):not(
-    :has(.vertext-upright, .vertext-neutral, .vertext-vform, .vertext-corner, .vertext-combine)) {
+    :has(.vertext-upright, .vertext-neutral, .vertext-vform, .vertext-quote, .vertext-corner,
+         .vertext-combine)) {
   text-align: justify;
 }
 @supports (text-justify: inter-word) {
@@ -315,6 +319,22 @@
 .vertext-vform {
   font-size: var(--vertext-cell);
   text-orientation: mixed;
+}
+/* The curly quotes (‘ ’ “ ”) take the face's vertical form too, and are stood
+   upright so that every browser draws it. Left to `mixed`, they are the one
+   case where browsers disagree: Unicode said they turned on their side until
+   17.0, which made them Tr, the face's form, like `「` and `（`. Chrome 152
+   draws the face's form; Firefox 140 and Chromium 141 turn them, so a
+   Mainland face's corner brackets came out as commas lying down, whatever
+   face the page chose. `upright` makes the face's form the only one asked
+   for, as it is for the column's Han: a Mainland face draws corner brackets
+   (GB/T 15834), a Taiwan face a small upright mark in a corner of the frame.
+   Where the page's font stack puts a Latin face first, that face draws the
+   quote and has no vertical form, so the quote stands in its horizontal
+   form, as Chrome 152 already drew it under `mixed`. */
+.vertext-quote {
+  font-size: var(--vertext-cell);
+  text-orientation: upright;
 }
 /* The pause and stop marks (、，。．；：) never turn (CLReq 2.1.2, appendix A).
    Where they sit is regional: the upper-right corner of the frame in the

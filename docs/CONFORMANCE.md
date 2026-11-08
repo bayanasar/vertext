@@ -100,7 +100,7 @@ Three findings are worth reading before the tables:
 | 2.1.2 Table captions | Not implemented | The wire protocol carries no caption. | |
 | 2.1.2 Table header row on the right | Partial | Header cells are real `<th>` and the table is `vertical-rl`, so the header row falls on the right. Nothing measures where it lands. | `a_table_keeps_its_cells_apart` |
 | 2.1.2 Incomplete lines on multi-column pages | Not implemented | No pagination. | |
-| 2.1.3 Mixed text composition in vertical | Partial | As 2.1.2. No Han–Western spacing is applied (CLReq: up to ¼ em). Quotation marks around Western text do not follow its orientation: `“”` always take the vertical form. | |
+| 2.1.3 Mixed text composition in vertical | Partial | As 2.1.2. No Han–Western spacing is applied (CLReq: up to ¼ em). Quotation marks around Western text do not follow its orientation: `‘’“”` take the face's vertical form wherever they stand. The form is regional, as for the pause marks: Noto Sans SC draws the corner brackets GB/T 15834 sets vertical quotes in, Noto Sans TC a small upright mark in a corner of the frame, under any `lang`. A face with no vertical forms, such as a Latin face first in the page's font stack, leaves the quote upright in its horizontal form. Measured in Chrome 152 by the gate, and in Firefox 140 by hand. | `a_curly_quote_is_named_apart_from_the_marks_that_turn`, gate `punctuation-ink` |
 
 ### 3 Glyph shaping and positioning
 

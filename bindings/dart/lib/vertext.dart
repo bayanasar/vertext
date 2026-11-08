@@ -58,9 +58,16 @@ enum SlotKind {
   /// Whitespace from the source, carried through.
   space,
 
-  /// Punctuation that turns a quarter in vertical text: brackets, quotes,
-  /// dashes, ellipses.
+  /// Punctuation that turns a quarter in vertical text: brackets, dashes,
+  /// ellipses.
   vform,
+
+  /// A curly quotation mark (‘ ’ “ ”). It takes the face's vertical form and
+  /// is never turned: a Mainland face draws a corner bracket, a Taiwan face a
+  /// small upright mark in a corner of its square. A host that shapes
+  /// vertically gets that from the face; one that shapes horizontally turns
+  /// it, as `vform`, which is the nearest it can come.
+  quote,
 
   /// A pause or stop mark (、，。．；：), which never turns. It sits in the
   /// upper-right corner of its square in the Mainland style and in the centre

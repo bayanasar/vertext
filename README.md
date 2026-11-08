@@ -161,6 +161,14 @@ a Taiwan face such as Noto Sans TC and the language declared (`lang: zh-TW`,
 face that serves every region falls back to its own: Noto Sans SC keeps the
 corner under `zh-TW` too.
 
+The curly quotes `‘ ’ “ ”` take the face's vertical form in the same way. A
+Mainland face draws them as the corner brackets `「 」『 』`; a Taiwan face
+draws a small upright mark in a corner of the cell, whatever the language,
+since Taiwan sets vertical quotes with `「」` in the first place. A Latin face
+has curly quotes and no vertical forms, so a page whose font stack puts a
+Latin face first, as Quarto's default does, draws the quotes upright in their
+horizontal form: put the CJK face first.
+
 The Mongolian face does ship: Noto Sans Mongolian sits beside `vertext.css`
 under the SIL Open Font License (`NotoSansMongolian-OFL.txt`), and the
 stylesheet loads it under a family name of its own. Every Mongolian

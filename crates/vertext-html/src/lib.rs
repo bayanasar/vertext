@@ -521,6 +521,11 @@ pub fn slot_kind(slot: &Slot) -> &'static str {
         Slot::LatinWord(_) => "latin",
         Slot::MongolianRun(_) => "mongolian",
         Slot::Space(_) => "space",
+        // A curly quote is a mark with a vertical form like the others, and the
+        // layout treats it as one. Only the page needs it named apart: its
+        // vertical form has to be asked of the face, which `vform` leaves to
+        // the browser, and browsers answer differently (see `is_curly_quote`).
+        Slot::VerticalPunctuation(s) if is_curly_quote(s) => "quote",
         // The character is emitted exactly as the author wrote it. The
         // vertical appearance is the stylesheet's job — see the note on
         // `Slot::VerticalPunctuation`.
@@ -534,6 +539,20 @@ pub fn slot_kind(slot: &Slot) -> &'static str {
 fn is_math_slot(text: &str) -> bool {
     let mut chars = text.chars();
     chars.next() == Some(MATH_SLOT) && chars.next().is_none()
+}
+
+/// `‘ ’ “ ”`, which the stylesheet stands upright so the face's vertical form
+/// is drawn in every browser.
+///
+/// Every other mark with a vertical form is left to `text-orientation: mixed`,
+/// which takes the face's form where Unicode says the mark has one and turns
+/// the mark where it says it does not. Unicode said the curly quotes turned
+/// until 17.0, which made them Tr, the face's form, like `「` and `（`.
+/// Chrome 152 draws the face's form; Firefox 140 and Chromium 141 still turn
+/// them on their side, so a Mainland face's corner brackets came out as
+/// commas lying down.
+fn is_curly_quote(text: &str) -> bool {
+    matches!(text, "‘" | "’" | "“" | "”")
 }
 
 /// Emits a column's slots, one span each, in order.
@@ -887,6 +906,25 @@ mod tests {
         let heading_at = html.find("vertext-column-heading").unwrap();
         let prose_at = html.rfind("vertext-column-prose\"").unwrap();
         assert!(prose_at > heading_at, "the prose column must follow the heading column");
+    }
+
+    /// A curly quote is named `quote`, so the stylesheet can stand it upright
+    /// and every browser draws the face's vertical form. The brackets, the
+    /// ASCII marks and the dashes stay `vform`, left to `mixed`, which turns
+    /// the ones that must turn. The layout's slot is the same for all of them.
+    #[test]
+    fn a_curly_quote_is_named_apart_from_the_marks_that_turn() {
+        let slot = |kind: &str, text: &str| format!("<span class=\"vertext-{kind}\">{text}</span>");
+        let html = render_document("他说“好的”，又说‘行’：（甲）「乙」(丙)——丁", RenderOptions::default());
+        for quote in ["“", "”", "‘", "’"] {
+            assert!(html.contains(&slot("quote", quote)), "{quote}: {html}");
+        }
+        for mark in ["（", "）", "「", "」", "(", ")", "—"] {
+            assert!(html.contains(&slot("vform", mark)), "{mark}: {html}");
+        }
+        assert!(!html.contains(&slot("vform", "“")), "{html}");
+        let layout = layout_text("“好”", &LayoutConfig::default());
+        assert_eq!(layout.columns[0].slots[0], Slot::VerticalPunctuation("“".into()));
     }
 
     /// CLReq 6.1.1's connector marks, interpuncts and solidi. The browser lets
