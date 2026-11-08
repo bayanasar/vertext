@@ -1101,6 +1101,35 @@ nothing in the core may foreclose it.
   red without the `:has()` rule, 10 lines short and none stretched.
   CONFORMANCE MLReq 7.2 is Partial again, and the summary MLReq 4/11/7/4.
 
+- **A formula in vertical text is set by the page's math engine** (#111).
+  The filter flattened a Math node to its text, so a formula reached the
+  column as its TeX source, `\pi_\theta` and the like. Now only its place
+  crosses the wire, U+E00D. The binary sets the place as one box,
+  `vertext-math`, horizontal in the column like a Latin word and held to a
+  closing mark after it. The filter puts the Math node back at each place,
+  and pandoc writes it for whichever engine the document asks for. A display
+  formula is a segment of its own, U+E00E, set as a horizontal block between
+  the columns. Author text loses both codepoints with the rest of the
+  reserved range; when the places that come back do not match the formulas
+  sent, the block is left horizontal with a warning. `filter-golden` adds a
+  page with formulas in its title, a paragraph, two display blocks, a
+  heading, a list item, a table cell and an English paragraph, and a U+E00D
+  typed by the author. With main's filter, red in 5 places: of 10 inline
+  formulas only the table-of-contents anchor's came back, no display formula
+  did, and the typed U+E00D stayed on the page. Green after under pandoc 3.9
+  and CI's 2.17.1.1: 10 inline and 2 display formulas in order, 8 of them
+  boxed. The renderer test checks that the places and the text around them
+  come out in the order they went in, red with a held run written backwards.
+  Chrome 152 with MathJax, under Quarto 1.11.9, typeset 8 formulas with no
+  `mjx-merror`; the review's Chromium 141 with MathJax 3.2.2 did the same in
+  `vertical-rl` and `vertical-lr`. The review also checked the order against
+  the Math nodes pandoc read, in 11 documents (adjacent formulas, formulas
+  against Latin and digits, in bold, links, footnotes, nested lists, a quote,
+  bichig), and found 5 documents without formulas rendered byte for byte as
+  main renders them, but for U+E00D and U+E00E typed by an author. A labelled
+  formula is not cross-referenced (README). A long inline formula widens its
+  line. KaTeX, MathML, Safari and Firefox were not run.
+
 ## Not sealed
 
 - **Two kinds of group still have no bound.** Only a mark that repeats the

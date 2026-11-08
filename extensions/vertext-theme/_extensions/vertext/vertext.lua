@@ -7,17 +7,17 @@
 -- external so an SSG gets deterministic, static HTML and no browser
 -- JavaScript is required.
 --
--- Wire protocol: all thirteen of these codepoints are also declared in
+-- Wire protocol: all fifteen of these codepoints are also declared in
 -- crates/vertext-html/src/lib.rs, each pinned to its literal value by the
 -- `mode_markers_are_the_wire_protocol` test, and the upper bound pinned by
 -- `the_reserved_range_ends_where_the_filter_stops_stripping`. Do not change
 -- one side alone.
 
--- The reserved block runs from MODE_CODE_POINT to MODE_CODE_POINT + 12:
+-- The reserved block runs from MODE_CODE_POINT to MODE_CODE_POINT + 14:
 -- code, prose, heading levels 1-6, table with its cell and row separators,
--- and the two kinds of list item.
+-- the two kinds of list item, a formula's place, and a display formula.
 local MODE_CODE_POINT = 0xE000
-local RESERVED_COUNT = 13 -- U+E000 .. U+E00C inclusive
+local RESERVED_COUNT = 15 -- U+E000 .. U+E00E inclusive
 local MODE_CODE = "\u{E000}"
 local MODE_PROSE = "\u{E001}"
 local MODE_TABLE = "\u{E008}"
@@ -25,6 +25,12 @@ local CELL_SEP = "\u{E009}"
 local ROW_SEP = "\u{E00A}"
 local MODE_LIST = "\u{E00B}"
 local MODE_LIST_ORDERED = "\u{E00C}"
+-- Where one formula goes. The formula stays here, as the document's own Math
+-- node; only its place crosses the wire, and `strip_block` puts the formula
+-- back where the place comes out. See MATH_SLOT in crates/vertext-html.
+local MATH_SLOT = "\u{E00D}"
+-- A display formula: a segment of its own, set as a horizontal block.
+local MODE_MATH_DISPLAY = "\u{E00E}"
 -- Heading levels 1-6 occupy U+E002-U+E007, matching MODE_HEADING_BASE in
 -- crates/vertext-html/src/lib.rs.
 local MODE_HEADING_BASE = 0xE002
@@ -695,8 +701,9 @@ end
 -- a legacy PUA encoding is a real document, not a hypothetical one.
 --
 -- So author text is sanitized at the point it enters the protocol. U+E000
--- through U+E00C are stripped — the whole reserved block, which is what
--- RESERVED_COUNT counts; everything else passes through untouched.
+-- through U+E00E are stripped — the whole reserved block, which is what
+-- RESERVED_COUNT counts; everything else passes through untouched. `keep`
+-- spares one marker, for text the filter has already written its own into.
 -- Note the loop: Lua patterns match BYTES, so a range class written as
 -- `[\u{E000}-\u{E007}]` is not a codepoint range at all. It is the byte set
 -- implied by those characters' UTF-8 encodings, and it happily deletes the
@@ -704,15 +711,132 @@ end
 -- turning 山 into invalid UTF-8. A literal multi-byte string is safe as a
 -- pattern because UTF-8 is self-synchronizing: no character's encoding can
 -- appear inside another's.
-local function strip_markers(text)
+local function strip_markers(text, keep)
   for offset = 0, RESERVED_COUNT - 1 do
-    text = text:gsub(utf8.char(MODE_CODE_POINT + offset), "")
+    local marker = utf8.char(MODE_CODE_POINT + offset)
+    if marker ~= keep then
+      text = text:gsub(marker, "")
+    end
   end
   return text
 end
 
+-- The formulas of the strip being encoded, in the order their places were
+-- written onto the wire. `strip_block` fills the places in this order, so
+-- every strip starts with an empty list (`begin_strip`).
+local formulas = {}
+
+local function begin_strip()
+  formulas = {}
+end
+
+local function walk(element, filter)
+  if element.walk then return element:walk(filter) end
+  return pandoc.walk_block(element, filter)
+end
+
+-- A block's text, flattened, with each formula replaced by its place.
+--
+-- Flattened is still what everything else here gets -- emphasis and links
+-- arrive as their bare words, which the README states. A formula cannot be
+-- treated that way. `stringify` turns a Math node into its TeX, so a vertical
+-- page used to show `\pi_\theta(a_t \mid s_t)` set one character to a slot,
+-- and no math engine on the page could read it: the loss was not a style but
+-- the content. The node is kept instead, and the wire carries only where it
+-- goes.
+--
+-- Author text is stripped of markers BEFORE the places go in, so a U+E00D
+-- typed in the source cannot pass for one; the last pass spares only the
+-- places this function wrote. Footnotes go first because `stringify` drops
+-- them: a formula inside one would have been counted with no place to fill.
 local function content_of(block)
-  return strip_markers(pandoc.utils.stringify(block))
+  if block.t == nil then block = pandoc.Div(block) end
+  local walked = walk(walk(block, { Note = function() return {} end }), {
+    Str = function(el) return pandoc.Str(strip_markers(el.text)) end,
+    Code = function(el)
+      el.text = strip_markers(el.text)
+      return el
+    end,
+    Math = function(el)
+      table.insert(formulas, el)
+      return pandoc.Str(MATH_SLOT)
+    end,
+  })
+  return strip_markers(pandoc.utils.stringify(walked), MATH_SLOT)
+end
+
+-- A paragraph that holds a display formula is cut at the formula: the text on
+-- either side stays prose, and the formula becomes a segment of its own that
+-- the binary sets as a horizontal block.
+local function encode_paragraph(block)
+  local holds_display = false
+  for _, inline in ipairs(block.content) do
+    if inline.t == "Math" and inline.mathtype == "DisplayMath" then
+      holds_display = true
+      break
+    end
+  end
+  if not holds_display then return content_of(block) end
+  local parts, run = {}, {}
+  local function flush_run()
+    local text = content_of(pandoc.Plain(run))
+    if text:match("%S") then table.insert(parts, text) end
+    run = {}
+  end
+  for _, inline in ipairs(block.content) do
+    if inline.t == "Math" and inline.mathtype == "DisplayMath" then
+      flush_run()
+      table.insert(formulas, inline)
+      table.insert(parts, MODE_MATH_DISPLAY .. MATH_SLOT .. MODE_PROSE)
+    else
+      table.insert(run, inline)
+    end
+  end
+  flush_run()
+  return table.concat(parts, "\n")
+end
+
+-- The block a rendered strip becomes: the binary's HTML with each formula put
+-- back where its place came out, as the Math node it was.
+--
+-- A strip with no formula is one RawBlock, as it always was. A strip with
+-- formulas is a Plain of RawInlines and Math nodes, so pandoc writes each
+-- formula the way it writes every other formula in the document, and the
+-- document keeps the math engine it asked for -- a strip of RawBlocks alone
+-- would also leave pandoc seeing no math at all, and the page without one.
+--
+-- nil when the places that came back are not the formulas that went in: a
+-- formula put in another's place is worse than the text left horizontal.
+local function strip_block(html)
+  if #formulas == 0 then return pandoc.RawBlock("html", html) end
+  local inlines, start, filled = {}, 1, 0
+  while true do
+    local first, last = html:find(MATH_SLOT, start, true)
+    if not first then break end
+    filled = filled + 1
+    local formula = formulas[filled]
+    if not formula then break end
+    table.insert(inlines, pandoc.RawInline("html", html:sub(start, first - 1)))
+    table.insert(inlines, pandoc.Math(formula.mathtype, formula.text))
+    start = last + 1
+  end
+  if filled ~= #formulas then
+    quarto.log.warning("vertext: the layout returned " .. filled .. " places for "
+      .. #formulas .. " formulas, so this block is left horizontal.")
+    return nil
+  end
+  table.insert(inlines, pandoc.RawInline("html", html:sub(start)))
+  return pandoc.Plain(inlines)
+end
+
+-- Whether a block is a strip this filter already rendered: a RawBlock, or the
+-- Plain `strip_block` makes, which opens with the binary's root element.
+local function is_strip(block)
+  if block.t == "RawBlock" then return true end
+  if block.t ~= "Plain" then return false end
+  local first = block.content[1]
+  return first ~= nil and first.t == "RawInline"
+    and first.text:find('^<div class="vertext[ "]') ~= nil
 end
 
 -- Encodes a Pandoc Table onto the wire as rows of cells.
@@ -871,10 +995,12 @@ function encode_blocks(blocks)
       -- specific to `.cell-output`; any Div holding code was erased.
       local inner = encode_blocks(block.content)
       if inner ~= "" then table.insert(parts, inner) end
+    elseif block.t == "Para" or block.t == "Plain" then
+      table.insert(parts, encode_paragraph(block))
     else
       -- Everything else is still flattened to its characters: inline emphasis,
       -- links, and list structure do not survive. Documented in the README
-      -- rather than silently implied.
+      -- rather than silently implied. Formulas do survive: see `content_of`.
       table.insert(parts, content_of(block))
     end
   end
@@ -886,6 +1012,7 @@ function Div(el)
   if not quarto.doc.is_format("html") then return el end
 
   local pure_code = el.classes:includes("vertext-code")
+  begin_strip()
   local text = encode_blocks(el.content)
   if text == "" then return pandoc.RawBlock("html", "") end
 
@@ -905,13 +1032,15 @@ function Div(el)
   -- No binary: hand the original content back untouched rather than emitting
   -- a broken block.
   if not html then return nil end
+  local strip = strip_block(html)
+  if not strip then return nil end
   -- A `.vertext-page` div asks for the whole page to go vertical, and it never
   -- reaches the Pandoc pass, so it registers its own page style here — again
   -- only after a successful render.
   if el.classes:includes("vertext-page") then
     page_div_rendered = true
   end
-  return pandoc.RawBlock("html", html)
+  return strip
 end
 
 -- Page mode: the whole document is one vertical surface.
@@ -983,22 +1112,35 @@ function Pandoc(doc)
   -- *down* the page — which would leave the document scrolling vertically to
   -- get from the title to the text, in a layout whose whole point is that it
   -- scrolls sideways. One strip, one scroll direction.
-  local prefix = ""
+  --
+  -- The title is encoded inside the first flush rather than up front, because
+  -- a formula in it belongs to the first strip's formulas, and every strip
+  -- starts that list afresh.
   local title = doc.meta.title
-  if title then
-    local text = strip_markers(pandoc.utils.stringify(title))
-    if text ~= "" then
-      prefix = heading_marker(1) .. text .. MODE_PROSE
-    end
+  local title_pending = title ~= nil
+
+  local function title_text()
+    local ok, block = pcall(pandoc.Plain, title)
+    if ok then return content_of(block) end
+    return strip_markers(pandoc.utils.stringify(title))
   end
 
   local function flush()
-    if #pending == 0 and prefix == "" then return end
+    if #pending == 0 and not title_pending then return end
+    begin_strip()
+    local prefix = ""
+    if title_pending then
+      title_pending = false
+      local text = title_text()
+      if text ~= "" then
+        prefix = heading_marker(1) .. text .. MODE_PROSE
+      end
+    end
     local text = prefix .. encode_blocks(pending)
-    prefix = ""
     local html = text ~= "" and render(text, strip_args) or nil
-    if html then
-      table.insert(rendered, pandoc.RawBlock("html", html))
+    local strip = html and strip_block(html)
+    if strip then
+      table.insert(rendered, strip)
     else
       -- Degrade to the untouched blocks so the document still renders.
       for _, block in ipairs(pending) do table.insert(rendered, block) end
@@ -1109,8 +1251,11 @@ function Pandoc(doc)
   -- the content is already rendered HTML that Quarto styles, and laying out
   -- pre-highlighted markup as vertical slots would destroy the highlighting
   -- that is the point of it.
+  --
+  -- A strip with formulas in it is a Plain rather than a RawBlock (see
+  -- `strip_block`), and stringifies to its formulas' TeX alone, so it counts.
   local function holds_raw_block(block)
-    if block.t == "RawBlock" then return true end
+    if is_strip(block) then return true end
     if block.t ~= "Div" or not block.content then return false end
     for _, inner in ipairs(block.content) do
       if holds_raw_block(inner) then return true end
@@ -1151,7 +1296,7 @@ function Pandoc(doc)
   for _, block in ipairs(doc.blocks) do
     -- A RawBlock at this point is a strip `Div` already rendered; emitting it
     -- as-is keeps an author's explicit fences intact.
-    if block.t ~= "RawBlock" and not is_quarto_chrome(block) and holds_raw_block(block) then
+    if not is_strip(block) and not is_quarto_chrome(block) and holds_raw_block(block) then
       -- Passed through, but NOT unstyled. The region it lands in is
       -- `writing-mode: vertical-rl`, so already-rendered HTML inherits it and a
       -- code listing comes out running down the page one character at a time.
@@ -1161,7 +1306,7 @@ function Pandoc(doc)
       flush()
       table.insert(rendered,
         pandoc.Div({ block }, pandoc.Attr("", { "vertext-raw" }, {})))
-    elseif block.t == "RawBlock" or is_quarto_chrome(block) then
+    elseif is_strip(block) or is_quarto_chrome(block) then
       flush()
       table.insert(rendered, block)
     else

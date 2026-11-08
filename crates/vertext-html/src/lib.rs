@@ -43,13 +43,27 @@ pub const MODE_LIST: char = '\u{E00B}';
 /// the text, so they must not also be given a bullet; a marker of their own
 /// is what lets the stylesheet tell them apart.
 pub const MODE_LIST_ORDERED: char = '\u{E00C}';
+/// Where one formula goes. Not a mode: it stands inside a segment, the way a
+/// word does, and the layout sets it as one box that no line divides.
+///
+/// The formula itself never crosses the wire. The filter keeps it as the
+/// document's own math node and puts it back where this character comes out,
+/// so the page sets it with whatever math engine the document chose — MathJax,
+/// KaTeX, MathML — and a formula in a vertical page is the same formula as in
+/// a horizontal one. Sent as TeX instead, it would have to be typeset here or
+/// arrive as text, and text is what it used to arrive as: `\pi_\theta` set one
+/// character to a slot, with nothing on the page that could read it.
+pub const MATH_SLOT: char = '\u{E00D}';
+/// A display formula: a segment of its own, set as a horizontal block. Its
+/// text is the [`MATH_SLOT`] the filter fills.
+pub const MODE_MATH_DISPLAY: char = '\u{E00E}';
 /// One past the last reserved codepoint — exclusive, like every other Rust
 /// upper bound. The filter strips `MODE_CODE ..RESERVED_END` from author
 /// text; keep the two in step. `vertext.lua` expresses the same bound as
 /// `MODE_CODE_POINT + RESERVED_COUNT`, and
 /// `the_reserved_range_ends_where_the_filter_stops_stripping` pins them to
 /// each other.
-pub const RESERVED_END: u32 = 0xE00D;
+pub const RESERVED_END: u32 = 0xE00F;
 
 /// The marker introducing a heading of `level` (clamped to 1–6).
 pub fn heading_marker(level: u8) -> char {
@@ -100,12 +114,16 @@ enum Mode {
     Heading(u8),
     Table,
     ListItem { ordered: bool },
+    MathDisplay,
 }
 
 impl Mode {
     fn from_marker(ch: char) -> Option<Mode> {
         if ch == MODE_CODE {
             return Some(Mode::Code);
+        }
+        if ch == MODE_MATH_DISPLAY {
+            return Some(Mode::MathDisplay);
         }
         if ch == MODE_PROSE {
             return Some(Mode::Prose);
@@ -127,14 +145,17 @@ impl Mode {
         match self {
             // A heading is prose that happens to be short and loud. It gets
             // the prose rule set; only its presentation differs.
-            Mode::Prose | Mode::Heading(_) | Mode::Table | Mode::ListItem { .. } => prose_config(progression),
+            Mode::Prose | Mode::Heading(_) | Mode::Table | Mode::ListItem { .. }
+            | Mode::MathDisplay => prose_config(progression),
             Mode::Code => code_config(progression),
         }
     }
 
     fn column_class(self) -> String {
         match self {
-            Mode::Prose | Mode::Table => "vertext-column vertext-column-prose".to_string(),
+            // A display formula is never a column (`block` sets it as its own
+            // horizontal block); prose is the class it would fall back to.
+            Mode::Prose | Mode::Table | Mode::MathDisplay => "vertext-column vertext-column-prose".to_string(),
             Mode::ListItem { ordered } => {
                 let kind = if ordered { "vertext-column-list-ordered" } else { "vertext-column-list-bullet" };
                 format!("vertext-column vertext-column-prose vertext-column-list {kind}")
@@ -156,6 +177,7 @@ impl Mode {
     fn block(self, text: &str) -> BlockKind {
         match self {
             Mode::Table => BlockKind::Table,
+            Mode::MathDisplay => BlockKind::MathDisplay,
             Mode::Code => BlockKind::Horizontal(HorizontalKind::Code),
             Mode::Prose | Mode::Heading(_) | Mode::ListItem { .. } => {
                 if prefers_horizontal(text) {
@@ -173,6 +195,10 @@ enum BlockKind {
     Vertical,
     Horizontal(HorizontalKind),
     Table,
+    /// A display formula, set horizontally like code and for the same reason:
+    /// a formula has a left-to-right reading order of its own, and a math
+    /// engine lays it out in one.
+    MathDisplay,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -283,7 +309,8 @@ pub fn render_document(input: &str, options: RenderOptions) -> String {
         // belongs above it and its commentary below, not beside it. A table
         // that happens to sit among vertical columns simply ends up alone in
         // its stack, which lays out exactly as it did before.
-        let horizontal = matches!(block, BlockKind::Horizontal(_) | BlockKind::Table);
+        let horizontal = matches!(block,
+                                  BlockKind::Horizontal(_) | BlockKind::Table | BlockKind::MathDisplay);
         if horizontal && !in_stack {
             html.push_str("<div class=\"vertext-hstack\">");
             in_stack = true;
@@ -294,6 +321,9 @@ pub fn render_document(input: &str, options: RenderOptions) -> String {
 
         match block {
             BlockKind::Table => render_table(&mut html, trimmed, options.progression),
+            BlockKind::MathDisplay => html.push_str(&format!(
+                "<div class=\"vertext-horizontal vertext-horizontal-math\">{}</div>",
+                escape(trimmed))),
             BlockKind::Horizontal(kind) => render_horizontal(&mut html, trimmed, kind, mode),
             BlockKind::Vertical => {
                 let layout = layout_text(trimmed, &mode.config(options.progression));
@@ -477,6 +507,11 @@ fn render_table(html: &mut String, text: &str, progression: Progression) {
 /// One table, so such a host classifies every slot exactly as the page does.
 pub fn slot_kind(slot: &Slot) -> &'static str {
     match slot {
+        // The layout reads the placeholder as one neutral character, which is
+        // what it should do: one character is one slot, and a slot is never
+        // divided. Only its name differs, and on the page that name is the box
+        // the formula goes into.
+        Slot::Neutral(s) if is_math_slot(s) => "math",
         Slot::Upright(_) => "upright",
         Slot::LatinWord(_) => "latin",
         Slot::MongolianRun(_) => "mongolian",
@@ -489,6 +524,11 @@ pub fn slot_kind(slot: &Slot) -> &'static str {
         Slot::Neutral(_) => "neutral",
         Slot::Combined(_) => "combine",
     }
+}
+
+fn is_math_slot(text: &str) -> bool {
+    let mut chars = text.chars();
+    chars.next() == Some(MATH_SLOT) && chars.next().is_none()
 }
 
 /// Emits a column's slots, one span each, in order.
@@ -535,7 +575,13 @@ fn render_slots(html: &mut String, slots: &[Slot], keep_edges: bool) {
 /// solidus: the browser lets those begin a line beside Han too, so the slot
 /// at `i` holds them, and the marks after them, the same way.
 fn keep_together(slots: &[Slot], i: usize) -> (usize, usize) {
-    let is_box = |slot: &Slot| matches!(slot, Slot::LatinWord(_) | Slot::MongolianRun(_));
+    // A formula is a box like a word: `$x$，` must not put the comma at the
+    // top of the next line.
+    let is_box = |slot: &Slot| match slot {
+        Slot::LatinWord(_) | Slot::MongolianRun(_) => true,
+        Slot::Neutral(s) => is_math_slot(s),
+        _ => false,
+    };
     let mut b = i;
     while b < slots.len() && may_not_end_a_line(&slots[b]) {
         b += 1;
@@ -606,10 +652,11 @@ fn may_not_end_a_line(slot: &Slot) -> bool {
 /// One run of text laid out as a single vertical strip, for a host that
 /// places slots itself: the layout and its source map, column for column what
 /// [`render_document`] draws for the same input. `None` where it would not set
-/// the text as one strip: outside code, the text carries a mode marker, or its
-/// Latin outweighs its vertical script and it goes horizontal. In code the
-/// page reads no markers, and neither does this; any other private-use
-/// character is text on the page and is text here.
+/// the text as one strip: outside code, the text carries a mode marker or a
+/// [`MATH_SLOT`] (a formula is not text a host can draw), or its Latin
+/// outweighs its vertical script and it goes horizontal. In code the page
+/// reads no markers, and neither does this; any other private-use character
+/// is text on the page and is text here.
 ///
 /// The line breaks at the end follow the page too: the last is the file's
 /// terminator and draws nothing, and any before it, however many, draw one
@@ -617,7 +664,7 @@ fn may_not_end_a_line(slot: &Slot) -> bool {
 pub fn strip_layout(input: &str, code: bool, progression: Progression)
                     -> Option<(Layout, SourceMap)> {
     let trimmed = input.trim_end_matches(['\n', '\r']);
-    if !code && trimmed.chars().any(|c| Mode::from_marker(c).is_some()) {
+    if !code && trimmed.chars().any(|c| c == MATH_SLOT || Mode::from_marker(c).is_some()) {
         return None;
     }
     if !code && prefers_horizontal(trimmed) {
@@ -654,13 +701,13 @@ mod tests {
     /// an ordered-list marker surviving into a document, no error, no warning.
     ///
     /// `vertext.lua` writes the same edge as `MODE_CODE_POINT +
-    /// RESERVED_COUNT`, with `RESERVED_COUNT = 13`. Changing either side alone
+    /// RESERVED_COUNT`, with `RESERVED_COUNT = 15`. Changing either side alone
     /// now fails here.
     #[test]
     fn the_reserved_range_ends_where_the_filter_stops_stripping() {
-        assert_eq!(RESERVED_END, MODE_LIST_ORDERED as u32 + 1);
-        assert_eq!(RESERVED_END, MODE_CODE as u32 + 13);
-        assert!(Mode::from_marker(MODE_LIST_ORDERED).is_some());
+        assert_eq!(RESERVED_END, MODE_MATH_DISPLAY as u32 + 1);
+        assert_eq!(RESERVED_END, MODE_CODE as u32 + 15);
+        assert!(Mode::from_marker(MODE_MATH_DISPLAY).is_some());
         assert!(char::from_u32(RESERVED_END).and_then(Mode::from_marker).is_none());
     }
 
@@ -698,6 +745,10 @@ mod tests {
         // A marker the page reads splits the text into blocks: no one strip.
         assert_eq!(strip_columns("山川\u{E000}x", false), None);
         assert_eq!(strip_columns("\u{E002}標題\u{E001}正文", false), None);
+        // Nor is a formula's place one: the page draws a box the filter fills,
+        // and a host drawing its own slots has nothing to fill it with.
+        assert_eq!(strip_columns("設\u{E00D}為", false), None);
+        assert_eq!(strip_columns("\u{E00E}\u{E00D}\u{E001}正文", false), None);
     }
 
     #[test]
@@ -717,6 +768,8 @@ mod tests {
         assert_eq!(ROW_SEP, '\u{E00A}');
         assert_eq!(MODE_LIST, '\u{E00B}');
         assert_eq!(MODE_LIST_ORDERED, '\u{E00C}');
+        assert_eq!(MATH_SLOT, '\u{E00D}');
+        assert_eq!(MODE_MATH_DISPLAY, '\u{E00E}');
         // Every reserved codepoint is pinned above. A round-trip test cannot
         // stand in for this one: it compares a constant against itself, so
         // renumbering MODE_TABLE would leave it green while the literal in
@@ -733,15 +786,79 @@ mod tests {
         assert_eq!(Mode::from_marker(MODE_TABLE), Some(Mode::Table));
         assert_eq!(Mode::from_marker(MODE_LIST), Some(Mode::ListItem { ordered: false }));
         assert_eq!(Mode::from_marker(MODE_LIST_ORDERED), Some(Mode::ListItem { ordered: true }));
+        assert_eq!(Mode::from_marker(MODE_MATH_DISPLAY), Some(Mode::MathDisplay));
         for level in 1..=MAX_HEADING_LEVEL {
             assert_eq!(Mode::from_marker(heading_marker(level)), Some(Mode::Heading(level)));
         }
         // Ordinary text must never be mistaken for a marker.
-        // '\u{E00D}' is one past the last reserved codepoint and '\u{D7FF}'
-        // sits below the whole block. Both must read as ordinary text.
-        for ch in ['字', 'a', '\u{E00D}', '\u{D7FF}', '\u{E7FF}'] {
+        // '\u{E00F}' is one past the last reserved codepoint and '\u{D7FF}'
+        // sits below the whole block. Both must read as ordinary text, and so
+        // must a formula's place, which stands inside a segment and opens none.
+        for ch in ['字', 'a', MATH_SLOT, '\u{E00F}', '\u{D7FF}', '\u{E7FF}'] {
             assert_eq!(Mode::from_marker(ch), None, "{ch:?} should not be a marker");
         }
+    }
+
+    /// A formula's place comes out once, in order, inside a box of its own,
+    /// wherever the text around it is set: a vertical column, a horizontal
+    /// paragraph, a list item, a table cell. The filter fills the places in
+    /// the order it wrote them, so a place lost, doubled or moved past the
+    /// text beside it would put a formula in the wrong spot on the page.
+    #[test]
+    fn a_formula_place_comes_out_once_and_in_order() {
+        let render = |input: &str| render_document(input, RenderOptions::default());
+        // The places and the text around them, in the order they stand, with
+        // the markup, the other markers and the white space left out.
+        let order = |text: &str| {
+            let mut tag = false;
+            text.chars()
+                .filter(|&c| {
+                    match c {
+                        '<' => tag = true,
+                        '>' => { tag = false; return false; }
+                        _ => {}
+                    }
+                    let marker = (MODE_CODE as u32..RESERVED_END).contains(&(c as u32));
+                    !tag && !c.is_whitespace() && (c == MATH_SLOT || !marker)
+                })
+                .collect::<String>()
+        };
+        for input in [
+            "策略\u{E00D}的梯度，見\u{E00D}。",
+            "\u{E00D}",
+            "甲\u{E00D}乙\u{E00D}丙",
+            "設\u{E00D}%與\u{E00D}?!",
+            "The policy \u{E00D} and its gradient \u{E00D} are both English here.",
+            "\u{E00B}一項\u{E00D}\u{E001}\u{E008}甲\u{E009}\u{E00D}\u{E00A}乙\u{E009}丙\u{E001}",
+            "\u{E003}標題\u{E00D}\u{E001}正文\u{E00D}",
+        ] {
+            let html = render(input);
+            assert_eq!(order(&html), order(input), "{input:?}\n{html}");
+        }
+        let html = render("策略\u{E00D}的梯度，見\u{E00D}。");
+        assert_eq!(html.matches("<span class=\"vertext-math\">\u{E00D}</span>").count(), 2, "{html}");
+    }
+
+    /// `$x$，`: the comma may not begin a line, and a formula is a box the
+    /// browser would break beside, so the two share a span that does not wrap.
+    #[test]
+    fn a_formula_holds_the_mark_after_it() {
+        let html = render_document("設\u{E00D}，則", RenderOptions::default());
+        assert!(html.contains("<span class=\"vertext-nobreak\"><span class=\"vertext-math\">\u{E00D}</span>\
+                               <span class=\"vertext-corner\">，</span></span>"), "{html}");
+    }
+
+    /// A display formula is a horizontal block, so it joins the stack the way
+    /// a code block does, and the prose on either side stays vertical.
+    #[test]
+    fn a_display_formula_is_a_horizontal_block_between_columns() {
+        let html = render_document("前文\n\u{E00E}\u{E00D}\u{E001}\n後文", RenderOptions::default());
+        assert!(html.contains("<div class=\"vertext-hstack\">\
+                               <div class=\"vertext-horizontal vertext-horizontal-math\">\u{E00D}</div></div>"),
+                "{html}");
+        assert!(html.contains("<span class=\"vertext-upright\">前</span>"), "{html}");
+        assert!(html.contains("<span class=\"vertext-upright\">後</span>"), "{html}");
+        assert_eq!(html.matches(MATH_SLOT).count(), 1);
     }
 
     #[test]

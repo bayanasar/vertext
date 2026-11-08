@@ -10,7 +10,7 @@ A real document reaches the page like this:
 `tools/shaping-golden.py` starts at the font. `tools/delivery-golden.py` and
 `tools/browser-golden.py` start at the BINARY: they hand it text on stdin. So
 every gate in this repository begins after the filter, and the filter half --
-where author text enters the wire protocol, and where the 13 reserved codepoints
+where author text enters the wire protocol, and where the 15 reserved codepoints
 are written -- has never been executed by anything that can fail.
 
 It is not the safe half. #25 (two copies of the filter, drifted) proved this is
@@ -140,7 +140,97 @@ STRUCTURE_WANTS = [
 ]
 
 
-def render(pandoc, document, path_extra=None, filter_copy=None):
+# Formulas in every place the filter encodes text: a vertical paragraph, a
+# display formula inside one and on its own, a heading, a list item, a table
+# cell, a Latin-majority paragraph set horizontally, and the title. The U+E00D
+# typed into the prose is the place marker itself, written by an author: it
+# must be stripped like every other reserved codepoint, not counted as a place,
+# or every formula after it lands one place late.
+MATH = """---
+title: 估計 $\\hat{A}_t$
+vertext: true
+---
+
+策略 $\\pi_\\theta(a_t \\mid s_t)$ 的梯度，以優勢 $A_t$ 加權\ue00d。
+
+$$
+\\hat{A}_t = \\sum_{l=0}^{\\infty} (\\gamma\\lambda)^l \\delta_{t+l}
+$$
+
+前文 $a$ 接著
+$$b = c$$
+後文 $d$。
+
+## 小節 $e$
+
+- 一項 $f$
+- 二項
+
+| 甲 | 乙 |
+|---|---|
+| $g$ | 丙 |
+
+The policy $\\pi$ and its gradient $\\nabla J$ are written in English here.
+"""
+
+MATH_INLINE = ["\\hat{A}_t", "\\pi_\\theta(a_t \\mid s_t)", "A_t", "a", "d", "e", "f",
+               "g", "\\pi", "\\nabla J"]
+MATH_DISPLAY = ["\n\\hat{A}_t = \\sum_{l=0}^{\\infty} (\\gamma\\lambda)^l \\delta_{t+l}\n",
+                "b = c"]
+MATH_SPAN = re.compile(r'<span class="math (inline|display)">\\[(\[](.*?)\\[)\]]</span>', re.S)
+
+
+def math_problems(pandoc):
+    """Every formula comes back as a formula, in its place and in order.
+
+    The filter flattened each paragraph with `stringify`, which turns a Math
+    node into its TeX: a vertical page showed `\\pi_\\theta` one character to a
+    slot, and no math engine on the page could read it. Now only a formula's
+    place crosses the wire and the filter puts the node back, so the page's
+    math spans must be the document's formulas, in the document's order, each
+    inside the box the layout made for it.
+    """
+    html, stderr = render(pandoc, MATH, extra=["--mathjax"])
+    fails = []
+    if stderr.strip():
+        return [f"math: the filter complained\n     {stderr.strip()[:200]}"]
+    if "data-column-advance" not in html:
+        return ["math: no strip was rendered, so nothing below was tested"]
+    # A heading also stays a real Header in a hidden anchor, for the table of
+    # contents, so its formula is there twice by design. The anchors are not
+    # the page's text; count without them. pandoc 3 writes an anchor as a
+    # <section>, 2.17 (CI's) as a <div>.
+    text = re.sub(r'<(div|section)\b[^>]*class="vertext-toc-anchor"[^>]*>.*?</\1>', "",
+                  html, flags=re.S)
+    found = MATH_SPAN.findall(text)
+    inline = [tex for kind, tex in found if kind == "inline"]
+    display = [tex for kind, tex in found if kind == "display"]
+    if inline != MATH_INLINE:
+        fails.append(f"math: the inline formulas are not the document's, in "
+                     f"order\n     got {inline}\n     want {MATH_INLINE}")
+    if display != MATH_DISPLAY:
+        fails.append(f"math: the display formulas are not the document's, in "
+                     f"order\n     got {display}\n     want {MATH_DISPLAY}")
+    if "\ue00d" in html:
+        fails.append(f"math: {html.count(chr(0xE00D))} U+E00D left on the page "
+                     f"-- a place no formula filled, or the author's own marker")
+    boxed = len(re.findall(r'<span class="vertext-math"><span class="math inline">',
+                           html))
+    # The title, the paragraph's two, the two around the display formula, the
+    # heading's, the list item's and the cell's are in columns; the English
+    # paragraph's two are in a horizontal line and need no box.
+    if boxed != 8:
+        fails.append(f"math: {boxed} inline formulas sit in a `vertext-math` "
+                     f"box, want 8")
+    blocks = len(re.findall(r'<div class="vertext-horizontal vertext-horizontal-math">'
+                            r'<span class="math display">', html))
+    if blocks != 2:
+        fails.append(f"math: {blocks} display formulas are horizontal blocks, "
+                     f"want 2")
+    return fails
+
+
+def render(pandoc, document, path_extra=None, filter_copy=None, extra=()):
     """pandoc -> the real filter -> the wire -> the binary. Returns (html, stderr)."""
     env = dict(os.environ)
     env["PATH"] = (path_extra if path_extra is not None
@@ -153,7 +243,7 @@ def render(pandoc, document, path_extra=None, filter_copy=None):
         source = f.name
     try:
         done = subprocess.run(
-            [pandoc, "-f", "markdown", "-t", "html", "--wrap=none",
+            [pandoc, "-f", "markdown", "-t", "html", "--wrap=none", *extra,
              f"--lua-filter={SHIM}", source],
             capture_output=True, text=True, env=env, timeout=60)
     finally:
@@ -377,6 +467,8 @@ def main():
             fails.append(f"structure: no `{wanted}` in the output -- {why} is "
                          f"no longer true, so a wire marker did not arrive")
 
+    fails += math_problems(args.pandoc)
+
     fails += versions_agree()
 
     # The handshake (#9, step 3). Nothing else in this repository checks that
@@ -413,6 +505,8 @@ def main():
           f"span each and shape as the golden recorded.")
     print(f"      every block kind survives the wire: heading, table, bullet "
           f"list, ordered list, code.")
+    print(f"      {len(MATH_INLINE)} inline and {len(MATH_DISPLAY)} display "
+          f"formulas come back as formulas, in order, each in its place.")
     print(f"      and the handshake refuses {len(stubs)} binaries that do not "
           f"speak this filter's wire version, degrading horizontal rather than "
           f"rendering a mismatched pair.")

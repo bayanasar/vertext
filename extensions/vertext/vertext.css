@@ -162,7 +162,8 @@
 .vertext-column-heading .vertext-combine {
   font-size: calc(var(--vertext-cell) * var(--vertext-heading-scale));
 }
-.vertext-column-heading .vertext-latin {
+.vertext-column-heading .vertext-latin,
+.vertext-column-heading .vertext-math {
   font-size: calc(var(--vertext-cell) * 14 / 18 * var(--vertext-heading-scale));
 }
 .vertext-column-heading .vertext-mongolian {
@@ -378,6 +379,29 @@
 .vertext-column-code .vertext-latin {
   max-inline-size: var(--vertext-latin-cap-code, 24ch);
 }
+/* A formula in a column is one box, set horizontally like a Latin word and
+   for the same reason: the math engine lays it out left to right, and turned
+   on its side it would read as nothing. Unlike a word it has no cap and never
+   wraps, because a formula cannot be divided where a word can be hyphenated;
+   a long one makes its line as wide as the formula. The box is the filter's
+   to fill: the document's math engine draws inside it. */
+.vertext-math {
+  display: inline-block;
+  writing-mode: horizontal-tb;
+  /* The column sets `line-height: 0` and every slot sets its own; a formula's
+     line inherited the zero, so the box was 17px for a 25px formula --
+     measured, with the comma after it drawn over the formula's foot. `normal`
+     lets the line grow to whatever the math engine draws. */
+  line-height: normal;
+  vertical-align: middle;
+  inline-size: max-content;
+  white-space: nowrap;
+  text-align: center;
+  /* The size a Latin word is set at, so a formula and the word beside it
+     match; and the same minimum, so a short formula keeps the pitch. */
+  font-size: calc(var(--vertext-cell) * 14 / 18);
+  min-inline-size: var(--vertext-line-pitch);
+}
 /* A Mongolian run is one joined word and must be handed to the font whole.
    Two things break it inside a CJK column:
    `text-orientation: upright` is inherited from the column and stands every
@@ -516,6 +540,14 @@
   margin-inline: .75rem;
   font-size: 15px;
   line-height: 1.5;
+}
+/* A display formula: a horizontal block like a code block. One wider than the
+   measure scrolls inside its block rather than being cut or spilling over the
+   columns beside it. */
+.vertext-horizontal-math {
+  overflow-x: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
 }
 /* Already-rendered HTML that the encoder cannot touch: a cell magic's
    syntax-highlighted source, a plot, a rendered table. It is emitted beside the

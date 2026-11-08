@@ -188,6 +188,17 @@ marker":
 | U+E008 | table (cells separated by U+E009, rows by U+E00A) |
 | U+E00B | list item |
 | U+E00C | ordered list item |
+| U+E00D | where one formula goes (not a mode: it stands inside a segment) |
+| U+E00E | display formula (its segment holds one U+E00D) |
+
+A formula never crosses the wire. The filter keeps it as the document's own
+Math node and sends only its place, U+E00D, which the layout sets as one box
+(`vertext-math`) that no line divides. When the HTML comes back the filter cuts
+it at each place and puts the Math node there, so pandoc writes the formula
+with whatever math engine the document chose. A display formula is a segment
+of its own and comes back as a horizontal block (`vertext-horizontal-math`).
+If the places that come back are not the formulas that went in, the block is
+left horizontal rather than filled wrongly.
 
 Two consequences the code enforces:
 
@@ -196,7 +207,7 @@ Two consequences the code enforces:
    containing U+E000 would switch the rest of itself into code mode. PUA is rare
    in prose, and rare is not never.
 2. **Both sides carry the same constants**, Rust and Lua, and
-   `mode_markers_are_the_wire_protocol` asserts every one of the thirteen
+   `mode_markers_are_the_wire_protocol` asserts every one of the fifteen
    against its literal codepoint, so renumbering any of them on the Rust side
    fails the build rather than passing silently. A round-trip test cannot do
    this job — comparing a constant to itself stays green through a

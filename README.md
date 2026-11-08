@@ -188,11 +188,14 @@ so structure only crosses the boundary where the wire protocol carries it:
 | Tables | Real `<table>`; rows become columns, cells never hyphenate |
 | Bullet / ordered lists | Each item is its own block, oriented on its own. An ordered item carries its number as text |
 | Paragraphs | Own block, oriented by the rule above |
+| Inline formulas (`$…$`) | One horizontal box in the column, set by the document's own math engine (MathJax, KaTeX, MathML). A formula is never divided, so a long one makes its line as wide as the formula |
+| Display formulas (`$$…$$`) | Own horizontal block, like code; one wider than the measure scrolls |
 | Emphasis, links | **Flattened to their text.** The markup is lost |
+| A labelled formula and its reference (`$$…$$ {#eq-x}`, `@eq-x`) | **Not cross-referenced.** Quarto resolves references after this filter has set the text, so the formula gets no number, `{#eq-x}` stays in the column as text and `@eq-x` stays as typed (Quarto 1.11.9). A horizontal page numbers and links them |
 | A list nested inside a list item | Flattened into that item's text |
 | Mongolian inside a code block | **Rendered in the monospace face, so its letters stay isolated instead of joining** |
 
-The last three rows are real limitations, not rounding errors: `*emphasis*`
+The last four rows are real limitations, not rounding errors: `*emphasis*`
 arrives as the bare word, and bichig inside a fenced block keeps the monospace
 face deliberately — a family change mid-line would break the column alignment
 that is the reason code is set in monospace at all. The cost is that those
