@@ -1251,6 +1251,26 @@ nothing in the core may foreclose it.
   face first. Firefox gives a bracket or quote in Noto Sans SC half a cell,
   not a whole one, as it did before (#122); Safari was not run.
 
+- **CONFORMANCE reads CLReq of 4 November 2026** (#106). It had read the
+  1 September 2026 draft. Against the dated copies on w3.org, 7 October
+  changed only the date. 4 November adds section 4.2 (grapheme, word and
+  sentence segmentation); names solidi in the English of the basic line-start
+  rule, where the Chinese already had 分隔號 and row 6.1.1 already held them;
+  and in 6.3.3 widens the marks beside which no Western spacing is added from
+  commas and full stops to every pause or stop mark, which changes nothing
+  here, since vertext adds no such spacing. Two rows are new: 4.2.1 grapheme
+  clusters, Partial, as the layout and the source map keep to cluster
+  boundaries and arrow keys, Backspace and Delete are the host's; and
+  4.2.2–4.2.3 words and sentences, Not implemented by design. The summary is
+  CLReq 7/16/22/3. `every_grapheme_boundary_round_trips_through_a_caret` now
+  also requires no caret at a character boundary inside a cluster, which its
+  comment claimed and it checked only inside `\r\n`: with the map's boundaries
+  taken per character, the old suite passed all 48 tests, and the new check
+  fails, first on a Mongolian letter with its free variation selector. The gap
+  analysis row on punctuation glyphs still said vertext placed the corner
+  marks itself, untrue since October. MLReq (10 July 2025) and the gap
+  analysis (31 October 2025) have no newer version.
+
 ## Not sealed
 
 - **Two kinds of group still have no bound.** Only a mark that repeats the

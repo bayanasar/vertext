@@ -244,6 +244,7 @@ mod tests {
         "internationalization is a long word",
         "use-after-free",
         "e\u{0301}cole स\u{094D}त 葛\u{FE00}城",
+        "ma\u{0304}ma 妈妈 ni\u{030C}",
         "👩\u{200D}💻 codes",
         "(mongɣol-un) čaγan Монгол хэл",
         "  indented\ttab",
@@ -290,10 +291,6 @@ mod tests {
             let (_, map) = maps(text);
             let mut offsets: Vec<usize> = text.grapheme_indices(true).map(|(o, _)| o).collect();
             offsets.push(text.len());
-            let breaks: Vec<Range<usize>> = text.grapheme_indices(true)
-                .filter(|(_, g)| matches!(*g, "\n" | "\r" | "\r\n"))
-                .map(|(o, g)| o..o + g.len())
-                .collect();
             let mut seen = std::collections::HashSet::new();
             for offset in offsets {
                 let caret = map.caret(offset)
@@ -301,9 +298,14 @@ mod tests {
                 assert_eq!(map.offset(caret), Some(offset), "{text:?} {caret:?}");
                 assert!(seen.insert(caret), "{text:?}: two offsets share {caret:?}");
             }
-            // And a byte inside a line break, or inside a grapheme, has none.
-            for br in breaks.iter().filter(|b| b.len() > 1) {
-                assert_eq!(map.caret(br.start + 1), None, "{text:?}");
+            // And no character boundary inside a grapheme has one: not between
+            // an ideograph and its variation selector, a letter and its tone
+            // mark, the parts of a ZWJ sequence, or the two halves of "\r\n".
+            for (start, grapheme) in text.grapheme_indices(true) {
+                for (inner, _) in grapheme.char_indices().skip(1) {
+                    assert_eq!(map.caret(start + inner), None,
+                               "{text:?}: a caret inside {grapheme:?}");
+                }
             }
         }
     }

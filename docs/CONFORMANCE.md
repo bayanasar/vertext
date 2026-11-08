@@ -6,7 +6,7 @@ and why; this document measures it against a standard somebody else wrote.
 
 | Document | Version read |
 |---|---|
-| [CLReq](https://www.w3.org/TR/clreq/), Requirements for Chinese Text Layout | Group Note Draft, 1 September 2026 |
+| [CLReq](https://www.w3.org/TR/clreq/), Requirements for Chinese Text Layout | Group Note Draft, 4 November 2026 |
 | [MLReq](https://www.w3.org/TR/mlreq/), Mongolian Layout Requirements | Group Draft Note, 10 July 2025 |
 | [Chinese Layout Gap Analysis](https://www.w3.org/TR/clreq-gap/) | Group Draft Note, 31 October 2025 |
 
@@ -41,7 +41,7 @@ a verdict):
 
 | | Conforms | Partial | Not implemented | Informative |
 |---|---|---|---|---|
-| CLReq | 7 | 15 | 21 | 3 |
+| CLReq | 7 | 16 | 22 | 3 |
 | MLReq | 4 | 11 | 7 | 4 |
 
 The pattern is the same in both. Direction, orientation, keeping words whole
@@ -57,7 +57,8 @@ on its other side (`30°C`), the fourth not in a browser without
 to measure (Chinese line adjustment, punctuation compression, widows,
 hanging punctuation), anything that needs markup vertext does not carry (ruby, emphasis marks,
 interlinear lines, decoration), and anything print-only (pages, running heads,
-page numbers) is not met.
+page numbers) is not met. Finding Chinese words and sentences, for selection, is
+left to the browser.
 
 Three findings are worth reading before the tables:
 
@@ -114,6 +115,8 @@ Three findings are worth reading before the tables:
 |---|---|---|---|
 | 4.1 Characters and encoding | Conforms | Layout never changes a character: no fullwidth substitution, no presentation forms, variation selectors kept with their base. | `layout_never_alters_a_single_character`, `punctuation_is_never_substituted`, `a_variation_selector_stays_with_its_ideograph` |
 | 4.1.1 Erhua (U+16FF2) | Partial | Set upright in its own slot. Its reduced size is the font's business, and nothing checks it. | |
+| 4.2.1 Grapheme clusters | Partial | The unit of layout is the UAX #29 extended grapheme cluster. A Han character with its variation selector, a letter with its combining tone mark and a ZWJ emoji sequence each stay in one slot, and the hyphen at the Latin cap counts clusters, so no break falls inside one. The source map gives a caret only at a cluster boundary, so a host that places carets with it never places one inside a cluster; the demo host clicks every grapheme of every slot. Arrow keys, Backspace and Delete are the host's, since vertext ships no editor, and selection on the page is the browser's. | `every_grapheme_boundary_round_trips_through_a_caret`, `a_variation_selector_stays_with_its_ideograph`, `combining_marks_stay_with_their_base`, `zwj_and_flag_sequences_are_one_slot_each`, `a_hard_hyphen_never_splits_a_cluster`, gate `wasm-caret` |
+| 4.2.2–4.2.3 Words and sentences | Not implemented | By design. vertext segments no Chinese words or sentences: a Han character is a slot of its own. Selecting a word or a sentence on the page is the browser's, and in an editor the host's. | |
 
 ### 5 Punctuation and inline features
 
@@ -216,7 +219,7 @@ can it hand to the browser?
 | Upright text orientation — fixed | The column is `text-orientation: upright`. vertext relies on it for Han characters. |
 | Table cells ignore a vertical writing mode set on the cell | Not hit: the writing mode is set on the whole table. |
 | List counters cannot stand upright | Not hit: ordered items carry their number as text. |
-| Punctuation glyphs in system fonts miss CLReq positions | Relevant: vertext hands brackets, dashes and the colon to the font's `vert`, so a font with poor vertical forms sets them poorly. Only the corner marks are placed by vertext itself. |
+| Punctuation glyphs in system fonts miss CLReq positions | Relevant: vertext moves no mark within its cell. Brackets, quotes, dashes and the pause and stop marks take the face's vertical forms, so a face with poor vertical forms sets them poorly, and where the pause marks sit follows the face's region (CLReq 2.1.2). |
 | Emphasis marks, ruby, bopomofo, warichu | Not used; vertext carries none of these (see CLReq 5.3, 5.5). |
 | No Han–Western spacing (`text-autospace`) | Not worked around. CLReq 2.1.3 and 6.3.3 stay unmet. |
 | Line breaking before `“`, ideographic space | Inherited as is, because line breaking is the browser's. |
