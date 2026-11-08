@@ -153,6 +153,25 @@ check        "the wheel yields to a nested scroller" 'insideLiveScroller' "$out"
 # And the default is untouched for documents that do not declare.
 check        "undeclared documents stay CJK"   'data-column-advance="left"' "$out"
 
+# Quarto's crossref and citeproc both run after this filter, so a citation and
+# a formula's label have to reach them as the nodes the author wrote, not as
+# the characters set in a column. The crossref is Quarto's own, so this is the
+# only place it can be checked; tools/filter-golden.py covers citeproc under
+# plain pandoc.
+printf '%s\n' '---' 'title: "引用"' 'vertext: true' 'filters: [vertext]' \
+  'references:' '  - id: knuth' '    type: book' '    author:' \
+  '      - family: Knuth' '        given: Donald E.' '    title: The TeXbook' \
+  '    issued:' '      date-parts: [[1984]]' '---' '' \
+  '如 @eq-x 所示，見 [@knuth] 第一章。' '' '$$' 'y = x' '$$ {#eq-x}' > "$work/xref.qmd"
+quarto render "$work/xref.qmd" --quiet
+xref="$work/xref.html"
+check        "a labelled formula is numbered"    '\\tag{1}'                     "$xref"
+check        "a labelled formula is the target"  'id="eq-x"'                    "$xref"
+check        "its reference links to it"         'href="#eq-x" class="quarto-xref"' "$xref"
+check        "a citation links to its entry"     'href="#ref-knuth"'            "$xref"
+check        "the bibliography is written"       'id="ref-knuth"'               "$xref"
+check_absent "the label is not left as text"     '{#eq-x}'                      "$xref"
+
 # Quarto loads a project's filters once and reuses the Lua state for every
 # document. A document that declares `vertext: true` must not turn on
 # whole-document layout for the pages rendered after it — including pages that

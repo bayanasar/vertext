@@ -188,19 +188,21 @@ marker":
 | U+E008 | table (cells separated by U+E009, rows by U+E00A) |
 | U+E00B | list item |
 | U+E00C | ordered list item |
-| U+E00D | where one formula or footnote goes (not a mode: it stands inside a segment) |
+| U+E00D | where one formula, footnote or citation goes (not a mode: it stands inside a segment) |
 | U+E00E | display formula (its segment holds one U+E00D) |
 
-A formula never crosses the wire, and neither does a footnote. The filter
-keeps each as the document's own node, Math or Note, and sends only its place,
-U+E00D, which the layout sets as one box (`vertext-math`) that no line divides.
-When the HTML comes back the filter cuts it at each place and puts the node
-there, so pandoc writes the formula with whatever math engine the document
-chose, and the note as its mark in the column and its text at the end of the
-page. A display formula is a segment of its own and comes back as a
-horizontal block (`vertext-horizontal-math`). If the places that come back are
-not the ones that went in, the block is left horizontal rather than filled
-wrongly.
+A formula never crosses the wire, and neither does a footnote or a citation.
+The filter keeps each as the document's own node, Math, Note or Cite, and
+sends only its place, U+E00D, which the layout sets as one box (`vertext-math`)
+that no line divides. When the HTML comes back the filter cuts it at each
+place and puts the node there, so pandoc writes the formula with whatever math
+engine the document chose and the note as its mark in the column and its text
+at the end of the page, and Quarto's crossref and citeproc, which run after
+the filter, still find every citation. A display formula is a segment of its
+own and comes back as a horizontal block (`vertext-horizontal-math`); its
+`{#eq-…}` label is kept with it, where crossref looks. If the places that come
+back are not the ones that went in, the block is left horizontal rather than
+filled wrongly.
 
 Two consequences the code enforces:
 

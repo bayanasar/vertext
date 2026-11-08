@@ -15,8 +15,8 @@
 
 -- The reserved block runs from MODE_CODE_POINT to MODE_CODE_POINT + 14:
 -- code, prose, heading levels 1-6, table with its cell and row separators,
--- the two kinds of list item, the place of a formula or a footnote, and a
--- display formula.
+-- the two kinds of list item, the place of a formula, a footnote or a
+-- citation, and a display formula.
 local MODE_CODE_POINT = 0xE000
 local RESERVED_COUNT = 15 -- U+E000 .. U+E00E inclusive
 local MODE_CODE = "\u{E000}"
@@ -26,8 +26,8 @@ local CELL_SEP = "\u{E009}"
 local ROW_SEP = "\u{E00A}"
 local MODE_LIST = "\u{E00B}"
 local MODE_LIST_ORDERED = "\u{E00C}"
--- Where one formula or one footnote goes. The node stays here, as the
--- document's own Math or Note; only its place crosses the wire, and
+-- Where one formula, footnote or citation goes. The node stays here, as the
+-- document's own Math, Note or Cite; only its place crosses the wire, and
 -- `strip_block` puts the node back where the place comes out. See MATH_SLOT
 -- in crates/vertext-html.
 local MATH_SLOT = "\u{E00D}"
@@ -724,7 +724,8 @@ local function strip_markers(text, keep)
 end
 
 -- What the strip being encoded kept off the wire, in the order the places were
--- written onto it: one list of inlines per place, a formula or a footnote.
+-- written onto it: one list of inlines per place, a formula, a footnote or a
+-- citation, and a display formula with its label.
 -- `strip_block` fills the places in this order, so every strip starts with an
 -- empty list (`begin_strip`).
 local kept = {}
@@ -745,8 +746,8 @@ local function keep(el)
   return pandoc.Str(MATH_SLOT), false
 end
 
--- A block's text, flattened, with each formula and footnote replaced by its
--- place.
+-- A block's text, flattened, with each formula, footnote and citation replaced
+-- by its place.
 --
 -- Flattened is still what everything else here gets -- emphasis and links
 -- arrive as their bare words, which the README states. A formula cannot be
@@ -755,9 +756,13 @@ end
 -- and no math engine on the page could read it: the loss was not a style but
 -- the content. A footnote was worse: `stringify` drops a Note, so its mark,
 -- its text and the footnotes at the end of the page were all gone, and nothing
--- told the reader there had been one. Both nodes are kept instead, and the
--- wire carries only where they go: pandoc then writes a formula with the
--- page's math engine, and a note as its mark here and its text at the end.
+-- told the reader there had been one. A citation became the text the author
+-- typed, `[@knuth]` or `@eq-x`, and the bibliography was never written:
+-- Quarto's crossref and citeproc both run after this filter, and found no
+-- citation left to resolve. All three nodes are kept instead, and the wire
+-- carries only where they go: pandoc then writes a formula with the page's
+-- math engine and a note as its mark here and its text at the end, and a
+-- citation is still a citation when crossref and citeproc reach it.
 --
 -- The walk is top-down so the places are written in reading order and a node
 -- kept is not walked into. A formula inside a footnote goes with the
@@ -778,13 +783,32 @@ local function content_of(block)
     end,
     Math = keep,
     Note = keep,
+    Cite = keep,
   })
   return strip_markers(pandoc.utils.stringify(walked), MATH_SLOT)
+end
+
+-- The label Quarto's crossref reads off a display formula, `$$…$$ {#eq-x}`:
+-- a Str after the formula, past any space. Same shape crossref looks for.
+local function equation_label(inlines, after)
+  local i = after + 1
+  while inlines[i] and (inlines[i].t == "Space" or inlines[i].t == "SoftBreak") do
+    i = i + 1
+  end
+  local label = inlines[i]
+  if label and label.t == "Str" and label.text:match("^{#eq%-[^}]+}$") then
+    return label, i
+  end
 end
 
 -- A paragraph that holds a display formula is cut at the formula: the text on
 -- either side stays prose, and the formula becomes a segment of its own that
 -- the binary sets as a horizontal block.
+--
+-- A label goes with its formula. Crossref runs after this filter and looks for
+-- the label right after the formula, so it is kept with the Math node and put
+-- back beside it. Left in the text, it was set in the column as `{#eq-x}`, the
+-- formula had no number and `@eq-x` pointed nowhere.
 local function encode_paragraph(block)
   local holds_display = false
   for _, inline in ipairs(block.content) do
@@ -800,14 +824,25 @@ local function encode_paragraph(block)
     if text:match("%S") then table.insert(parts, text) end
     run = {}
   end
-  for _, inline in ipairs(block.content) do
+  local inlines = block.content
+  local i = 1
+  while i <= #inlines do
+    local inline = inlines[i]
     if inline.t == "Math" and inline.mathtype == "DisplayMath" then
       flush_run()
-      table.insert(kept, { inline })
+      local nodes = { inline }
+      local label, at = equation_label(inlines, i)
+      if label then
+        table.insert(nodes, pandoc.Space())
+        table.insert(nodes, label)
+        i = at
+      end
+      table.insert(kept, nodes)
       table.insert(parts, MODE_MATH_DISPLAY .. MATH_SLOT .. MODE_PROSE)
     else
       table.insert(run, inline)
     end
+    i = i + 1
   end
   flush_run()
   return table.concat(parts, "\n")
@@ -819,12 +854,13 @@ end
 -- A strip that kept nothing is one RawBlock, as it always was. Any other is a
 -- Plain of RawInlines and the kept nodes, so pandoc writes each formula the
 -- way it writes every other formula in the document, and each footnote the
--- way it writes every other footnote: the mark here, the text at the end. A
--- strip of RawBlocks alone would also leave pandoc seeing no math at all, and
--- the page without its math engine.
+-- way it writes every other footnote: the mark here, the text at the end.
+-- Crossref and citeproc, which run later, find each citation where its place
+-- came out. A strip of RawBlocks alone would also leave pandoc seeing no math
+-- at all, and the page without its math engine.
 --
--- nil when the places that came back are not the ones that went in: a formula
--- or a note put in another's place is worse than the text left horizontal.
+-- nil when the places that came back are not the ones that went in: a node
+-- put in another's place is worse than the text left horizontal.
 local function strip_block(html)
   if #kept == 0 then return pandoc.RawBlock("html", html) end
   local inlines, start, filled = {}, 1, 0
@@ -840,7 +876,8 @@ local function strip_block(html)
   end
   if filled ~= #kept then
     quarto.log.warning("vertext: the layout returned " .. filled .. " places for "
-      .. #kept .. " formulas and footnotes, so this block is left horizontal.")
+      .. #kept .. " formulas, footnotes and citations, so this block is left "
+      .. "horizontal.")
     return nil
   end
   table.insert(inlines, pandoc.RawInline("html", html:sub(start)))
@@ -1018,8 +1055,8 @@ function encode_blocks(blocks)
     else
       -- Everything else is still flattened to its characters: inline emphasis,
       -- links, and list structure do not survive. Documented in the README
-      -- rather than silently implied. Formulas and footnotes do survive: see
-      -- `content_of`.
+      -- rather than silently implied. Formulas, footnotes and citations do
+      -- survive: see `content_of`.
       table.insert(parts, content_of(block))
     end
   end
@@ -1133,8 +1170,8 @@ function Pandoc(doc)
   -- scrolls sideways. One strip, one scroll direction.
   --
   -- The title is encoded inside the first flush rather than up front, because
-  -- a formula or a footnote in it belongs to what the first strip keeps, and
-  -- every strip starts that list afresh.
+  -- a formula, a footnote or a citation in it belongs to what the first strip
+  -- keeps, and every strip starts that list afresh.
   local title = doc.meta.title
   local title_pending = title ~= nil
 
@@ -1236,9 +1273,9 @@ function Pandoc(doc)
   -- listing back down the page one character at a time; and a RawBlock beside
   -- text may be an opening tag, which no wrapper can enclose.
   --
-  -- A strip with formulas or footnotes in it is a Plain rather than a RawBlock
-  -- (see `strip_block`), and stringifies to its formulas' TeX alone, so it
-  -- counts.
+  -- A strip that kept a formula, a footnote or a citation is a Plain rather
+  -- than a RawBlock (see `strip_block`), and stringifies to little more than
+  -- its formulas' TeX, so it counts.
   local function holds_raw_block(block)
     if is_strip(block) then return true end
     if block.t ~= "Div" or not block.content then return false end

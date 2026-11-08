@@ -351,8 +351,84 @@ def notes_problems(pandoc):
     return fails
 
 
-def render(pandoc, document, path_extra=None, filter_copy=None, extra=()):
-    """pandoc -> the real filter -> the wire -> the binary. Returns (html, stderr)."""
+# Citations in a paragraph, in brackets and narrative and with a locator, and
+# a display formula with the label Quarto's crossref reads off it. pandoc runs
+# `--citeproc` after the Lua filters named before it, which is where Quarto
+# runs citeproc too; the crossref itself is Quarto's and is checked in
+# examples/test-extension.sh.
+CITES = """---
+vertext: true
+references:
+  - id: knuth
+    type: book
+    author:
+      - family: Knuth
+        given: Donald E.
+    title: The TeXbook
+    issued:
+      date-parts: [[1984]]
+---
+
+見 [@knuth] 第一章。@knuth 也這樣寫。
+
+$$
+y = x
+$$ {#eq-x}
+
+後文再引 [@knuth, 頁 12]。
+"""
+
+CITATIONS = 3
+CITATION = '<span class="citation" data-cites="knuth">'
+LABELLED = re.compile(r'<div class="vertext-horizontal vertext-horizontal-math">'
+                      r'<span class="math display">\\\[\s*y = x\s*\\\]</span> \{#eq-x\}')
+
+
+def cites_problems(pandoc):
+    """Every citation reaches citeproc, and a formula's label stays on it.
+
+    The filter flattened each paragraph with `stringify`, which turns a Cite
+    into the text the author typed: `[@knuth]` sat in the column one character
+    to a slot, citeproc found nothing to cite, and the bibliography was not
+    written at all. Now only a citation's place crosses the wire and the
+    filter puts the node back, so citeproc formats it where the place came
+    out. A display formula's `{#eq-x}` goes back beside the formula, where
+    Quarto's crossref looks for it, instead of into the column as text.
+    """
+    html, stderr = render(pandoc, CITES, extra=["--mathjax"], after=["--citeproc"])
+    if stderr.strip():
+        return [f"cites: the filter complained\n     {stderr.strip()[:200]}"]
+    if "data-column-advance" not in html:
+        return ["cites: no strip was rendered, so nothing below was tested"]
+    fails = []
+    text = htmllib.unescape(re.sub(r"<[^>]+>", "", html))
+    found = html.count(CITATION)
+    if found != CITATIONS:
+        fails.append(f"cites: {found} citations formatted, want {CITATIONS}")
+    boxed = html.count('<span class="vertext-math">' + CITATION)
+    if boxed != CITATIONS:
+        fails.append(f"cites: {boxed} citations sit in a box in the columns, "
+                     f"want {CITATIONS}")
+    if "@knuth" in text:
+        fails.append("cites: `@knuth` is on the page as typed")
+    if 'id="ref-knuth"' not in html:
+        fails.append("cites: no bibliography entry for knuth")
+    if not LABELLED.search(html):
+        fails.append("cites: the label is not beside its display formula")
+    if text.count("{#eq-x}") != 1:
+        fails.append(f"cites: `{{#eq-x}}` is on the page {text.count('{#eq-x}')} "
+                     f"times, want once, beside the formula")
+    if "" in html:
+        fails.append(f"cites: {html.count(chr(0xE00D))} U+E00D left on the page")
+    return fails
+
+
+def render(pandoc, document, path_extra=None, filter_copy=None, extra=(),
+           after=()):
+    """pandoc -> the real filter -> the wire -> the binary. Returns (html, stderr).
+
+    `extra` goes before the filter on pandoc's command line and `after` after
+    it, which matters for `--citeproc`: pandoc runs it where it stands."""
     env = dict(os.environ)
     env["PATH"] = (path_extra if path_extra is not None
                    else f"{BINARY.parent}:{env['PATH']}")
@@ -365,7 +441,7 @@ def render(pandoc, document, path_extra=None, filter_copy=None, extra=()):
     try:
         done = subprocess.run(
             [pandoc, "-f", "markdown", "-t", "html", "--wrap=none", *extra,
-             f"--lua-filter={SHIM}", source],
+             f"--lua-filter={SHIM}", *after, source],
             capture_output=True, text=True, env=env, timeout=60)
     finally:
         os.unlink(source)
@@ -590,6 +666,7 @@ def main():
 
     fails += math_problems(args.pandoc)
     fails += notes_problems(args.pandoc)
+    fails += cites_problems(args.pandoc)
     fails += panel_problems(args.pandoc)
 
     fails += versions_agree()
@@ -632,6 +709,8 @@ def main():
           f"formulas come back as formulas, in order, each in its place.")
     print(f"      {len(NOTES_TEXTS)} footnotes keep their mark in the column and "
           f"their text at the end, once each.")
+    print(f"      {CITATIONS} citations reach citeproc, each boxed in its column, "
+          f"with the bibliography written; a display formula keeps its label.")
     print(f"      a block of raw HTML with markdown inside passes through whole "
           f"and horizontal, once, between columns.")
     print(f"      and the handshake refuses {len(stubs)} binaries that do not "

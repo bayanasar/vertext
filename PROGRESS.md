@@ -1127,8 +1127,8 @@ nothing in the core may foreclose it.
   against Latin and digits, in bold, links, footnotes, nested lists, a quote,
   bichig), and found 5 documents without formulas rendered byte for byte as
   main renders them, but for U+E00D and U+E00E typed by an author. A labelled
-  formula is not cross-referenced (README). A long inline formula widens its
-  line. KaTeX, MathML, Safari and Firefox were not run.
+  formula was not cross-referenced until #114. A long inline formula widens
+  its line. KaTeX, MathML, Safari and Firefox were not run.
 
 - **A block holding raw HTML is set horizontally, whole** (#112).
   `relayout_raw`, which was to lay out the text beside such a block's HTML,
@@ -1158,6 +1158,31 @@ nothing in the core may foreclose it.
   marks in the columns and 4 notes at the end, which the browser sets
   vertically; a formula in a note lies on its side, as Latin does there.
   Safari and Firefox were not run.
+
+- **A citation and a cross-reference in vertical text resolve** (#114).
+  Quarto's crossref and citeproc both run after this filter, and the filter
+  had flattened every Cite into what the author typed: `[@knuth]` and `@eq-x`
+  sat in the column as text, a labelled formula had no number, and the
+  bibliography was not written. A Cite now goes the way a note does, its
+  place over the wire and the node put back. A display formula keeps its
+  `{#eq-…}` label beside it, where crossref looks. `filter-golden` adds three
+  citations, bracketed, narrative and with a locator, and a labelled display
+  formula, with `--citeproc` after the filter as Quarto orders them. With
+  main's filter, red in 5 places: no citation formatted or boxed, `@knuth`
+  on the page, no bibliography, the label not beside its formula. Green
+  after under pandoc 3.9 and CI's 2.17.1.1: 3 citations, each boxed, the
+  entry for knuth, the label once, after the formula. The crossref is Quarto's alone, so
+  `examples/test-extension.sh` checks it: the formula numbered `\tag{1}` and
+  `id="eq-x"`, its reference linking there, the citation linking to its
+  entry, the bibliography written and no `{#eq-x}` left. Red in 6 of those
+  with the filter before this change, green after, under Quarto 1.11.9; CI
+  has no Quarto, so that half runs only where Quarto is installed. In Chrome
+  152 under `vertext: true` and `vertext-page: true`: 2 references reading
+  "Equation 1", 3 citations, the entry for Knuth, the formula numbered, no
+  `mjx-merror`. A citation is one horizontal box, like an inline formula, so
+  a long one widens its line: "(Knuth 1984, 頁 12)" made its line 123px. The
+  bibliography is set by the browser like the footnotes. Safari and Firefox
+  were not run.
 
 ## Not sealed
 
