@@ -334,6 +334,31 @@ jobs:
           python3 tools/punctuation-ink.py --chrome /opt/chrome/chrome-linux64/chrome \
             --fonts /opt/vertext-fonts
 
+      # Firefox, for the gate below, which Chrome cannot fail. Debian's ESR
+      # from the image's own archive, so apt brings its libraries. It is not
+      # pinned: an ESR keeps its layout within a major version, and the log
+      # names the version that ran.
+      - name: Firefox
+        if: ${{ !cancelled() }}
+        id: firefox-setup
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          apt-get update -qq
+          apt-get install -y -qq firefox-esr
+          firefox-esr --version
+
+      # Every bracket, quote and pause or stop mark takes one cell along the
+      # column, also under `font-kerning: normal`, where Firefox applies the
+      # face's proportional metrics and Chrome does not. Measured from the
+      # slots' boxes, in both browsers.
+      - name: Every mark takes one cell, in Chrome and in Firefox
+        if: ${{ !cancelled() }}
+        id: cell-advance
+        run: |
+          python3 tools/cell-advance.py --chrome /opt/chrome/chrome-linux64/chrome \
+            --firefox /usr/bin/firefox-esr --fonts /opt/vertext-fonts
+
       # MLReq 7.3.1-7.3.4: the Mongolian stem sits on the line's centre, and
       # Han, Latin and digits on the stem, in the face the extension ships, at
       # two cells. The stem is found in the pixels, the densest line of a

@@ -142,6 +142,19 @@
 .vertext-corner,
 .vertext-combine,
 .vertext-space { line-height: var(--vertext-line-pitch); }
+/* A cell is one cell along the column, whatever kerning the page asks for.
+   The faces carry proportional vertical metrics for the marks (`vpal`), half
+   a cell for most, and Firefox 140 applies them under `font-kerning: normal`,
+   which pandoc's standalone template sets on the body: Noto Sans SC then set
+   the bracket in `说「好`, and `，` and `。`, in half a cell where Chrome set
+   one. No kerning is wanted between cells, so it is off for them. Latin and
+   Mongolian are not cells and keep theirs. */
+.vertext-upright,
+.vertext-neutral,
+.vertext-vform,
+.vertext-quote,
+.vertext-corner,
+.vertext-combine { font-kerning: none; }
 
 /* Headings. The level sets one scale factor and every glyph class multiplies
    the base size by it, so adding a level means adding one line here and the

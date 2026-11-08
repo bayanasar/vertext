@@ -169,6 +169,14 @@ has curly quotes and no vertical forms, so a page whose font stack puts a
 Latin face first, as Quarto's default does, draws the quotes upright in their
 horizontal form: put the CJK face first.
 
+Every bracket, quote and pause or stop mark between characters takes one cell.
+The faces also carry narrower, proportional forms of these marks, and Firefox
+uses them on a page that sets `font-kerning: normal`, as pandoc's standalone
+template does, so the stylesheet turns kerning off for the cells. Chrome
+narrows on its own: by default the first of two adjacent marks, as in `」，`,
+takes half a cell (`text-spacing-trim: normal`). Set `text-spacing-trim:
+space-all` on `.vertext` to keep every mark in a whole cell there too.
+
 The Mongolian face does ship: Noto Sans Mongolian sits beside `vertext.css`
 under the SIL Open Font License (`NotoSansMongolian-OFL.txt`), and the
 stylesheet loads it under a family name of its own. Every Mongolian

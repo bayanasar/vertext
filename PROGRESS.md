@@ -1271,6 +1271,26 @@ nothing in the core may foreclose it.
   marks itself, untrue since October. MLReq (10 July 2025) and the gap
   analysis (31 October 2025) have no newer version.
 
+- **A mark takes one cell in Firefox too** (#122). Firefox set a bracket,
+  quote or pause mark in half a cell on a page that sets `font-kerning:
+  normal`, as pandoc's standalone template does on the body: Firefox 140
+  then applies the face's `vpal`, its proportional vertical metrics, which
+  HarfBuzz and Chrome leave off. Noto Sans SC set `说「好` with the bracket in
+  half a cell, and `，` and `。` too. Quarto's pages, with or without a
+  theme, set no kerning and were whole. The stylesheet turns kerning off for
+  the cells; Latin and Mongolian keep theirs. `cell-advance` sets 26 marks
+  between two Han characters in Noto Sans SC, Noto Sans CJK SC and Noto Sans
+  TC, on a plain page and under pandoc's body rule, in Chrome and in Firefox,
+  and requires every slot to be one cell to within half a pixel. With main's
+  stylesheet, red in 60, all in Firefox under the kerning rule, in Firefox
+  140 and in Debian's Firefox 153 inside the CI image; green after in both,
+  and green in Chrome 152 before and after, which is why CI now installs
+  Firefox. Chrome narrows on its own: by default the first of two adjacent
+  marks, `」，` or `）。`, takes half a cell (`text-spacing-trim: normal`),
+  and an opening bracket at a line's head keeps its cell; CONFORMANCE 6.3.2
+  and the README say so, and the README names `space-all` for a page that
+  wants whole cells there too.
+
 ## Not sealed
 
 - **Two kinds of group still have no bound.** Only a mark that repeats the
