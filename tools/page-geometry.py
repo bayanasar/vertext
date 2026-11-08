@@ -129,6 +129,43 @@ document.fonts.ready.then(() => {
       .map(e => { const r = e.getBoundingClientRect(); return [r.width, r.height]; }),
     fonts: [...document.fonts].filter(f => f.status === 'loaded').map(f => f.family),
   };
+  // The hidden copies of the headings, kept for the table of contents: the
+  // size each heading is drawn at, how far the strips move when the copies
+  // are taken out, and whether following the last one brings its heading
+  // into the window.
+  const anchors = [...document.querySelectorAll('.vertext-toc-anchor')];
+  result.anchors = anchors.map(a => {
+    const r = a.firstElementChild.getBoundingClientRect();
+    return [a.textContent.trim(), r.width, r.height];
+  });
+  const strips = () => [...document.querySelectorAll('div.vertext')]
+    .map(e => e.getBoundingClientRect());
+  const before = strips();
+  anchors.forEach(a => a.style.setProperty('display', 'none', 'important'));
+  const after = strips();
+  anchors.forEach(a => a.style.removeProperty('display'));
+  result.anchorShift = Math.max(0, ...before.map((r, i) =>
+    Math.max(Math.abs(r.left - after[i].left), Math.abs(r.top - after[i].top))));
+  // The line a copy sits on, across the line: a block holding one space,
+  // set where the copy is.
+  if (anchors[0]) {
+    const probe = document.createElement('div');
+    probe.textContent = ' ';
+    anchors[0].parentElement.insertBefore(probe, anchors[0]);
+    const r = probe.getBoundingClientRect();
+    const vertical = getComputedStyle(probe).writingMode.startsWith('vertical');
+    result.anchorLine = vertical ? r.width : r.height;
+    probe.remove();
+  }
+  const last = anchors[anchors.length - 1];
+  if (last) {
+    // Where a table-of-contents link goes: the element that carries the id.
+    (last.id ? last : last.querySelector('[id]')).scrollIntoView({ behavior: 'instant' });
+    const drawn = [...document.querySelectorAll('.vertext-column-heading')]
+      .find(c => c.textContent.trim() === last.textContent.trim());
+    const r = drawn && drawn.getBoundingClientRect();
+    result.anchorReach = r ? [r.left, r.right, innerWidth] : null;
+  }
   fetch('result', { method: 'POST', body: JSON.stringify(result) });
 });
 </script>
@@ -166,9 +203,12 @@ def page(pandoc, work, name, text, meta, body_faces, stylesheet="vertext.css"):
     written = "永" if isinstance(text, Raw) else text
     source.write_text(f"---\nvertext: true\n{front}---\n\n{written}\n", encoding="utf-8")
     env = dict(os.environ, PATH=f"{BINARY.parent}:{os.environ['PATH']}")
+    # Sections as Quarto writes them: a heading's id is on its section, so a
+    # link to the heading targets the section and not the heading inside it.
     done = subprocess.run([pandoc, "-s", "-f", "markdown", "-t", "html", "--wrap=none",
-                           "--metadata", f"title={name}", f"--lua-filter={SHIM}",
-                           str(source)], capture_output=True, text=True, env=env, timeout=120)
+                           "--section-divs", "--metadata", f"title={name}",
+                           f"--lua-filter={SHIM}", str(source)],
+                          capture_output=True, text=True, env=env, timeout=120)
     if done.returncode != 0:
         sys.exit(f"pandoc failed:\n{done.stderr[-2000:]}")
     head, _, rest = done.stdout.partition("<body>")
@@ -659,6 +699,45 @@ def without_text_justify(css):
     return re.sub(r"text-justify\s*:[^;}]*;?", "", css)
 
 
+# Sections long enough that the page scrolls, each opened by a heading. The
+# filter keeps a copy of every heading beside the strip, as a real Header, so
+# that the table of contents has something to list and link to.
+HEADED = "".join(f"## 第{n}節\n\n{PROSE}\n\n" for n in "一二三四")
+
+
+def heading_drawn_once(m, where):
+    """A heading is drawn once, in its column. Its copy for the table of
+    contents is not seen, takes no more room than the empty line it sits on,
+    and a link to it still brings the heading into the window.
+
+    The rules that hide the copy were written for document mode only, so a
+    page under `vertext-page: true` drew every heading twice: once in its
+    column and once as a column of bold text beside it, with the copy's own
+    margins around it. The empty line stays: between two strips it is the
+    only space before a heading, as it always was in document mode."""
+    fails = []
+    if not m["anchors"]:
+        return [f"{where}: no heading copy on the page, so nothing was measured"]
+    for text, width, height in m["anchors"]:
+        if width > 1 or height > 1:
+            fails.append(f"{where}: the copy of `{text}` is drawn, {width:.0f}x{height:.0f}px")
+    room = len(m["anchors"]) * m["anchorLine"]
+    if m["anchorShift"] > room + 0.5:
+        fails.append(f"{where}: the copies take {m['anchorShift']:.1f}px, more than "
+                     f"their {len(m['anchors'])} empty lines of {m['anchorLine']:.1f}px")
+    reach = m["anchorReach"]
+    if reach is None:
+        fails.append(f"{where}: the last heading has no column on the page")
+    elif not (0 <= reach[0] and reach[1] <= reach[2]):
+        fails.append(f"{where}: following the last heading's link leaves its column at "
+                     f"x={reach[0]:.0f}..{reach[1]:.0f} in a {reach[2]}px window")
+    else:
+        m["gap"] = (f"{len(m['anchors'])} headings drawn once, their copies taking "
+                    f"{m['anchorShift']:.1f}px; the last link lands its column at "
+                    f"x={reach[0]:.0f}..{reach[1]:.0f}")
+    return fails
+
+
 # A body that sets Latin first: a space is then the Latin face's, which has
 # no vertical metrics, unless the stylesheet sizes the space itself.
 LATIN_FIRST = {"body": ["Noto Sans", "Noto Sans SC"]}
@@ -672,6 +751,9 @@ CASES = [
     ("document-short", PROSE, {}, (900, 700), ["Noto Sans SC"], [whole_cells, line_gap]),
     ("page-short", PROSE, {"vertext-page": "true"}, (900, 500), ["Noto Sans SC"],
      [whole_cells, line_gap]),
+    ("headings-document", HEADED, {}, (900, 700), ["Noto Sans SC"], [heading_drawn_once]),
+    ("headings-page", HEADED, {"vertext-page": "true"}, (900, 500), ["Noto Sans SC"],
+     [heading_drawn_once]),
     ("marks-together", TOGETHER, {}, (900, 700), ["Noto Sans SC"], [marks_together]),
     ("number-affixes", affixes, {}, (900, 700), ["Noto Sans SC"], [numbers_keep_affixes]),
     ("line-start", line_start, {}, (900, 700), ["Noto Sans SC"], [no_mark_starts_a_line]),
@@ -776,7 +858,9 @@ def main():
           "one mark runs past a column's end, no line begins with a word space, "
           "a space is half a cell whatever face the body puts first, and a "
           "Mongolian paragraph is justified at its spaces, one with Han in it "
-          "only where the browser applies `text-justify`")
+          "only where the browser applies `text-justify`, and in both modes a "
+          "heading is drawn once, its hidden copy takes no more than its empty "
+          "line, and a link to it reaches its column")
     for line in lines:
         print("      " + line)
     return 0

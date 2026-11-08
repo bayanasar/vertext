@@ -1206,6 +1206,25 @@ nothing in the core may foreclose it.
   `test-extension.sh` adds 3 checks, red before and green after, 108 in all.
   Without the stop at its own Span the walk recursed until pandoc failed.
 
+- **A heading is drawn once in page mode** (#116). Both modes keep a hidden
+  copy of every heading beside its strip, for the table of contents, but only
+  the document-mode stylesheet had the rules that hide it. Under
+  `vertext-page: true` each heading was drawn twice, in its column and as a
+  column of bold text beside it. The rules are now one string both
+  stylesheets carry. The copy still opens an empty line, which is the only
+  space between a strip and the heading that starts the next; it stays, and
+  page mode now spaces its sections as document mode always has.
+  `page-geometry` adds a document of four headed sections in each mode, set
+  as Quarto sets it, with section divs: each copy no larger than 1px, taking
+  no more room than its empty line, and a link to the last heading landing
+  its column in the window. With main's filter, red in 5 places in page
+  mode: 4 copies drawn at 35×275px, and 299px taken where 4 lines are 96px.
+  Green after, and green in document mode before and after.
+  `test-extension.sh` checks the page-mode page carries the rule. Under
+  Quarto 1.11.9 in Chrome 152, page mode went from 80px between sections to
+  document mode's 26px, the link to the last heading landing its column at
+  x=306..343 of 1300; document mode is unchanged.
+
 ## Not sealed
 
 - **Two kinds of group still have no bound.** Only a mark that repeats the

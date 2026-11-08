@@ -193,6 +193,60 @@ end
 -- The rules live here rather than in vertext.css because they are
 -- document-level policy that must only apply when the author asks for it; the
 -- stylesheet stays scoped to the strip itself.
+-- The real `Header` nodes kept beside the strip so Quarto can build a TOC at
+-- all (`emit_toc_headings`) are kept in both modes, so both styles carry the
+-- rules that hide them, from this one copy. Page mode once had none, and drew
+-- every heading twice: in its column, and as a column of bold text beside it.
+local TOC_ANCHOR_RULES = [[
+  /* The strip already draws these headings in columns, so these copies must
+     not be seen -- but NOT via `display: none` or `visibility: hidden`, which
+     drop them from the accessibility tree and would hand a screen reader a
+     document with no headings while sighted readers get a full outline. This
+     is the standard visually-hidden clip: out of the layout, still in the
+     tree, still a valid anchor target.
+
+     Deliberately NOT `position: absolute`, which is what the usual
+     visually-hidden recipe uses: taking the anchor out of flow puts it
+     wherever the containing block starts, measured at x=-1950 in a document
+     that scrolls right-to-left -- outside the scrollable range entirely, so
+     following a TOC link updated the hash and scrolled nowhere. In flow and
+     zero-width, the anchor sits exactly beside the text it names, which is
+     the whole point of it being an anchor.
+
+     Zero-width, the anchor still opens a line, and that empty line is the
+     only space between the strip it ends and the heading that starts the
+     next: strips have no gap between them. Taking the line away puts every
+     heading against the last column before it. */
+  body .vertext-toc-anchor {
+    display: inline-block;
+    width: 0;
+    height: 0;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    border: 0;
+    vertical-align: top;
+  }
+  /* The heading inside keeps its text for a screen reader while contributing
+     no box of its own. */
+  body .vertext-toc-anchor > * {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }]]
+
+-- A mode's stylesheet with its writing mode and the shared rules filled in.
+-- The rules go in by function, as `inset(50%)` would be a capture in a
+-- replacement string.
+local function mode_style(css, writing_mode)
+  return (css:gsub('WRITING_MODE', writing_mode)
+             :gsub('TOC_ANCHOR_RULES', function() return TOC_ANCHOR_RULES end))
+end
+
 -- Document mode: the body stays a normal horizontal page (navbar, sidebar,
 -- and table of contents keep working) but the *content region* becomes a
 -- vertical surface that scrolls horizontally. Quarto's own title block is
@@ -201,7 +255,7 @@ end
 -- exists to stop.
 local function document_style(mode)
   local writing_mode = (mode == 'lr') and 'vertical-lr' or 'vertical-rl'
-  return (([[
+  return mode_style(([[
 <style id="vertext-document-mode">
   /* The column length budget: how far a paragraph runs before wrapping into
      the next visual column. This is the vertical analogue of a measure, and
@@ -305,42 +359,7 @@ local function document_style(mode)
      nothing to anchor to here. The filter alone offers no edge to put one on;
      the THEME does, and overrides this at matching specificity. */
   body #quarto-margin-sidebar, body .toc-active #TOC { display: none; }
-  /* The real `Header` nodes kept beside the strip so Quarto can build a TOC
-     at all (see the Pandoc pass). The strip already draws these headings in
-     columns, so these copies must not be seen -- but NOT via `display: none`
-     or `visibility: hidden`, which drop them from the accessibility tree and
-     would hand a screen reader a document with no headings while sighted
-     readers get a full outline. This is the standard visually-hidden clip:
-     out of the layout, still in the tree, still a valid anchor target.
-
-     Deliberately NOT `position: absolute`, which is what the usual
-     visually-hidden recipe uses: taking the anchor out of flow puts it
-     wherever the containing block starts, measured at x=-1950 in a document
-     that scrolls right-to-left -- outside the scrollable range entirely, so
-     following a TOC link updated the hash and scrolled nowhere. In flow and
-     zero-width, the anchor sits exactly beside the text it names, which is
-     the whole point of it being an anchor. */
-  body .vertext-toc-anchor {
-    display: inline-block;
-    width: 0;
-    height: 0;
-    margin: 0;
-    padding: 0;
-    overflow: hidden;
-    white-space: nowrap;
-    border: 0;
-    vertical-align: top;
-  }
-  /* The heading inside keeps its text for a screen reader while contributing
-     no box of its own. */
-  body .vertext-toc-anchor > * {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-  }
+TOC_ANCHOR_RULES
   /* Give the document the full width of the window.
      Quarto's article grid reserves margin columns for a sidebar and a table
      of contents; in a horizontally scrolling document those reservations are
@@ -359,7 +378,7 @@ local function document_style(mode)
   }
   body #quarto-content { max-width: none; padding-inline: 0; }
 </style>
-]]):gsub('WRITING_MODE', writing_mode))
+]]), writing_mode)
 end
 
 -- Wheel-to-column-advance.
@@ -590,7 +609,7 @@ end
 
 local function page_style(mode)
   local writing_mode = (mode == 'lr') and 'vertical-lr' or 'vertical-rl'
-  return ([[
+  return mode_style([[
 <style id="vertext-page-mode">
   html { block-size: 100%; }
   /* `vertical-rl` puts the block axis horizontal, advancing right-to-left, and
@@ -666,6 +685,7 @@ local function page_style(mode)
      markup it hides. An author who wants the node gone entirely can set
      `title-block-style: none` in the document's own YAML. */
   body #title-block-header { display: none; }
+TOC_ANCHOR_RULES
   /* A vertext strip runs its own flex geometry and must not be rotated a
      second time by the page's writing mode. Nested in an orthogonal flow it
      takes the viewport height as its block size and sizes its inline axis to
@@ -685,7 +705,7 @@ local function page_style(mode)
     align-items: flex-start;
   }
 </style>
-]]):gsub('WRITING_MODE', writing_mode)
+]], writing_mode)
 end
 
 local function strip_trailing_newlines(text)

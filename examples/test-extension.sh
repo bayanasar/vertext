@@ -94,6 +94,9 @@ check_absent "header cells are not welded"     '蒙古文转写'                
 # at level 1 rather than leaving it to Quarto's horizontal title block.
 check        "title is rendered by vertext at h1" 'vertext-\(column\|horizontal\)-h1' "$out"
 check        "page mode injects its stylesheet" 'vertext-page-mode'         "$out"
+# Both modes keep a hidden copy of every heading for the table of contents.
+# Page mode once had no rule to hide it, and drew every heading twice.
+check        "page mode hides the heading copies" 'body .vertext-toc-anchor {' "$out"
 check        "caps published to CSS"           'vertext-latin-cap-prose:12ch' "$out"
 # Quarto builds its title block at template time, after this filter runs, so
 # the node exists and is hidden by the inlined page stylesheet. Assert the rule
