@@ -53,6 +53,10 @@ pub const MODE_LIST_ORDERED: char = '\u{E00C}';
 /// a horizontal one. Sent as TeX instead, it would have to be typeset here or
 /// arrive as text, and text is what it used to arrive as: `\pi_\theta` set one
 /// character to a slot, with nothing on the page that could read it.
+///
+/// A footnote's mark goes in one the same way: the filter keeps the note and
+/// pandoc writes the mark where this comes out. The name is for the first
+/// thing it held; this side does not know what fills the box.
 pub const MATH_SLOT: char = '\u{E00D}';
 /// A display formula: a segment of its own, set as a horizontal block. Its
 /// text is the [`MATH_SLOT`] the filter fills.

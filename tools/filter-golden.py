@@ -277,6 +277,80 @@ def panel_problems(pandoc):
     return fails
 
 
+# Footnotes in every place a column holds one: a paragraph, beside a formula,
+# inline, in a heading and in a list item. The heading's matters twice over: it
+# is also kept as a real Header in a hidden anchor, for the table of contents,
+# and a note copied there would be a second footnote with a mark nobody sees.
+NOTES = """---
+vertext: true
+---
+
+正文有一個腳注[^1]，後面還有字 $x$。
+
+[^1]: 第一個腳注，裏面有公式 $y$。
+
+另一段有行內腳注^[行內腳注的內容。]，然後結束。
+
+## 小節有腳注[^2]
+
+[^2]: 標題裏的腳注。
+
+- 列表項也有腳注^[列表裏的腳注。]
+- 二項
+"""
+
+NOTES_TEXTS = ["第一個腳注", "行內腳注的內容", "標題裏的腳注", "列表裏的腳注"]
+NOTE_REF = re.compile(r'<a href="#fn\d+" class="footnote-ref"')
+
+
+def notes_problems(pandoc):
+    """Every footnote keeps its mark in the column and its text at the end.
+
+    The filter flattened each paragraph with `stringify`, which drops a Note:
+    a vertical page had no mark, no footnotes and no trace of their text, and
+    the reader could not know anything was missing. Now only a note's place
+    crosses the wire and the filter puts the node back, so pandoc writes the
+    mark where the place came out and the notes where it always does.
+    """
+    html, stderr = render(pandoc, NOTES, extra=["--mathjax"])
+    if stderr.strip():
+        return [f"notes: the filter complained\n     {stderr.strip()[:200]}"]
+    if "data-column-advance" not in html:
+        return ["notes: no strip was rendered, so nothing below was tested"]
+    fails = []
+    body, notes = (re.split(r'(?=<section[^>]*class="footnotes)', html,
+                            maxsplit=1) + [""])[:2]
+    marks = len(NOTE_REF.findall(html))
+    if marks != len(NOTES_TEXTS):
+        fails.append(f"notes: {marks} footnote marks on the page, want "
+                     f"{len(NOTES_TEXTS)} -- one per note, none from the hidden "
+                     f"heading anchor")
+    boxed = len(re.findall(r'<span class="vertext-math"><a href="#fn\d+" '
+                           r'class="footnote-ref"', body))
+    if boxed != len(NOTES_TEXTS):
+        fails.append(f"notes: {boxed} footnote marks sit in a box in the columns, "
+                     f"want {len(NOTES_TEXTS)}")
+    listed = len(re.findall(r'<li id="fn\d+"', notes))
+    if listed != len(NOTES_TEXTS):
+        fails.append(f"notes: {listed} footnotes at the end of the page, want "
+                     f"{len(NOTES_TEXTS)}")
+    for text in NOTES_TEXTS:
+        if text not in notes:
+            fails.append(f"notes: `{text}` is not among the footnotes")
+    # A formula inside a note belongs to the note, not to the text around its
+    # mark: counted with the paragraph's formulas, it would take a place that
+    # is not its own and every formula after it would shift by one.
+    if r'<span class="math inline">\(y\)</span>' not in notes:
+        fails.append("notes: the formula inside the first note is not in the "
+                     "footnotes")
+    if r'<span class="vertext-math"><span class="math inline">\(x\)</span>' not in body:
+        fails.append("notes: the formula after the first mark is not in its "
+                     "place in the column")
+    if "" in html:
+        fails.append(f"notes: {html.count(chr(0xE00D))} U+E00D left on the page")
+    return fails
+
+
 def render(pandoc, document, path_extra=None, filter_copy=None, extra=()):
     """pandoc -> the real filter -> the wire -> the binary. Returns (html, stderr)."""
     env = dict(os.environ)
@@ -515,6 +589,7 @@ def main():
                          f"no longer true, so a wire marker did not arrive")
 
     fails += math_problems(args.pandoc)
+    fails += notes_problems(args.pandoc)
     fails += panel_problems(args.pandoc)
 
     fails += versions_agree()
@@ -555,6 +630,8 @@ def main():
           f"list, ordered list, code.")
     print(f"      {len(MATH_INLINE)} inline and {len(MATH_DISPLAY)} display "
           f"formulas come back as formulas, in order, each in its place.")
+    print(f"      {len(NOTES_TEXTS)} footnotes keep their mark in the column and "
+          f"their text at the end, once each.")
     print(f"      a block of raw HTML with markdown inside passes through whole "
           f"and horizontal, once, between columns.")
     print(f"      and the handshake refuses {len(stubs)} binaries that do not "

@@ -188,17 +188,19 @@ marker":
 | U+E008 | table (cells separated by U+E009, rows by U+E00A) |
 | U+E00B | list item |
 | U+E00C | ordered list item |
-| U+E00D | where one formula goes (not a mode: it stands inside a segment) |
+| U+E00D | where one formula or footnote goes (not a mode: it stands inside a segment) |
 | U+E00E | display formula (its segment holds one U+E00D) |
 
-A formula never crosses the wire. The filter keeps it as the document's own
-Math node and sends only its place, U+E00D, which the layout sets as one box
-(`vertext-math`) that no line divides. When the HTML comes back the filter cuts
-it at each place and puts the Math node there, so pandoc writes the formula
-with whatever math engine the document chose. A display formula is a segment
-of its own and comes back as a horizontal block (`vertext-horizontal-math`).
-If the places that come back are not the formulas that went in, the block is
-left horizontal rather than filled wrongly.
+A formula never crosses the wire, and neither does a footnote. The filter
+keeps each as the document's own node, Math or Note, and sends only its place,
+U+E00D, which the layout sets as one box (`vertext-math`) that no line divides.
+When the HTML comes back the filter cuts it at each place and puts the node
+there, so pandoc writes the formula with whatever math engine the document
+chose, and the note as its mark in the column and its text at the end of the
+page. A display formula is a segment of its own and comes back as a
+horizontal block (`vertext-horizontal-math`). If the places that come back are
+not the ones that went in, the block is left horizontal rather than filled
+wrongly.
 
 Two consequences the code enforces:
 

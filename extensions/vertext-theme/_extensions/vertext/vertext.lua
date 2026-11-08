@@ -15,7 +15,8 @@
 
 -- The reserved block runs from MODE_CODE_POINT to MODE_CODE_POINT + 14:
 -- code, prose, heading levels 1-6, table with its cell and row separators,
--- the two kinds of list item, a formula's place, and a display formula.
+-- the two kinds of list item, the place of a formula or a footnote, and a
+-- display formula.
 local MODE_CODE_POINT = 0xE000
 local RESERVED_COUNT = 15 -- U+E000 .. U+E00E inclusive
 local MODE_CODE = "\u{E000}"
@@ -25,9 +26,10 @@ local CELL_SEP = "\u{E009}"
 local ROW_SEP = "\u{E00A}"
 local MODE_LIST = "\u{E00B}"
 local MODE_LIST_ORDERED = "\u{E00C}"
--- Where one formula goes. The formula stays here, as the document's own Math
--- node; only its place crosses the wire, and `strip_block` puts the formula
--- back where the place comes out. See MATH_SLOT in crates/vertext-html.
+-- Where one formula or one footnote goes. The node stays here, as the
+-- document's own Math or Note; only its place crosses the wire, and
+-- `strip_block` puts the node back where the place comes out. See MATH_SLOT
+-- in crates/vertext-html.
 local MATH_SLOT = "\u{E00D}"
 -- A display formula: a segment of its own, set as a horizontal block.
 local MODE_MATH_DISPLAY = "\u{E00E}"
@@ -721,13 +723,14 @@ local function strip_markers(text, keep)
   return text
 end
 
--- The formulas of the strip being encoded, in the order their places were
--- written onto the wire. `strip_block` fills the places in this order, so
--- every strip starts with an empty list (`begin_strip`).
-local formulas = {}
+-- What the strip being encoded kept off the wire, in the order the places were
+-- written onto it: one list of inlines per place, a formula or a footnote.
+-- `strip_block` fills the places in this order, so every strip starts with an
+-- empty list (`begin_strip`).
+local kept = {}
 
 local function begin_strip()
-  formulas = {}
+  kept = {}
 end
 
 local function walk(element, filter)
@@ -735,32 +738,46 @@ local function walk(element, filter)
   return pandoc.walk_block(element, filter)
 end
 
--- A block's text, flattened, with each formula replaced by its place.
+-- Keeps a node off the wire: the wire gets its place, `kept` gets the node.
+-- `false` stops the walk at the node, so what is inside it stays inside it.
+local function keep(el)
+  table.insert(kept, { el })
+  return pandoc.Str(MATH_SLOT), false
+end
+
+-- A block's text, flattened, with each formula and footnote replaced by its
+-- place.
 --
 -- Flattened is still what everything else here gets -- emphasis and links
 -- arrive as their bare words, which the README states. A formula cannot be
 -- treated that way. `stringify` turns a Math node into its TeX, so a vertical
 -- page used to show `\pi_\theta(a_t \mid s_t)` set one character to a slot,
 -- and no math engine on the page could read it: the loss was not a style but
--- the content. The node is kept instead, and the wire carries only where it
--- goes.
+-- the content. A footnote was worse: `stringify` drops a Note, so its mark,
+-- its text and the footnotes at the end of the page were all gone, and nothing
+-- told the reader there had been one. Both nodes are kept instead, and the
+-- wire carries only where they go: pandoc then writes a formula with the
+-- page's math engine, and a note as its mark here and its text at the end.
+--
+-- The walk is top-down so the places are written in reading order and a node
+-- kept is not walked into. A formula inside a footnote goes with the
+-- footnote; counted among the paragraph's own, it would take a place that is
+-- not its own and move every formula after it by one.
 --
 -- Author text is stripped of markers BEFORE the places go in, so a U+E00D
 -- typed in the source cannot pass for one; the last pass spares only the
--- places this function wrote. Footnotes go first because `stringify` drops
--- them: a formula inside one would have been counted with no place to fill.
+-- places this function wrote.
 local function content_of(block)
   if block.t == nil then block = pandoc.Div(block) end
-  local walked = walk(walk(block, { Note = function() return {} end }), {
+  local walked = walk(block, {
+    traverse = "topdown",
     Str = function(el) return pandoc.Str(strip_markers(el.text)) end,
     Code = function(el)
       el.text = strip_markers(el.text)
       return el
     end,
-    Math = function(el)
-      table.insert(formulas, el)
-      return pandoc.Str(MATH_SLOT)
-    end,
+    Math = keep,
+    Note = keep,
   })
   return strip_markers(pandoc.utils.stringify(walked), MATH_SLOT)
 end
@@ -786,7 +803,7 @@ local function encode_paragraph(block)
   for _, inline in ipairs(block.content) do
     if inline.t == "Math" and inline.mathtype == "DisplayMath" then
       flush_run()
-      table.insert(formulas, inline)
+      table.insert(kept, { inline })
       table.insert(parts, MODE_MATH_DISPLAY .. MATH_SLOT .. MODE_PROSE)
     else
       table.insert(run, inline)
@@ -796,33 +813,34 @@ local function encode_paragraph(block)
   return table.concat(parts, "\n")
 end
 
--- The block a rendered strip becomes: the binary's HTML with each formula put
--- back where its place came out, as the Math node it was.
+-- The block a rendered strip becomes: the binary's HTML with each kept node
+-- put back where its place came out, as the node it was.
 --
--- A strip with no formula is one RawBlock, as it always was. A strip with
--- formulas is a Plain of RawInlines and Math nodes, so pandoc writes each
--- formula the way it writes every other formula in the document, and the
--- document keeps the math engine it asked for -- a strip of RawBlocks alone
--- would also leave pandoc seeing no math at all, and the page without one.
+-- A strip that kept nothing is one RawBlock, as it always was. Any other is a
+-- Plain of RawInlines and the kept nodes, so pandoc writes each formula the
+-- way it writes every other formula in the document, and each footnote the
+-- way it writes every other footnote: the mark here, the text at the end. A
+-- strip of RawBlocks alone would also leave pandoc seeing no math at all, and
+-- the page without its math engine.
 --
--- nil when the places that came back are not the formulas that went in: a
--- formula put in another's place is worse than the text left horizontal.
+-- nil when the places that came back are not the ones that went in: a formula
+-- or a note put in another's place is worse than the text left horizontal.
 local function strip_block(html)
-  if #formulas == 0 then return pandoc.RawBlock("html", html) end
+  if #kept == 0 then return pandoc.RawBlock("html", html) end
   local inlines, start, filled = {}, 1, 0
   while true do
     local first, last = html:find(MATH_SLOT, start, true)
     if not first then break end
     filled = filled + 1
-    local formula = formulas[filled]
-    if not formula then break end
+    local nodes = kept[filled]
+    if not nodes then break end
     table.insert(inlines, pandoc.RawInline("html", html:sub(start, first - 1)))
-    table.insert(inlines, pandoc.Math(formula.mathtype, formula.text))
+    for _, node in ipairs(nodes) do table.insert(inlines, node) end
     start = last + 1
   end
-  if filled ~= #formulas then
+  if filled ~= #kept then
     quarto.log.warning("vertext: the layout returned " .. filled .. " places for "
-      .. #formulas .. " formulas, so this block is left horizontal.")
+      .. #kept .. " formulas and footnotes, so this block is left horizontal.")
     return nil
   end
   table.insert(inlines, pandoc.RawInline("html", html:sub(start)))
@@ -1000,7 +1018,8 @@ function encode_blocks(blocks)
     else
       -- Everything else is still flattened to its characters: inline emphasis,
       -- links, and list structure do not survive. Documented in the README
-      -- rather than silently implied. Formulas do survive: see `content_of`.
+      -- rather than silently implied. Formulas and footnotes do survive: see
+      -- `content_of`.
       table.insert(parts, content_of(block))
     end
   end
@@ -1114,8 +1133,8 @@ function Pandoc(doc)
   -- scrolls sideways. One strip, one scroll direction.
   --
   -- The title is encoded inside the first flush rather than up front, because
-  -- a formula in it belongs to the first strip's formulas, and every strip
-  -- starts that list afresh.
+  -- a formula or a footnote in it belongs to what the first strip keeps, and
+  -- every strip starts that list afresh.
   local title = doc.meta.title
   local title_pending = title ~= nil
 
@@ -1217,8 +1236,9 @@ function Pandoc(doc)
   -- listing back down the page one character at a time; and a RawBlock beside
   -- text may be an opening tag, which no wrapper can enclose.
   --
-  -- A strip with formulas in it is a Plain rather than a RawBlock (see
-  -- `strip_block`), and stringifies to its formulas' TeX alone, so it counts.
+  -- A strip with formulas or footnotes in it is a Plain rather than a RawBlock
+  -- (see `strip_block`), and stringifies to its formulas' TeX alone, so it
+  -- counts.
   local function holds_raw_block(block)
     if is_strip(block) then return true end
     if block.t ~= "Div" or not block.content then return false end
@@ -1246,12 +1266,17 @@ function Pandoc(doc)
   -- document order so the TOC reads in the right sequence. The stylesheet
   -- takes them out of the visual flow -- they are already drawn, in columns,
   -- inside the strip.
+  --
+  -- A footnote in a heading is left out of its copy. The strip already holds
+  -- the note; kept here as well, pandoc would number it a second time, with a
+  -- mark in a heading nobody sees and a second copy of its text at the end.
   local function emit_toc_headings(blocks)
     for _, block in ipairs(blocks) do
       if block.t == "Header" then
+        local heading = walk(pandoc.Header(block.level, block.content, block.attr),
+                             { Note = function() return {} end })
         table.insert(rendered,
-          pandoc.Div({ pandoc.Header(block.level, block.content, block.attr) },
-                     pandoc.Attr("", { "vertext-toc-anchor" }, {})))
+          pandoc.Div({ heading }, pandoc.Attr("", { "vertext-toc-anchor" }, {})))
       elseif block.t == "Div" and block.content then
         emit_toc_headings(block.content)
       end

@@ -1141,6 +1141,24 @@ nothing in the core may foreclose it.
   before and after; with `relayout_raw` wired in, red, with no `vertext-raw`
   block. Pages are unchanged.
 
+- **A footnote in vertical text keeps its mark and its note** (#115). The
+  filter dropped every Note before flattening, so a vertical page had no mark,
+  no notes and none of their text. A note now goes the way a formula does:
+  the wire carries its place, U+E00D, and the filter puts the Note back where
+  the place comes out, so pandoc writes the mark there and the note at the end
+  of the page. The walk is top-down, so places are written in reading order
+  and a formula inside a note stays in the note. A heading's copy for the
+  table of contents leaves its notes out; with them it made a second
+  footnote. `filter-golden` adds notes in a paragraph beside a formula,
+  inline, in a heading and in a list item. With main's filter, red in 7
+  places: 1 mark on the page, from the heading's hidden copy, and 1 note.
+  Green after under pandoc 3.9 and CI's 2.17.1.1: 4 marks, each boxed in its
+  column, and 4 notes, the formula inside the first among them. Quarto
+  1.11.9 in Chrome 152, under `vertext: true` and `vertext-page: true`: 4
+  marks in the columns and 4 notes at the end, which the browser sets
+  vertically; a formula in a note lies on its side, as Latin does there.
+  Safari and Firefox were not run.
+
 ## Not sealed
 
 - **Two kinds of group still have no bound.** Only a mark that repeats the
