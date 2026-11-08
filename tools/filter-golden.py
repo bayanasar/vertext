@@ -230,6 +230,53 @@ def math_problems(pandoc):
     return fails
 
 
+# A hand-written panel: raw tags with markdown between them, and the prose
+# around it. The README says such a block passes through whole and horizontal,
+# text included; a pass that laid out the text between the tags was written
+# once and never called, and the comment describing it read as though it ran.
+PANEL = """---
+vertext: true
+---
+
+前文
+
+::: {.panel}
+```{=html}
+<div class="card">
+```
+卡片裏的中文
+```{=html}
+</div>
+```
+:::
+
+後文
+"""
+
+
+def panel_problems(pandoc):
+    """A Div holding raw HTML comes back whole, horizontal, and only once."""
+    html, stderr = render(pandoc, PANEL)
+    if stderr.strip():
+        return [f"panel: the filter complained\n     {stderr.strip()[:200]}"]
+    fails = []
+    # Each raw block runs to the strip that follows it.
+    raw = [part.split('<div class="vertext" ')[0]
+           for part in html.split('<div class="vertext-raw">')[1:]]
+    if len(raw) != 1:
+        fails.append(f"panel: {len(raw)} `vertext-raw` blocks, want the panel as one")
+    elif '<div class="card">' not in raw[0] or "卡片裏的中文" not in raw[0]:
+        fails.append("panel: the `vertext-raw` block is not the panel, card and "
+                     "text unbroken")
+    cards = html.count('<div class="card">')
+    if cards != 1:
+        fails.append(f"panel: the card's tag is on the page {cards} times, want once")
+    if '<span class="vertext-upright">前</span>' not in html \
+            or '<span class="vertext-upright">後</span>' not in html:
+        fails.append("panel: the prose around the panel is not in columns")
+    return fails
+
+
 def render(pandoc, document, path_extra=None, filter_copy=None, extra=()):
     """pandoc -> the real filter -> the wire -> the binary. Returns (html, stderr)."""
     env = dict(os.environ)
@@ -468,6 +515,7 @@ def main():
                          f"no longer true, so a wire marker did not arrive")
 
     fails += math_problems(args.pandoc)
+    fails += panel_problems(args.pandoc)
 
     fails += versions_agree()
 
@@ -507,6 +555,8 @@ def main():
           f"list, ordered list, code.")
     print(f"      {len(MATH_INLINE)} inline and {len(MATH_DISPLAY)} display "
           f"formulas come back as formulas, in order, each in its place.")
+    print(f"      a block of raw HTML with markdown inside passes through whole "
+          f"and horizontal, once, between columns.")
     print(f"      and the handshake refuses {len(stubs)} binaries that do not "
           f"speak this filter's wire version, degrading horizontal rather than "
           f"rendering a mismatched pair.")

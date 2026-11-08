@@ -1130,6 +1130,17 @@ nothing in the core may foreclose it.
   formula is not cross-referenced (README). A long inline formula widens its
   line. KaTeX, MathML, Safari and Firefox were not run.
 
+- **A block holding raw HTML is set horizontally, whole** (#112).
+  `relayout_raw`, which was to lay out the text beside such a block's HTML,
+  was never called: on main only it called itself. It is removed rather than
+  wired in. Wired into the loop, it took the `vertext-raw` wrapper off, and a
+  raw block beside text may be only an opening tag, which no wrapper can
+  close around. `filter-golden` adds a panel of hand-written cards between
+  two paragraphs: one `vertext-raw` block holding the card and its Chinese
+  unbroken, the card's tag once, the prose around it in columns. Green
+  before and after; with `relayout_raw` wired in, red, with no `vertext-raw`
+  block. Pages are unchanged.
+
 ## Not sealed
 
 - **Two kinds of group still have no bound.** Only a mark that repeats the

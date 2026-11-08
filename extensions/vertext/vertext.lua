@@ -1148,49 +1148,6 @@ function Pandoc(doc)
     pending = {}
   end
 
-  -- Structural HTML with text inside it: keep the structure, lay out the text.
-  --
-  -- Passing such a Div through whole is right for a code listing, which is one
-  -- opaque lump of rendered markup. It is wrong for a hand-written panel -- the
-  -- crew roster is the case that named this -- where the raw tags are the
-  -- CARDS and the Chinese between them is ordinary prose that should be set in
-  -- columns like every other paragraph on the site. Passing it through left the
-  -- one page of hand-written HTML reading horizontally.
-  --
-  -- So walk it: raw tags survive untouched and keep the layout they describe,
-  -- nested Divs recurse, and each run of real content between them becomes its
-  -- own small strip. That is what "every micro div gets the normal treatment"
-  -- means -- the container decides where the card sits, the engine decides how
-  -- the text inside it reads.
-  local function relayout_raw(block)
-    if block.t ~= "Div" or not block.content then return block end
-    local out, group = {}, {}
-    local function flush_group()
-      if #group == 0 then return end
-      local text = encode_blocks(group)
-      local html = text ~= "" and render(text, strip_args) or nil
-      if html then
-        table.insert(out, pandoc.RawBlock("html", html))
-      else
-        for _, b in ipairs(group) do table.insert(out, b) end
-      end
-      group = {}
-    end
-    for _, inner in ipairs(block.content) do
-      if inner.t == "RawBlock" then
-        flush_group()
-        table.insert(out, inner)
-      elseif inner.t == "Div" then
-        flush_group()
-        table.insert(out, relayout_raw(inner))
-      else
-        table.insert(group, inner)
-      end
-    end
-    flush_group()
-    return pandoc.Div(out, block.attr)
-  end
-
   -- Quarto carries its own machinery in the document AST as hidden divs --
   -- `quarto-navigation-envelope` holds the navbar and footer,
   -- `quarto-meta-markdown` the title and description -- and extracts them into
@@ -1251,6 +1208,14 @@ function Pandoc(doc)
   -- the content is already rendered HTML that Quarto styles, and laying out
   -- pre-highlighted markup as vertical slots would destroy the highlighting
   -- that is the point of it.
+  --
+  -- The whole Div goes, text included: a hand-written panel of raw tags with
+  -- markdown between them reads horizontally too. Laying out only the text
+  -- between the tags was written once and never called, and calling it would
+  -- not have been safe. It recursed into nested Divs without the wrapper, so a
+  -- `.cell` holding source and a `.cell-output-display` would have sent that
+  -- listing back down the page one character at a time; and a RawBlock beside
+  -- text may be an opening tag, which no wrapper can enclose.
   --
   -- A strip with formulas in it is a Plain rather than a RawBlock (see
   -- `strip_block`), and stringifies to its formulas' TeX alone, so it counts.
