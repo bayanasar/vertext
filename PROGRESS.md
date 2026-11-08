@@ -1303,6 +1303,34 @@ nothing in the core may foreclose it.
   marks a box holds (Not sealed): `sayin` and 40 of `。`, `」` or `）` now
   run 230px past a 28-cell column, where 80 were needed before.
 
+- **Code on a vertical page is highlighted, and a tabset of code keeps its
+  tabs** (#123). On a `vertext: true` or `vertext-page: true` page the filter
+  encoded every code block as text, so it came out as a plain code strip,
+  and a tabset was flattened: by the time the filter runs it is Quarto's own
+  node, a Div typed `Tabset`, and its PyTorch and Burn panels went into the
+  strip one after the other, with no tabs. The ML review's vertical Chinese
+  copy is this. Code at the top level now goes the way a block of raw HTML
+  does: the strip is cut, and the block goes to pandoc whole in a
+  `vertext-raw` block, which sets it horizontally. That is a code block, a
+  notebook cell (`.cell`, whole, with what it printed or drew), and a tabset
+  whose every panel is code. Code in a list, a quote, a block with prose
+  beside it or a `::: {.vertext}` fence is still a code strip. The same
+  section of the ML review's first module, a fenced block and a tabset of
+  two embedded cells, rendered under Quarto 1.11.9 without executing:
+  horizontally, 3 highlighted blocks with 425 token spans and tabs; in
+  `vertext-theme-html`, before, 5 code strips, no token, no tabs; after, the
+  same 3 blocks, 425 spans and tabs, in 2 `vertext-raw` blocks between 3
+  strips. `filter-golden` adds a fenced block, a cell, a tabset as Quarto
+  hands it to a filter and a block with prose beside its code: red in 2 with
+  main's filter (no `vertext-raw`, 6 code strips), green after under pandoc
+  3.9. `test-extension.sh` checks the cell and a tabset of Python and Rust
+  under Quarto: 8 checks red with main's filter, green after. The structure
+  fixture's code block moved into a block with prose, where the code mode
+  still crosses the wire. The docs site's check that its vertical ML pages
+  have as many code strips as the English pages have `<pre>` will need to
+  count `<pre>` when it takes this. In Firefox 140 the page looks as it
+  does in Chrome 152; Safari was not run.
+
 ## Not sealed
 
 - **Two kinds of group still have no bound.** Only a mark that repeats the

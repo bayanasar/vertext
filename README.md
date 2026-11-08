@@ -202,7 +202,7 @@ so structure only crosses the boundary where the wire protocol carries it:
 | Markdown | Result |
 |---|---|
 | Headings (`#`–`######`) | Own block, level-scaled, with a section rule |
-| Fenced / indented code | Own block, horizontal, indentation preserved |
+| Fenced / indented code | At the top level of a `vertext: true` or `vertext-page: true` page, passed to pandoc whole and set horizontally between the columns, highlighted and with Quarto's copy button as on any other page. So is a notebook cell, embedded or executed, and a tabset whose every panel is code, which keeps its tabs. Inside a list, a quote, a block with prose beside it or a `::: {.vertext}` fence, a code strip: own block, horizontal, indentation preserved, not highlighted |
 | Tables | Real `<table>`; rows become columns, cells never hyphenate |
 | Bullet / ordered lists | Each item is its own block, oriented on its own. An ordered item carries its number as text |
 | Paragraphs | Own block, oriented by the rule above |
@@ -214,10 +214,10 @@ so structure only crosses the boundary where the wire protocol carries it:
 | A block holding raw HTML (a rendered listing, a plot, hand-written cards) | Passed through whole and set horizontally, markdown inside it included |
 | Emphasis, links | **Flattened to their text.** The markup is lost |
 | A list nested inside a list item | Flattened into that item's text |
-| Mongolian inside a code block | **Rendered in the monospace face, so its letters stay isolated instead of joining** |
+| Mongolian inside a code strip | **Rendered in the monospace face, so its letters stay isolated instead of joining** |
 
 The last three rows are real limitations, not rounding errors: `*emphasis*`
-arrives as the bare word, and bichig inside a fenced block keeps the monospace
+arrives as the bare word, and bichig inside a code strip keeps the monospace
 face deliberately — a family change mid-line would break the column alignment
 that is the reason code is set in monospace at all. The cost is that those
 letters do not join, which is the failure this library exists to prevent,

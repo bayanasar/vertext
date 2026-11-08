@@ -242,9 +242,28 @@ printf '%s\n' '---' 'title: "输出"' 'vertext: true' 'filters: [vertext]' \
 quarto render "$work/cell.qmd" --quiet
 cellout="$work/cell.html"
 check "executed output survives the layout"     'Sum: 15'         "$cellout"
-check "the cell source survives the layout"     'sum(range(1, 6))' "$cellout"
-# Both belong in the horizontal code column, not poured into vertical prose.
-check "wrapped code is laid out as code"        'vertext-horizontal-code' "$cellout"
+check "the cell source survives the layout"     '<span class="bu">range</span>' "$cellout"
+# The cell goes to pandoc whole, beside the strips, so its source is
+# highlighted as on any other page, and set horizontally.
+check "the cell is passed whole"                'class="vertext-raw"' "$cellout"
+check "its source is highlighted"               '<pre class="sourceCode python' "$cellout"
+check_absent "it is not a code strip"           'vertext-horizontal-code' "$cellout"
+
+# A tabset of code keeps its tabs. By the time the filter runs it is Quarto's
+# own node, a Div typed `Tabset`, and laying it out flattened the panels one
+# after the other, unhighlighted, with no tabs. The PyTorch and Burn panels of
+# the ML review are this.
+printf '%s\n' '---' 'title: "分頁"' 'vertext: true' 'filters: [vertext]' \
+  'format: {vertext-html: default}' '---' '' '前文' '' '::: {.panel-tabset}' \
+  '## PyTorch' '```python' 'import torch' '```' '' '## Burn' '```rust' 'fn main() {}' \
+  '```' ':::' '' '後文' > "$work/tabs.qmd"
+quarto render "$work/tabs.qmd" --quiet
+tabsout="$work/tabs.html"
+check "a tabset of code keeps its tabs"         'nav-tabs'        "$tabsout"
+check "its Python is highlighted"               '<span class="im">import</span>' "$tabsout"
+check "its Rust is highlighted"                 '<span class="kw">fn</span>' "$tabsout"
+check "the tabset is passed whole"              'class="vertext-raw"' "$tabsout"
+check "the prose around it is in columns"       '<span class="vertext-upright">後</span>' "$tabsout"
 
 # ...and the same trap once more, for a RawBlock rather than a CodeBlock.
 #

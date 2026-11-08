@@ -1366,6 +1366,33 @@ function Pandoc(doc)
     return false
   end
 
+  -- Code at the top level goes the same way, so that pandoc highlights it and
+  -- Quarto gives it its copy button, as on any other page. Encoded, it came
+  -- out as plain text in a code strip, and a tabset of code lost its tabs:
+  -- by the time this filter runs a tabset is Quarto's own node, a Div typed
+  -- `Tabset` whose slots alternate content and title, and laying it out
+  -- flattened the slots one after another. A notebook cell (`.cell`, which
+  -- `{{< embed >}}` wraps once more) is its source and whatever it printed or
+  -- drew, and goes whole. A tabset counts only when every panel is code; one
+  -- with prose in a panel, and code inside a list, a quote or an explicit
+  -- `::: {.vertext}` fence, is laid out as before.
+  local function is_code(block)
+    if block.t == "CodeBlock" then return true end
+    if block.t ~= "Div" or not block.content or #block.content == 0 then return false end
+    if block.classes:includes("cell") then return true end
+    local tabset = block.attributes["__quarto_custom_type"] == "Tabset"
+    local any = false
+    for _, inner in ipairs(block.content) do
+      if is_code(inner) then
+        any = true
+      elseif not (tabset and inner.t == "Div" and #inner.content == 1
+                  and (inner.content[1].t == "Plain" or inner.content[1].t == "Para")) then
+        return false
+      end
+    end
+    return any
+  end
+
   -- Headings are carried across in BOTH forms, and the reason is Quarto's
   -- table of contents.
   --
@@ -1410,7 +1437,8 @@ function Pandoc(doc)
   for _, block in ipairs(doc.blocks) do
     -- A RawBlock at this point is a strip `Div` already rendered; emitting it
     -- as-is keeps an author's explicit fences intact.
-    if not is_strip(block) and not is_quarto_chrome(block) and holds_raw_block(block) then
+    if not is_strip(block) and not is_quarto_chrome(block)
+        and (holds_raw_block(block) or is_code(block)) then
       -- Passed through, but NOT unstyled. The region it lands in is
       -- `writing-mode: vertical-rl`, so already-rendered HTML inherits it and a
       -- code listing comes out running down the page one character at a time.

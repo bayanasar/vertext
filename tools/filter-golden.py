@@ -104,7 +104,9 @@ FRONT = "---\nvertext: true\nvertext-progression: lr\n---\n\n"
 # Every block kind the filter encodes specially, each carrying bichig. The
 # classes are what the wire protocol's mode markers turn into on the other side:
 # if a marker stopped being written, or the binary's reserved range moved, the
-# text still arrives and the STRUCTURE does not.
+# text still arrives and the STRUCTURE does not. The code block sits in a Div
+# beside prose, the one place code still crosses the wire in this mode: at the
+# top level it goes to pandoc whole (CODE below).
 STRUCTURE = FRONT + """# ᠨᠣᠮ heading
 
 ᠰᠠᠶᠢᠨ
@@ -119,9 +121,13 @@ STRUCTURE = FRONT + """# ᠨᠣᠮ heading
 |---|---|
 | ᠨᠡᠷ᠎ᠡ | x |
 
+::: {.aside}
+code below
+
 ```
 ᠲᠠ code
 ```
+:::
 """
 
 # Declared rather than re-extracted: this fixture is hand-written, so its runs
@@ -274,6 +280,120 @@ def panel_problems(pandoc):
     if '<span class="vertext-upright">前</span>' not in html \
             or '<span class="vertext-upright">後</span>' not in html:
         fails.append("panel: the prose around the panel is not in columns")
+    return fails
+
+
+# Code at the top level, where pandoc highlights it: a fenced block, a notebook
+# cell, and a tabset of code as Quarto 1.11.9 hands it to a filter (dumped from
+# a render: a Div typed `Tabset` whose slots alternate content and title). A
+# Div with prose beside its code is still laid out, its code in a code strip.
+# Quarto's attribute names begin with `__`, which pandoc's markdown cannot
+# write, so the fixture writes `quarto-custom-…` and QUARTO_NAMES renames them
+# before the filter runs.
+TABSET_SLOT = '::: {quarto-custom-scaffold="true"}'
+QUARTO_NAMES = """function Div(el)
+  local attributes = {}
+  for _, pair in ipairs(el.attr.attributes) do
+    local key = pair[1]
+    if key:match("^quarto%-custom") then key = "__" .. key:gsub("%-", "_") end
+    table.insert(attributes, { key, pair[2] })
+  end
+  el.attr = pandoc.Attr(el.identifier, el.classes, attributes)
+  return el
+end
+"""
+CODE = f"""---
+vertext: true
+---
+
+前文
+
+```python
+import torch
+```
+
+::: {{.cell}}
+```python
+x = 1
+```
+
+::: {{.cell-output .cell-output-stdout}}
+```
+1
+```
+:::
+:::
+
+::: {{quarto-custom="true" quarto-custom-type="Tabset" quarto-custom-context="Block"}}
+{TABSET_SLOT}
+```python
+def f(): return 2
+```
+:::
+{TABSET_SLOT}
+PyTorch
+:::
+{TABSET_SLOT}
+```rust
+fn f() -> u32 {{ 2 }}
+```
+:::
+{TABSET_SLOT}
+Burn
+:::
+:::
+
+::: {{.aside}}
+說明
+
+```
+in prose
+```
+:::
+
+後文
+"""
+# What each top-level block must come back as: highlighted, so a keyword or an
+# import is a token span.
+CODE_RAW = [
+    ("the fenced block", ['<pre class="sourceCode python">', "torch"]),
+    ("the notebook cell", ['<pre class="sourceCode python">', "x ", "<code>1</code>"]),
+    ("the tabset", ['<pre class="sourceCode python">', '<pre class="sourceCode rust">',
+                    "PyTorch", "Burn"]),
+]
+TOKEN = re.compile(r'<span class="(kw|im|fu|dv|dt|op)">')
+
+
+def code_problems(pandoc):
+    """Top-level code reaches pandoc whole and highlighted; code beside prose
+    is still laid out."""
+    with tempfile.NamedTemporaryFile("w", suffix=".lua", encoding="utf-8",
+                                     delete=False) as f:
+        f.write(QUARTO_NAMES)
+    try:
+        html, stderr = render(pandoc, CODE, extra=(f"--lua-filter={f.name}",))
+    finally:
+        os.unlink(f.name)
+    if stderr.strip():
+        return [f"code: the filter complained\n     {stderr.strip()[:200]}"]
+    fails = []
+    raw = [part.split('<div class="vertext" ')[0]
+           for part in html.split('<div class="vertext-raw">')[1:]]
+    if len(raw) != len(CODE_RAW):
+        fails.append(f"code: {len(raw)} `vertext-raw` blocks, want {len(CODE_RAW)}: "
+                     f"the fenced block, the cell and the tabset, each passed whole")
+    for (what, wants), block in zip(CODE_RAW, raw):
+        missing = [w for w in wants if w not in block]
+        if missing:
+            fails.append(f"code: the `vertext-raw` block for {what} lacks {missing}")
+        if not TOKEN.search(block):
+            fails.append(f"code: {what} came back without a highlighted token")
+    strips = html.count("vertext-horizontal-code")
+    if strips != 1:
+        fails.append(f"code: {strips} code strips, want 1, the code beside prose")
+    if '<span class="vertext-upright">前</span>' not in html \
+            or '<span class="vertext-upright">後</span>' not in html:
+        fails.append("code: the prose around the code is not in columns")
     return fails
 
 
@@ -785,6 +905,7 @@ def main():
     fails += cites_problems(args.pandoc)
     fails += note_style_problems(args.pandoc)
     fails += panel_problems(args.pandoc)
+    fails += code_problems(args.pandoc)
 
     fails += versions_agree()
 
@@ -833,6 +954,9 @@ def main():
           f"not two.")
     print(f"      a block of raw HTML with markdown inside passes through whole "
           f"and horizontal, once, between columns.")
+    print(f"      a code block, a notebook cell and a tabset of code at the top "
+          f"level reach pandoc whole and highlighted; code beside prose is "
+          f"still a code strip.")
     print(f"      and the handshake refuses {len(stubs)} binaries that do not "
           f"speak this filter's wire version, degrading horizontal rather than "
           f"rendering a mismatched pair.")
