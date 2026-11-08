@@ -189,10 +189,10 @@ so structure only crosses the boundary where the wire protocol carries it:
 | Bullet / ordered lists | Each item is its own block, oriented on its own. An ordered item carries its number as text |
 | Paragraphs | Own block, oriented by the rule above |
 | Inline formulas (`$…$`) | One horizontal box in the column, set by the document's own math engine (MathJax, KaTeX, MathML). A formula is never divided, so a long one makes its line as wide as the formula |
-| Display formulas (`$$…$$`) | Own horizontal block, like code; one wider than the measure scrolls |
+| Display formulas (`$$…$$`) | Own horizontal block, like code; one wider than the measure scrolls. In a list item, a quote or a table cell, one box in the column, like an inline formula |
 | Footnotes (`[^1]`, `^[…]`) | The mark stays in its column as a small box and links to its note. The notes go at the end of the page, where pandoc puts them; on a vertical page the browser sets them in its own vertical text, not this layout |
 | Citations and cross-references (`[@key]`, `@key`, `@eq-x`) | One horizontal box in the column, like an inline formula, filled after layout by citeproc or Quarto's crossref. A long one makes its line as wide as itself. The bibliography goes at the end of the page, set like the footnotes |
-| A labelled formula (`$$…$$ {#eq-x}`) | Under Quarto, numbered and the target of its references |
+| A labelled formula (`$$…$$ {#eq-x}`) | Under Quarto, numbered and the target of its references, in a paragraph, a list item, a quote or a table cell |
 | A block holding raw HTML (a rendered listing, a plot, hand-written cards) | Passed through whole and set horizontally, markdown inside it included |
 | Emphasis, links | **Flattened to their text.** The markup is lost |
 | A list nested inside a list item | Flattened into that item's text |

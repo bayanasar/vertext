@@ -746,6 +746,73 @@ local function keep(el)
   return pandoc.Str(MATH_SLOT), false
 end
 
+-- The label Quarto's crossref reads off a display formula, `$$…$$ {#eq-x}`,
+-- read the way crossref reads it: past any spaces, a Str that opens `{#eq-`,
+-- then the Strs, spaces and quotes of `{#eq-x alt="…"}` up to the `}` that
+-- closes it. The index of the label's last node, or nil if there is none.
+local function equation_label(inlines, after)
+  local i = after + 1
+  while inlines[i] and inlines[i].t == "Space" do i = i + 1 end
+  local first = inlines[i]
+  if not (first and first.t == "Str" and first.text:match("^{#eq%-")) then
+    return nil
+  end
+  local text, last = first.text, i
+  while not text:match("}$") do
+    local el = inlines[last + 1]
+    if not el then break end
+    if el.t == "Str" then
+      text = text .. el.text
+    elseif el.t == "Space" then
+      text = text .. " "
+    elseif el.t == "Quoted" then
+      local quote = el.quotetype == "DoubleQuote" and '"' or "'"
+      text = text .. quote .. pandoc.utils.stringify(el.content) .. quote
+    else
+      break
+    end
+    last = last + 1
+  end
+  if text:match("^{#eq%-[^}]+}$") then return last end
+end
+
+-- The class of the Span `bind_labels` puts a labelled formula in. The Span is
+-- only ever in this filter's own copy of a block: what is kept is its
+-- content, and the Span itself goes nowhere.
+local LABELLED = "vertext-labelled-formula"
+
+-- Puts each labelled display formula and its label in one Span, so the two
+-- are kept as one place and come back side by side.
+--
+-- Crossref runs after this filter and looks for the label right after the
+-- formula. Left in the text, the label was set in the column as `{#eq-x}`,
+-- the formula had no number and `@eq-x` pointed nowhere. That held wherever
+-- the formula stood: a paragraph cuts at its formula, but a list item, a
+-- quote or a table cell keeps it as a box in the column, and the label has
+-- to go with it there too.
+local function bind_labels(inlines)
+  local bound, i = pandoc.List(), 1
+  while i <= #inlines do
+    local inline = inlines[i]
+    local last = inline.t == "Math" and inline.mathtype == "DisplayMath"
+      and equation_label(inlines, i)
+    if last then
+      local nodes = pandoc.List({ inline })
+      for j = i + 1, last do nodes:insert(inlines[j]) end
+      bound:insert(pandoc.Span(nodes, pandoc.Attr("", { LABELLED }, {})))
+      i = last + 1
+    else
+      bound:insert(inline)
+      i = i + 1
+    end
+  end
+  return bound
+end
+
+local function is_labelled(inline)
+  return inline.t == "Span" and inline.classes:includes(LABELLED)
+end
+
 -- A block's text, flattened, with each formula, footnote and citation replaced
 -- by its place.
 --
@@ -767,14 +834,15 @@ end
 -- The walk is top-down so the places are written in reading order and a node
 -- kept is not walked into. A formula inside a footnote goes with the
 -- footnote; counted among the paragraph's own, it would take a place that is
--- not its own and move every formula after it by one.
+-- not its own and move every formula after it by one. A labelled formula is
+-- one place, its label with it (`bind_labels`).
 --
 -- Author text is stripped of markers BEFORE the places go in, so a U+E00D
 -- typed in the source cannot pass for one; the last pass spares only the
 -- places this function wrote.
 local function content_of(block)
   if block.t == nil then block = pandoc.Div(block) end
-  local walked = walk(block, {
+  local walked = walk(walk(block, { Inlines = bind_labels }), {
     traverse = "topdown",
     Str = function(el) return pandoc.Str(strip_markers(el.text)) end,
     Code = function(el)
@@ -784,31 +852,18 @@ local function content_of(block)
     Math = keep,
     Note = keep,
     Cite = keep,
+    Span = function(el)
+      if not is_labelled(el) then return nil end
+      table.insert(kept, el.content)
+      return pandoc.Str(MATH_SLOT), false
+    end,
   })
   return strip_markers(pandoc.utils.stringify(walked), MATH_SLOT)
 end
 
--- The label Quarto's crossref reads off a display formula, `$$…$$ {#eq-x}`:
--- a Str after the formula, past any space. Same shape crossref looks for.
-local function equation_label(inlines, after)
-  local i = after + 1
-  while inlines[i] and (inlines[i].t == "Space" or inlines[i].t == "SoftBreak") do
-    i = i + 1
-  end
-  local label = inlines[i]
-  if label and label.t == "Str" and label.text:match("^{#eq%-[^}]+}$") then
-    return label, i
-  end
-end
-
 -- A paragraph that holds a display formula is cut at the formula: the text on
 -- either side stays prose, and the formula becomes a segment of its own that
--- the binary sets as a horizontal block.
---
--- A label goes with its formula. Crossref runs after this filter and looks for
--- the label right after the formula, so it is kept with the Math node and put
--- back beside it. Left in the text, it was set in the column as `{#eq-x}`, the
--- formula had no number and `@eq-x` pointed nowhere.
+-- the binary sets as a horizontal block, with its label if it has one.
 local function encode_paragraph(block)
   local holds_display = false
   for _, inline in ipairs(block.content) do
@@ -824,25 +879,15 @@ local function encode_paragraph(block)
     if text:match("%S") then table.insert(parts, text) end
     run = {}
   end
-  local inlines = block.content
-  local i = 1
-  while i <= #inlines do
-    local inline = inlines[i]
-    if inline.t == "Math" and inline.mathtype == "DisplayMath" then
+  for _, inline in ipairs(bind_labels(block.content)) do
+    local display = inline.t == "Math" and inline.mathtype == "DisplayMath"
+    if display or is_labelled(inline) then
       flush_run()
-      local nodes = { inline }
-      local label, at = equation_label(inlines, i)
-      if label then
-        table.insert(nodes, pandoc.Space())
-        table.insert(nodes, label)
-        i = at
-      end
-      table.insert(kept, nodes)
+      table.insert(kept, display and { inline } or inline.content)
       table.insert(parts, MODE_MATH_DISPLAY .. MATH_SLOT .. MODE_PROSE)
     else
       table.insert(run, inline)
     end
-    i = i + 1
   end
   flush_run()
   return table.concat(parts, "\n")
@@ -1304,14 +1349,20 @@ function Pandoc(doc)
   -- takes them out of the visual flow -- they are already drawn, in columns,
   -- inside the strip.
   --
-  -- A footnote in a heading is left out of its copy. The strip already holds
-  -- the note; kept here as well, pandoc would number it a second time, with a
-  -- mark in a heading nobody sees and a second copy of its text at the end.
+  -- A footnote in a heading is left out of its copy, and so is a citation.
+  -- The strip already holds both; kept here as well, pandoc would number the
+  -- note a second time, with a mark in a heading nobody sees and a second
+  -- copy of its text at the end. Under a note style citeproc makes a footnote
+  -- of the citation too, so it would come out the same, and every footnote
+  -- after it would move by one. The table of contents lists the heading
+  -- without the citation.
   local function emit_toc_headings(blocks)
     for _, block in ipairs(blocks) do
       if block.t == "Header" then
-        local heading = walk(pandoc.Header(block.level, block.content, block.attr),
-                             { Note = function() return {} end })
+        local heading = walk(pandoc.Header(block.level, block.content, block.attr), {
+          Note = function() return {} end,
+          Cite = function() return {} end,
+        })
         table.insert(rendered,
           pandoc.Div({ heading }, pandoc.Attr("", { "vertext-toc-anchor" }, {})))
       elseif block.t == "Div" and block.content then

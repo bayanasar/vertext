@@ -198,9 +198,11 @@ that no line divides. When the HTML comes back the filter cuts it at each
 place and puts the node there, so pandoc writes the formula with whatever math
 engine the document chose and the note as its mark in the column and its text
 at the end of the page, and Quarto's crossref and citeproc, which run after
-the filter, still find every citation. A display formula is a segment of its
-own and comes back as a horizontal block (`vertext-horizontal-math`); its
-`{#eq-…}` label is kept with it, where crossref looks. If the places that come
+the filter, still find every citation. A display formula in a paragraph is a
+segment of its own and comes back as a horizontal block
+(`vertext-horizontal-math`); in a list item, a quote or a table cell it is a
+box in the column. Either way its `{#eq-…}` label is one place with it and
+comes back beside it, where crossref looks. If the places that come
 back are not the ones that went in, the block is left horizontal rather than
 filled wrongly.
 

@@ -1183,6 +1183,20 @@ nothing in the core may foreclose it.
   a long one widens its line: "(Knuth 1984, 頁 12)" made its line 123px. The
   bibliography is set by the browser like the footnotes. Safari and Firefox
   were not run.
+  Review found two gaps, closed before merge. A list item, a quote or a
+  table cell is not cut at its formula as a paragraph is, so the formula is a
+  box in the column, and its label stayed behind as text; the label is now
+  read the way crossref reads it, an `alt` included, and kept with its
+  formula wherever it stands. The heading's copy for the table of contents
+  kept its citations, and under a note style citeproc made the heading's
+  citation a second footnote and moved every one after it; the copy leaves
+  citations out, so the table of contents lists that heading without them.
+  `filter-golden` adds the label in a list item, a quote, a table cell and
+  with an `alt`, and a note style with a citation in a heading: red in 6
+  places with the filter before, green after under pandoc 3.9 and 2.17.1.1.
+  `test-extension.sh` checks those four under Quarto, 13 checks red before
+  and green after. Its footnote split also takes pandoc 3.1's `<aside>`. The
+  47 documents compared above are unchanged.
 
 ## Not sealed
 

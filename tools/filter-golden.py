@@ -301,6 +301,14 @@ vertext: true
 
 NOTES_TEXTS = ["第一個腳注", "行內腳注的內容", "標題裏的腳注", "列表裏的腳注"]
 NOTE_REF = re.compile(r'<a href="#fn\d+" class="footnote-ref"')
+NOTE_ITEM = re.compile(r'<li id="fn\d+"')
+
+
+def split_notes(html):
+    """The page before its footnotes, and the footnotes. pandoc 3.1 writes
+    them in an `<aside>`, 2.17 and 3.9 in a `<section>`."""
+    return (re.split(r'(?=<(?:section|aside)[^>]*class="footnotes)', html,
+                     maxsplit=1) + [""])[:2]
 
 
 def notes_problems(pandoc):
@@ -318,8 +326,7 @@ def notes_problems(pandoc):
     if "data-column-advance" not in html:
         return ["notes: no strip was rendered, so nothing below was tested"]
     fails = []
-    body, notes = (re.split(r'(?=<section[^>]*class="footnotes)', html,
-                            maxsplit=1) + [""])[:2]
+    body, notes = split_notes(html)
     marks = len(NOTE_REF.findall(html))
     if marks != len(NOTES_TEXTS):
         fails.append(f"notes: {marks} footnote marks on the page, want "
@@ -330,7 +337,7 @@ def notes_problems(pandoc):
     if boxed != len(NOTES_TEXTS):
         fails.append(f"notes: {boxed} footnote marks sit in a box in the columns, "
                      f"want {len(NOTES_TEXTS)}")
-    listed = len(re.findall(r'<li id="fn\d+"', notes))
+    listed = len(NOTE_ITEM.findall(notes))
     if listed != len(NOTES_TEXTS):
         fails.append(f"notes: {listed} footnotes at the end of the page, want "
                      f"{len(NOTES_TEXTS)}")
@@ -352,13 +359,14 @@ def notes_problems(pandoc):
 
 
 # Citations in a paragraph, in brackets and narrative and with a locator, and
-# a display formula with the label Quarto's crossref reads off it. pandoc runs
-# `--citeproc` after the Lua filters named before it, which is where Quarto
-# runs citeproc too; the crossref itself is Quarto's and is checked in
+# a display formula with the label Quarto's crossref reads off it, standing as
+# its own paragraph and inside a list item, a quote and a table cell. A
+# paragraph cuts at its formula; the others do not, and their formula is a box
+# in the column, so the label has to stay with the formula on both paths. pandoc runs `--citeproc` after
+# the Lua filters named before it, which is where Quarto runs citeproc too;
+# the crossref itself is Quarto's and is checked in
 # examples/test-extension.sh.
-CITES = """---
-vertext: true
-references:
+REFERENCES = """references:
   - id: knuth
     type: book
     author:
@@ -367,21 +375,82 @@ references:
     title: The TeXbook
     issued:
       date-parts: [[1984]]
----
+"""
+
+CITES = f"""---
+vertext: true
+{REFERENCES}---
 
 見 [@knuth] 第一章。@knuth 也這樣寫。
 
 $$
 y = x
-$$ {#eq-x}
+$$ {{#eq-x}}
 
 後文再引 [@knuth, 頁 12]。
+
+- 列表項裏的公式 $$z = x$$ {{#eq-z}} 之後還有字
+
+> 引文裏的公式 $$w = x$$ {{#eq-w}}
+
+$$u = x$$ {{#eq-u alt="u 等於 x"}}
+
+| 格子 |
+|---|
+| 表格裏的公式 $$v = x$$ {{#eq-v}} |
 """
 
 CITATIONS = 3
 CITATION = '<span class="citation" data-cites="knuth">'
-LABELLED = re.compile(r'<div class="vertext-horizontal vertext-horizontal-math">'
-                      r'<span class="math display">\\\[\s*y = x\s*\\\]</span> \{#eq-x\}')
+
+
+def boxed_label(formula, label):
+    """A display formula set as a box in its column, its label beside it."""
+    return re.compile(r'<span class="vertext-math"><span class="math display">\\\['
+                      + re.escape(formula) + r'\\\]</span> ' + re.escape(label)
+                      + '</span>')
+
+
+LABELLED = {
+    "{#eq-x}": re.compile(r'<div class="vertext-horizontal vertext-horizontal-math">'
+                          r'<span class="math display">\\\[\s*y = x\s*\\\]</span> '
+                          r'\{#eq-x\}'),
+    "{#eq-z}": boxed_label("z = x", "{#eq-z}"),
+    "{#eq-w}": boxed_label("w = x", "{#eq-w}"),
+    "{#eq-v}": boxed_label("v = x", "{#eq-v}"),
+    # The label crossref also reads in several nodes: Strs, a space and the
+    # quotes of an `alt`, which pandoc writes as curly quotes.
+    "{#eq-u alt=“u 等於 x”}": re.compile(
+        r'<div class="vertext-horizontal vertext-horizontal-math">'
+        r'<span class="math display">\\\[u = x\\\]</span> '
+        r'\{#eq-u alt=“u 等於 x”\}'),
+}
+
+# A citation in a heading, under a note style: citeproc turns each citation
+# outside a footnote into one. The heading is also copied into a hidden anchor
+# for the table of contents, and a citation copied there became a footnote of
+# its own, with a mark nobody sees, and every footnote after it moved by one.
+NOTE_STYLE = """<?xml version="1.0" encoding="utf-8"?>
+<style xmlns="http://purl.org/net/xbiblio/csl" class="note" version="1.0">
+  <info><title>note</title><id>note</id><updated>2026-01-01T00:00:00+00:00</updated></info>
+  <citation><layout><names variable="author"><name/></names></layout></citation>
+</style>
+"""
+
+NOTE_CITES = f"""---
+vertext: true
+{REFERENCES}---
+
+## 小節 [@knuth]
+
+正文引一次 [@knuth]，還有一條腳注[^1]。
+
+[^1]: 作者寫的腳注。
+"""
+
+# Footnotes in order, as horizontal pandoc writes them: the heading's
+# citation, the paragraph's, the author's note.
+NOTE_CITES_NOTES = ["Knuth", "Knuth", "作者寫的腳注"]
 
 
 def cites_problems(pandoc):
@@ -413,13 +482,46 @@ def cites_problems(pandoc):
         fails.append("cites: `@knuth` is on the page as typed")
     if 'id="ref-knuth"' not in html:
         fails.append("cites: no bibliography entry for knuth")
-    if not LABELLED.search(html):
-        fails.append("cites: the label is not beside its display formula")
-    if text.count("{#eq-x}") != 1:
-        fails.append(f"cites: `{{#eq-x}}` is on the page {text.count('{#eq-x}')} "
-                     f"times, want once, beside the formula")
+    for label, beside in LABELLED.items():
+        if not beside.search(html):
+            fails.append(f"cites: `{label}` is not beside its display formula")
+        if text.count(label) != 1:
+            fails.append(f"cites: `{label}` is on the page {text.count(label)} "
+                         f"times, want once, beside the formula")
     if "" in html:
         fails.append(f"cites: {html.count(chr(0xE00D))} U+E00D left on the page")
+    return fails
+
+
+def note_style_problems(pandoc):
+    """Under a note style, a citation in a heading is one footnote, not two."""
+    with tempfile.NamedTemporaryFile("w", suffix=".csl", encoding="utf-8",
+                                     delete=False) as f:
+        f.write(NOTE_STYLE)
+        csl = f.name
+    try:
+        html, stderr = render(pandoc, NOTE_CITES,
+                              after=["--citeproc", f"--csl={csl}"])
+    finally:
+        os.unlink(csl)
+    if stderr.strip():
+        return [f"note style: the filter complained\n     {stderr.strip()[:200]}"]
+    if "data-column-advance" not in html:
+        return ["note style: no strip was rendered, so nothing below was tested"]
+    fails = []
+    _, notes = split_notes(html)
+    items = NOTE_ITEM.split(notes)[1:]
+    texts = [htmllib.unescape(re.sub(r"<[^>]+>", "", item)) for item in items]
+    got = [next((w for w in NOTE_CITES_NOTES if w in t), t.strip()[:20])
+           for t in texts]
+    if got != NOTE_CITES_NOTES:
+        fails.append(f"note style: footnotes {got}, want {NOTE_CITES_NOTES} -- "
+                     f"one per citation and note, none from the hidden heading "
+                     f"anchor")
+    marks = len(NOTE_REF.findall(html))
+    if marks != len(NOTE_CITES_NOTES):
+        fails.append(f"note style: {marks} footnote marks on the page, want "
+                     f"{len(NOTE_CITES_NOTES)}")
     return fails
 
 
@@ -667,6 +769,7 @@ def main():
     fails += math_problems(args.pandoc)
     fails += notes_problems(args.pandoc)
     fails += cites_problems(args.pandoc)
+    fails += note_style_problems(args.pandoc)
     fails += panel_problems(args.pandoc)
 
     fails += versions_agree()
@@ -710,7 +813,10 @@ def main():
     print(f"      {len(NOTES_TEXTS)} footnotes keep their mark in the column and "
           f"their text at the end, once each.")
     print(f"      {CITATIONS} citations reach citeproc, each boxed in its column, "
-          f"with the bibliography written; a display formula keeps its label.")
+          f"with the bibliography written; a display formula keeps its label "
+          f"in a paragraph, a list item, a quote and a table cell.")
+    print(f"      under a note style, a citation in a heading is one footnote, "
+          f"not two.")
     print(f"      a block of raw HTML with markdown inside passes through whole "
           f"and horizontal, once, between columns.")
     print(f"      and the handshake refuses {len(stubs)} binaries that do not "

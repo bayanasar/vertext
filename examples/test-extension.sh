@@ -162,7 +162,11 @@ printf '%s\n' '---' 'title: "引用"' 'vertext: true' 'filters: [vertext]' \
   'references:' '  - id: knuth' '    type: book' '    author:' \
   '      - family: Knuth' '        given: Donald E.' '    title: The TeXbook' \
   '    issued:' '      date-parts: [[1984]]' '---' '' \
-  '如 @eq-x 所示，見 [@knuth] 第一章。' '' '$$' 'y = x' '$$ {#eq-x}' > "$work/xref.qmd"
+  '如 @eq-x 所示，見 [@knuth] 第一章。' '' '$$' 'y = x' '$$ {#eq-x}' '' \
+  '- 列表項裏的公式 $$z = x$$ {#eq-z} 見 @eq-z。' '' \
+  '> 引文裏的公式 $$w = x$$ {#eq-w}' '' \
+  '| 格子 |' '|---|' '| 表格裏的公式 $$v = x$$ {#eq-v} |' '' \
+  '$$u = x$$ {#eq-u alt="u 等於 x"}' > "$work/xref.qmd"
 quarto render "$work/xref.qmd" --quiet
 xref="$work/xref.html"
 check        "a labelled formula is numbered"    '\\tag{1}'                     "$xref"
@@ -171,6 +175,25 @@ check        "its reference links to it"         'href="#eq-x" class="quarto-xre
 check        "a citation links to its entry"     'href="#ref-knuth"'            "$xref"
 check        "the bibliography is written"       'id="ref-knuth"'               "$xref"
 check_absent "the label is not left as text"     '{#eq-x}'                      "$xref"
+# A list item, a quote and a table cell are not cut at a formula as a
+# paragraph is: the formula is a box in the column, and its label has to go
+# with it all the same. A label left behind is set in the column a character
+# or a run at a time, so it is looked for as the run it becomes there, not as
+# the text it was.
+check        "a list item's formula is numbered" '\\tag{2}'                     "$xref"
+check        "a list item's formula is the target" 'id="eq-z"'                  "$xref"
+check        "its reference links to it too"     'href="#eq-z" class="quarto-xref"' "$xref"
+check_absent "its label is not set in the column" 'vertext-latin">eq-z<'        "$xref"
+check        "a quote's formula is numbered"     '\\tag{3}'                     "$xref"
+check        "a quote's formula is the target"   'id="eq-w"'                    "$xref"
+check_absent "its label is not set in the column" 'vertext-latin">eq-w<'        "$xref"
+check        "a table cell's formula is numbered" '\\tag{4}'                    "$xref"
+check        "a table cell's formula is the target" 'id="eq-v"'                 "$xref"
+check_absent "its label is not set in the column" 'vertext-latin">eq-v<'        "$xref"
+# A label with an `alt` reaches crossref in several nodes, not one.
+check        "a label with alt text is numbered" '\\tag{5}'                     "$xref"
+check        "a label with alt text is the target" 'id="eq-u"'                  "$xref"
+check_absent "no alt text is left on the page"   'alt=“'                        "$xref"
 
 # Quarto loads a project's filters once and reuses the Lua state for every
 # document. A document that declares `vertext: true` must not turn on
