@@ -398,6 +398,8 @@ $$u = x$$ {{#eq-u alt="u 等於 x"}}
 | 格子 |
 |---|
 | 表格裏的公式 $$v = x$$ {{#eq-v}} |
+
+腳注裏也有帶標籤的公式^[注裏 $$n = x$$ {{#eq-n}} 完。]。
 """
 
 CITATIONS = 3
@@ -425,6 +427,12 @@ LABELLED = {
         r'<span class="math display">\\\[u = x\\\]</span> '
         r'\{#eq-u alt=“u 等於 x”\}'),
 }
+
+# A labelled formula inside a footnote belongs to the footnote. The note is
+# kept whole, so pandoc writes it as it writes any footnote, the label beside
+# its formula as the author put it, and crossref finds it there. Bound like
+# the column's own, it went out to the page wrapped in the filter's Span.
+NOTE_LABEL = re.compile(r'<span class="math display">\\\[n = x\\\]</span> \{#eq-n\}')
 
 # A citation in a heading, under a note style: citeproc turns each citation
 # outside a footnote into one. The heading is also copied into a hidden anchor
@@ -482,6 +490,12 @@ def cites_problems(pandoc):
         fails.append("cites: `@knuth` is on the page as typed")
     if 'id="ref-knuth"' not in html:
         fails.append("cites: no bibliography entry for knuth")
+    if not NOTE_LABEL.search(split_notes(html)[1]):
+        fails.append("cites: the footnote's formula is not written with its label "
+                     "beside it, as horizontal pandoc writes it")
+    if "vertext-labelled-formula" in html:
+        fails.append(f"cites: the filter's Span is on the page "
+                     f"{html.count('vertext-labelled-formula')} times")
     for label, beside in LABELLED.items():
         if not beside.search(html):
             fails.append(f"cites: `{label}` is not beside its display formula")

@@ -166,7 +166,8 @@ printf '%s\n' '---' 'title: "引用"' 'vertext: true' 'filters: [vertext]' \
   '- 列表項裏的公式 $$z = x$$ {#eq-z} 見 @eq-z。' '' \
   '> 引文裏的公式 $$w = x$$ {#eq-w}' '' \
   '| 格子 |' '|---|' '| 表格裏的公式 $$v = x$$ {#eq-v} |' '' \
-  '$$u = x$$ {#eq-u alt="u 等於 x"}' > "$work/xref.qmd"
+  '$$u = x$$ {#eq-u alt="u 等於 x"}' '' \
+  '腳注裏也有^[注裏 $$n = x$$ {#eq-n} 完。]，見 @eq-n。' > "$work/xref.qmd"
 quarto render "$work/xref.qmd" --quiet
 xref="$work/xref.html"
 check        "a labelled formula is numbered"    '\\tag{1}'                     "$xref"
@@ -194,6 +195,11 @@ check_absent "its label is not set in the column" 'vertext-latin">eq-v<'        
 check        "a label with alt text is numbered" '\\tag{5}'                     "$xref"
 check        "a label with alt text is the target" 'id="eq-u"'                  "$xref"
 check_absent "no alt text is left on the page"   'alt=“'                        "$xref"
+# A footnote is kept whole and written as pandoc writes any footnote, so a
+# labelled formula inside one is numbered as it is in horizontal text.
+check        "a footnote's formula is the target" 'id="eq-n"'                   "$xref"
+check        "its reference links to it as well" 'href="#eq-n" class="quarto-xref"' "$xref"
+check_absent "the filter's own Span stays off the page" 'vertext-labelled-formula' "$xref"
 
 # Quarto loads a project's filters once and reuses the Lua state for every
 # document. A document that declares `vertext: true` must not turn on

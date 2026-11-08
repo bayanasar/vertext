@@ -813,6 +813,22 @@ local function is_labelled(inline)
   return inline.t == "Span" and inline.classes:includes(LABELLED)
 end
 
+-- The walk that binds labels, which stops at a footnote and a citation. Both
+-- are kept whole and pandoc writes them as it writes any other, so a labelled
+-- formula inside a footnote already has its label beside it, where crossref
+-- finds it. Bound, it went out to the page inside the Span, and crossref left
+-- it unnumbered. The walk stops at its own Span too, or it would bind the
+-- formula inside it again.
+local BIND_LABELS = {
+  traverse = "topdown",
+  Inlines = bind_labels,
+  Note = function(el) return el, false end,
+  Cite = function(el) return el, false end,
+  Span = function(el)
+    if is_labelled(el) then return el, false end
+  end,
+}
+
 -- A block's text, flattened, with each formula, footnote and citation replaced
 -- by its place.
 --
@@ -842,7 +858,7 @@ end
 -- places this function wrote.
 local function content_of(block)
   if block.t == nil then block = pandoc.Div(block) end
-  local walked = walk(walk(block, { Inlines = bind_labels }), {
+  local walked = walk(walk(block, BIND_LABELS), {
     traverse = "topdown",
     Str = function(el) return pandoc.Str(strip_markers(el.text)) end,
     Code = function(el)

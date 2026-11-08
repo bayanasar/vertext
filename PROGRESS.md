@@ -1196,7 +1196,15 @@ nothing in the core may foreclose it.
   places with the filter before, green after under pandoc 3.9 and 2.17.1.1.
   `test-extension.sh` checks those four under Quarto, 13 checks red before
   and green after. Its footnote split also takes pandoc 3.1's `<aside>`. The
-  47 documents compared above are unchanged.
+  47 documents compared above are unchanged. The second review found the
+  binding walking into footnotes: a footnote is kept whole, so a labelled
+  formula in one went out to the page inside the filter's Span, and under
+  Quarto it lost its number and `@eq-n` printed as `?@eq-n`, where
+  `9cf7dfa` and horizontal Quarto numbered it. The binding now stops at a
+  footnote, a citation and its own Span. `filter-golden` adds the case, red
+  in 1 place before and green after under pandoc 3.9 and 2.17.1.1;
+  `test-extension.sh` adds 3 checks, red before and green after, 108 in all.
+  Without the stop at its own Span the walk recursed until pandoc failed.
 
 ## Not sealed
 
