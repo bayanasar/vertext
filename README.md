@@ -42,8 +42,8 @@ which carries the next minor's pre-release, pairs with no release; see
 `docs/ARCHITECTURE.md`.
 
 ```sh
-cargo install vertext-cli --version 0.3.0
-quarto add https://github.com/bayanasar/vertext/releases/download/v0.3.0/vertext-quarto-0.3.0.zip
+cargo install vertext-cli --version 0.4.0
+quarto add https://github.com/bayanasar/vertext/releases/download/v0.4.0/vertext-quarto-0.4.0.zip
 ```
 
 The zip holds `_extensions/vertext/` and nothing else. It is built from

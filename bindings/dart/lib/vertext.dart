@@ -21,7 +21,7 @@ import 'src/bindings.dart' as native;
 
 /// The version this binding was released as. The native library reports its
 /// own, and the two must speak one wire version (tools/wire-pairs.json).
-const version = '0.4.0-dev';
+const version = '0.4.0';
 
 /// The wire version a half with version [v] speaks: a release its
 /// MAJOR.MINOR, a pre-release its whole version.
