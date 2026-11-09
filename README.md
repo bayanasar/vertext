@@ -173,9 +173,11 @@ Every bracket, quote and pause or stop mark between characters takes one cell.
 The faces also carry narrower, proportional forms of these marks, and Firefox
 uses them on a page that sets `font-kerning: normal`, as pandoc's standalone
 template does, so the stylesheet turns kerning off for the cells. Chrome
-narrows on its own: by default the first of two adjacent marks, as in `」，`,
-takes half a cell (`text-spacing-trim: normal`). Set `text-spacing-trim:
-space-all` on `.vertext` to keep every mark in a whole cell there too.
+narrows on its own: by default one of two adjacent marks, as the `」` in `」，`,
+takes half a cell (`text-spacing-trim: normal`), so the stylesheet sets
+`text-spacing-trim: space-all` on the cells too. That is a choice: Mainland
+and Hong Kong publications mostly narrow such a pair (CLReq 6.3.2), and
+vertext offers no way to ask for it yet.
 
 The Mongolian face does ship: Noto Sans Mongolian sits beside `vertext.css`
 under the SIL Open Font License (`NotoSansMongolian-OFL.txt`), and the

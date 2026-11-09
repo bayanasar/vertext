@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Every bracket, quote and pause or stop mark takes one cell along the column,
-in Chrome and in Firefox, whatever kerning the page asks for.
+in Chrome and in Firefox, whatever kerning the page asks for, alone or beside
+another mark.
 
 CLReq 6.3.2: a mark between characters usually occupies one em. Whether to
 narrow it is a style; many Taiwan publications do not. vertext narrows none
@@ -14,13 +15,17 @@ bracket in half a cell, and `，` and `。` too, where Chrome set one cell each.
 The stylesheet now turns kerning off for the cells. Chrome does not do this,
 so this gate has to run in Firefox to be able to fail.
 
-Each mark is set between two Han characters, `口<mark>口`, exactly as the binary
-renders it, with the shipped stylesheet and a pinned face, twice: on a plain
-page, and under the body rule of pandoc's template. The page reports every
-slot's extent along the column, and each must be one cell to within half a
-pixel. Two marks side by side are not set here: Chrome narrows the first of
-such a pair by default (`text-spacing-trim: normal`), which CONFORMANCE 6.3.2
-records.
+Chrome narrows on its own instead: by default (`text-spacing-trim: normal`)
+Chrome 152 set one of two adjacent marks in half a cell, the first in `」，`
+and `）、`, the opening bracket in `」「` and `。「`, on either page. Firefox
+140 trims neither, so this half of the gate can fail only in Chrome. The
+stylesheet now asks for `text-spacing-trim: space-all` on the cells.
+
+Each mark is set between two Han characters, `口<mark>口`, and so is each pair
+of marks, exactly as the binary renders it, with the shipped stylesheet and a
+pinned face, twice: on a plain page, and under the body rule of pandoc's
+template. The page reports every slot's extent along the column, and each must
+be one cell to within half a pixel.
 
 Usage
 -----
@@ -58,6 +63,14 @@ _pg = _load("page_geometry", "page-geometry.py")
 
 CELL = 48
 MARKS = "「」『』（）《》〈〉【】〔〕“”‘’、，。．；：！？"
+# Two marks side by side, of the kinds CLReq 3.1.6 lists as adjacent: a
+# closing bracket before a pause or stop mark and after one, two closing or
+# two opening brackets, a closing bracket or a pause or stop mark before an
+# opening bracket.
+PAIRS = ["」，", "」。", "）、", "』；", "。」", "，」", "！」", "』」", "）」",
+         "「『", "（「", "」「", "）（", "。「", "，（", "：「"]
+ITEMS = list(MARKS) + PAIRS
+ROWS = -(-len(ITEMS) // len(MARKS))
 # (lang attribute or None, face)
 FACES = [
     (None, "Noto Sans SC"),
@@ -68,7 +81,7 @@ FACES = [
 # that reaches shaping.
 PANDOC_BODY = "text-rendering: optimizeLegibility; font-kerning: normal;"
 LEGS = [("plain page", ""), ("pandoc's font-kerning: normal", PANDOC_BODY)]
-WINDOW = (len(MARKS) * 2 * CELL, len(LEGS) * len(FACES) * 4 * CELL)
+WINDOW = (len(MARKS) * 2 * CELL, len(LEGS) * len(FACES) * ROWS * 5 * CELL)
 
 
 def column_html(text):
@@ -83,10 +96,10 @@ def build(fonts):
     rows = []
     for leg, rule in LEGS:
         cells = "".join(
-            f'<div class="box" data-leg="{leg}" data-face="{face}" data-mark="{mark}"'
+            f'<div class="box" data-leg="{leg}" data-face="{face}" data-mark="{item}"'
             f'{f" lang={lang}" if lang else ""} style="font-family: &quot;{face}&quot;">'
-            f'{column_html(f"口{mark}口")}</div>'
-            for lang, face in FACES for mark in MARKS)
+            f'{column_html(f"口{item}口")}</div>'
+            for lang, face in FACES for item in ITEMS)
         rows.append(f'<div class="leg" style="{rule}">{cells}</div>')
     return f"""<!doctype html><meta charset="utf-8">
 <style>
@@ -95,7 +108,7 @@ def build(fonts):
 :root {{ --vertext-cell: {CELL}px; }}
 html, body {{ margin: 0; padding: 0; background: #fff; color: #000; }}
 .leg {{ display: grid; grid-template-columns: repeat({len(MARKS)}, {2 * CELL}px); }}
-.box {{ position: relative; width: {2 * CELL}px; height: {4 * CELL}px; overflow: hidden; }}
+.box {{ position: relative; width: {2 * CELL}px; height: {5 * CELL}px; overflow: hidden; }}
 .box .vertext {{ position: absolute; top: 0; right: 0; padding: 0; border: 0;
                  gap: 0; min-block-size: 0; overflow: visible; }}
 </style>
@@ -166,8 +179,9 @@ def problems(report):
                          f"measured are not that face's")
     for cell in report["cells"]:
         where = f"{cell['mark']} in {cell['face']}, {cell['leg']}"
-        if [text for text, _, _ in cell["slots"]] != ["口", cell["mark"], "口"]:
-            fails.append(f"{where}: the column is not three slots: {cell['slots']}")
+        if [text for text, _, _ in cell["slots"]] != ["口", *cell["mark"], "口"]:
+            fails.append(f"{where}: the column is not one slot a character: "
+                         f"{cell['slots']}")
             continue
         for text, kind, advance in cell["slots"]:
             if abs(advance - CELL) > 0.5:
@@ -209,9 +223,9 @@ def main():
         for f in fails:
             print(f"  {f}")
         sys.exit(1)
-    print(f"PASS: each of {len(MARKS)} marks takes one cell between two Han characters "
-          f"in {len(FACES)} faces, on a plain page and under font-kerning: normal, in "
-          + " and ".join(ran))
+    print(f"PASS: each of {len(MARKS)} marks, and each mark of {len(PAIRS)} adjacent "
+          f"pairs, takes one cell between two Han characters in {len(FACES)} faces, on "
+          f"a plain page and under font-kerning: normal, in " + " and ".join(ran))
 
 
 if __name__ == "__main__":

@@ -1285,11 +1285,23 @@ nothing in the core may foreclose it.
   stylesheet, red in 60, all in Firefox under the kerning rule, in Firefox
   140 and in Debian's Firefox 153 inside the CI image; green after in both,
   and green in Chrome 152 before and after, which is why CI now installs
-  Firefox. Chrome narrows on its own: by default the first of two adjacent
-  marks, `」，` or `）。`, takes half a cell (`text-spacing-trim: normal`),
-  and an opening bracket at a line's head keeps its cell; CONFORMANCE 6.3.2
-  and the README say so, and the README names `space-all` for a page that
-  wants whole cells there too.
+  Firefox. Chrome narrowed on its own, which the next entry turns off.
+
+- **Two marks side by side take a cell each in Chrome too** (#125). By
+  default (`text-spacing-trim: normal`) Chrome 152 set one of two adjacent
+  marks in half a cell, with or without the kerning rule: the first in `」，`
+  and `）、`, the opening bracket in `」「` and `。「`, and in the SC faces
+  the stop in `。」` and `，」`, which the TC faces centre. Firefox 140 trims
+  none. vertext counts a column in whole cells, so Chrome's columns came out
+  shorter than counted. CLReq 6.3.2 has Mainland and Hong Kong publications
+  mostly narrowing such a pair and Taiwan's mostly not; Bayanasar chose whole
+  cells on 2026-11-08, and narrowing is not offered. The cells now set
+  `text-spacing-trim: space-all` beside `font-kerning: none`. `cell-advance`
+  sets 16 adjacent pairs between two Han characters as well: with the
+  stylesheet before, red in 74 in Chrome 152, 37 on each page, and none in
+  Firefox 140; green after in both. The cost falls on the run of closing
+  marks a box holds (Not sealed): `sayin` and 40 of `。`, `」` or `）` now
+  run 230px past a 28-cell column, where 80 were needed before.
 
 ## Not sealed
 
@@ -1299,8 +1311,10 @@ nothing in the core may foreclose it.
   past a 28-cell column at `1d060c2`. And the loop at the end of
   `keep_together()` takes every closing mark after a box, as it has since
   #93: `sayin` and then 80 of `。`, `！`, `」` or `）` ran 230–239px past the
-  column; 40 did not, as Chromium sets consecutive fullwidth marks half a
-  cell each. Both measured by a reviewer, neither by a gate. Missing: a
+  column; 40 did not, while Chromium set consecutive fullwidth marks half a
+  cell each. Both measured by a reviewer, neither by a gate. Since #125 each
+  takes a cell, and in Chrome 152 40 of `。`, `」` or `）` run 230px past a
+  28-cell column and 80 run 950px; `！` is as it was. Missing: a
   bound for either, and a measurement of whether the browser would break a
   run of closing marks that is not held; until then a long enough one runs
   past the column's end. Neither is common in prose.
