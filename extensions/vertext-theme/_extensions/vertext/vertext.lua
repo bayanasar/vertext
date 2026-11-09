@@ -1455,7 +1455,16 @@ function Pandoc(doc)
       if block.t == "Header" or block.t == "Div" then
         -- Flush first so the anchor lands AFTER the strip carrying the text
         -- before it, keeping the reading order Pandoc will walk.
-        flush()
+        --
+        -- Except the title alone: an anchor is not seen, so nothing has to
+        -- come between the title and the section after it, and the binary
+        -- sets a heading by the body it heads. Flushed alone, a title has no
+        -- body, and `2.3 構建系統——Cargo vs CMake / Bazel / Meson / Make`,
+        -- more Latin than Han, stood horizontal over a vertical page. So the
+        -- title waits and opens the first section's strip; that section's
+        -- anchor lands before the title, a column or two early. A block that
+        -- is seen still flushes the title alone before it.
+        if #pending > 0 then flush() end
         emit_toc_headings({ block })
       end
       table.insert(pending, block)

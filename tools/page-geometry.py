@@ -74,7 +74,9 @@ MEASURE = """
 document.fonts.ready.then(() => {
   const root = getComputedStyle(document.documentElement);
   const cell = parseFloat(root.getPropertyValue('--vertext-cell'));
-  const columns = [...document.querySelectorAll('.vertext-column')]
+  // The paragraphs' columns. Each page's title is its fixture's name, Latin,
+  // and a heading over a vertical body is a column too, so it is left out.
+  const columns = [...document.querySelectorAll('.vertext-column:not(.vertext-column-heading)')]
     .filter(c => c.textContent.trim());
   // A column's slots in order: its children, and the slots inside a span
   // that keeps a box and its marks on one line.

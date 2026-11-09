@@ -397,6 +397,43 @@ def code_problems(pandoc):
     return fails
 
 
+# A page title with more Latin than Han over a Chinese section. Set by its
+# own script it stood horizontal over a vertical page; the binary now sets a
+# heading by the body it heads too, and the filter lets the title open the
+# first section's strip so that it has one.
+TITLE = """---
+title: "2.3 構建系統——Cargo vs CMake / Bazel / Meson / Make"
+vertext-page: true
+---
+
+## 學習目標
+
+讀完本課後，你將能夠陳述構建系統的職責。
+"""
+
+
+def title_problems(pandoc):
+    """The title is a column of the first strip, before the section's heading,
+    and the section's anchor comes before that strip."""
+    html, stderr = render(pandoc, TITLE, extra=("-s",))
+    if stderr.strip():
+        return [f"title: the filter complained\n     {stderr.strip()[:200]}"]
+    fails = []
+    if "vertext-horizontal-h1" in html:
+        fails.append("title: set horizontally, by its own script")
+    title = html.find("vertext-column-h1")
+    section = html.find("vertext-column-h2")
+    anchor = html.find('class="vertext-toc-anchor"')
+    if title < 0:
+        fails.append("title: not a column")
+    elif not 0 <= anchor < title < section:
+        fails.append(f"title: want the section's anchor, then the title's column, then the "
+                     f"section's, found them at {anchor}, {title}, {section}")
+    elif html.count('<div class="vertext ', 0, section) != html.count('<div class="vertext ', 0, title):
+        fails.append("title: not in the same strip as the first section")
+    return fails
+
+
 # Footnotes in every place a column holds one: a paragraph, beside a formula,
 # inline, in a heading and in a list item. The heading's matters twice over: it
 # is also kept as a real Header in a hidden anchor, for the table of contents,
@@ -906,6 +943,7 @@ def main():
     fails += note_style_problems(args.pandoc)
     fails += panel_problems(args.pandoc)
     fails += code_problems(args.pandoc)
+    fails += title_problems(args.pandoc)
 
     fails += versions_agree()
 
@@ -957,6 +995,8 @@ def main():
     print(f"      a code block, a notebook cell and a tabset of code at the top "
           f"level reach pandoc whole and highlighted; code beside prose is "
           f"still a code strip.")
+    print(f"      a title with more Latin than Han over a Chinese section is a "
+          f"column of that section's strip.")
     print(f"      and the handshake refuses {len(stubs)} binaries that do not "
           f"speak this filter's wire version, degrading horizontal rather than "
           f"rendering a mismatched pair.")

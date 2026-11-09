@@ -82,6 +82,7 @@ Not everything in a document wants to be vertical. Each block decides:
 |---|---|---|
 | CJK / Mongolian paragraph | Vertical columns | East Asian Width majority |
 | Latin-majority paragraph | Horizontal block, 66ch | The same measure, inverted |
+| Heading, page title | Vertical unless it and the body it heads are both Latin-majority | The same measure, on both |
 | Fenced or indented code | Horizontal block, 80ch, monospace | Markdown declared it code |
 | Table | Rows become columns | Markdown declared it a table |
 | `::: {.vertext .vertext-code}` | Vertical code | The author declared it |
@@ -201,7 +202,7 @@ so structure only crosses the boundary where the wire protocol carries it:
 
 | Markdown | Result |
 |---|---|
-| Headings (`#`–`######`) | Own block, level-scaled, with a section rule |
+| Headings (`#`–`######`) | Own block, level-scaled, with a section rule. Horizontal only when its own text and the first paragraph or list item after it both are; with none after it in the strip, the strip's prose together stands for the page |
 | Fenced / indented code | At the top level of a `vertext: true` or `vertext-page: true` page, passed to pandoc whole and set horizontally between the columns, highlighted and with Quarto's copy button as on any other page. So is a notebook cell, embedded or executed, and a tabset whose every panel is code, which keeps its tabs. Inside a list, a quote, a block with prose beside it or a `::: {.vertext}` fence, a code strip: own block, horizontal, indentation preserved, not highlighted |
 | Tables | Real `<table>`; rows become columns, cells never hyphenate |
 | Bullet / ordered lists | Each item is its own block, oriented on its own. An ordered item carries its number as text |
@@ -243,7 +244,9 @@ embedded in a horizontal page.
 
 The document title is re-rendered through the binary as a level-1 heading and
 Quarto's own title block is hidden, so the title obeys the same layout rules
-as the body it heads. Rotating it with `text-orientation: sideways` would have
+as the body it heads: it opens the first section's strip, and a title with
+more Latin than Han, `2.3 構建系統——Cargo vs CMake / Bazel / Meson / Make`,
+stands in a column over a Chinese page. Rotating it with `text-orientation: sideways` would have
 been a transform wearing the costume of vertical text.
 
 ### Collapsing the top strip

@@ -1331,6 +1331,35 @@ nothing in the core may foreclose it.
   count `<pre>` when it takes this. In Firefox 140 the page looks as it
   does in Chrome 152; Safari was not run.
 
+- **A title with more Latin than Han stands in a column** (#126). A Chinese
+  page titled `2.3 構建系統——Cargo vs CMake / Bazel / Meson / Make` had it
+  stand horizontal over the vertical page: a heading was set by its own script,
+  though the renderer's comment said headings follow the body, and the title
+  always had a strip to itself, since the filter cuts a strip at every
+  heading to place its table-of-contents anchor. A heading now goes
+  horizontal only when its own text and the body it heads both would: the
+  first paragraph or list item after it, past headings, code, tables and
+  formulas, or with none, the strip's prose together; with no prose at all,
+  its own text. The title, with nothing but anchors before the first
+  section, opens that section's strip, whose anchor then lands a column or
+  two before the title. Across a Rust course's Chinese chapters and the ML
+  review's Chinese pages, 154 files and 2328 headings under pandoc and
+  `tools/quarto-shim.lua` with Quarto's code cells rewritten for pandoc: 45
+  page titles and 26 section headings, mixed or Latin, turn vertical, and
+  none turns horizontal. Following the body alone turned 3 Chinese headings
+  horizontal, `解答` over a paragraph of `x`, `+INFINITY` and `-1.0` among
+  them, hence the rule on both. Two Latin-majority headings stay horizontal,
+  `clangd --version 與 --check-lines` and one other: each is followed at once
+  by code the filter passes through whole, so its strip holds no prose to go
+  by. `filter-golden` sets that title over a Chinese section and requires
+  its column in the section's strip after the section's anchor: red with
+  either half from before, the filter or the binary, green with both.
+  `test-extension.sh` renders it under Quarto; its Latin heading now has a
+  Latin paragraph under it, which is what keeps it horizontal.
+  `page-geometry` titles each page with its fixture's name, Latin, which
+  is now a column over the vertical body, so it measures the paragraphs'
+  columns without the headings'.
+
 ## Not sealed
 
 - **Two kinds of group still have no bound.** Only a mark that repeats the

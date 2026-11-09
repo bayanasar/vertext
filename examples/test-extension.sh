@@ -70,7 +70,7 @@ printf '%s\n' '---' 'title: "Injection 山"' 'vertext-page: true' 'filters: [ver
   '山川异域，风月同天。' '' \
   'before'"$(printf '\356\200\200')"'after'"$(printf '\356\200\202')"'tail' '' \
   '## 見出し' '' \
-  '## Latin Heading Goes Horizontal' '' \
+  '## Latin Heading Goes Horizontal' '' 'It is a truth universally acknowledged.' '' \
   '| 蒙古文 | 转写 | English |' '|---|---|---|' \
   '| ᠰᠠᠶᠢᠨ | sayin | good |' '| ᠪᠢ | bi | I |' '' \
   '```rust' 'let x = "日本語";' '```' ':::' > "$work/doc.qmd"
@@ -80,7 +80,7 @@ quarto render "$work/doc.qmd" --quiet
 out="$work/doc.html"
 ships_face "a document" "$work"
 check        "CJK heading stays a vertical column" 'vertext-column-h2'      "$out"
-check        "Latin heading goes horizontal"   'vertext-horizontal-h2'      "$out"
+check        "Latin heading over Latin goes horizontal" 'vertext-horizontal-h2' "$out"
 check        "fenced code is set horizontally" 'vertext-horizontal-code'    "$out"
 check        "CJK prose stays vertical"        'vertext-column-prose'       "$out"
 # The defect this whole encoding exists to prevent: a table flattened into one
@@ -89,9 +89,10 @@ check        "table survives as a table"       '<table class="vertext-table">' "
 check        "table cells stay apart"          '<td class="vertext-cell">'   "$out"
 check_absent "cells are not welded together"   'ᠰᠠᠶᠢᠨsayin'                  "$out"
 check_absent "header cells are not welded"     '蒙古文转写'                   "$out"
-# The title goes through the binary like any other heading and takes whichever
-# orientation its own script calls for. What matters is that vertext renders it
-# at level 1 rather than leaving it to Quarto's horizontal title block.
+# The title goes through the binary like any other heading, horizontal only
+# when its own script and the body it heads both call for it. What matters here
+# is that vertext renders it at level 1 rather than leaving it to Quarto's
+# horizontal title block; the page below checks which way it goes.
 check        "title is rendered by vertext at h1" 'vertext-\(column\|horizontal\)-h1' "$out"
 check        "page mode injects its stylesheet" 'vertext-page-mode'         "$out"
 # Both modes keep a hidden copy of every heading for the table of contents.
@@ -264,6 +265,17 @@ check "its Python is highlighted"               '<span class="im">import</span>'
 check "its Rust is highlighted"                 '<span class="kw">fn</span>' "$tabsout"
 check "the tabset is passed whole"              'class="vertext-raw"' "$tabsout"
 check "the prose around it is in columns"       '<span class="vertext-upright">後</span>' "$tabsout"
+
+# A title with more Latin than Han over a Chinese page is a column. Set by its
+# own script it stood horizontal: a heading follows the body it heads now, and
+# the title opens the first section's strip so that it has one.
+printf '%s\n' '---' 'title: "2.3 構建系統——Cargo vs CMake / Bazel / Meson / Make"' \
+  'vertext-page: true' 'filters: [vertext]' 'format: {vertext-html: default}' '---' '' \
+  '## 學習目標' '' '讀完本課後，你將能夠陳述構建系統的職責。' > "$work/title.qmd"
+quarto render "$work/title.qmd" --quiet
+titleout="$work/title.html"
+check        "a long mixed title is a column"   'vertext-column-h1'          "$titleout"
+check_absent "it is not set horizontally"       'vertext-horizontal-h1'      "$titleout"
 
 # ...and the same trap once more, for a RawBlock rather than a CodeBlock.
 #

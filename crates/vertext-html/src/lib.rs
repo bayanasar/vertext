@@ -278,10 +278,11 @@ pub fn render_document(input: &str, options: RenderOptions) -> String {
          --vertext-latin-cap-code:{CODE_LATIN_CAP}ch\">"
     );
 
+    let kinds = block_kinds(&segments, options.whole_strip_code);
     let mut emitted_any = false;
     let mut in_stack = false;
     let last_index = segments.len().saturating_sub(1);
-    for (index, (mode, segment_text)) in segments.into_iter().enumerate() {
+    for (index, ((mode, segment_text), kind)) in segments.into_iter().zip(kinds).enumerate() {
         let trimmed = segment_text.trim_end_matches(['\n', '\r']);
         // Counted, not merely detected: the LAST segment's first trailing
         // newline is the file's line terminator, and every later one is the
@@ -297,11 +298,7 @@ pub fn render_document(input: &str, options: RenderOptions) -> String {
             continue;
         }
         emitted_any = true;
-        // `.vertext-code` is the author declaring "set this vertically as
-        // code" — the showcase case. A fenced block inside ordinary prose is
-        // the opposite instruction and goes horizontal. Same content, and the
-        // difference is what the author asked for, never what we guessed.
-        let block = if options.whole_strip_code { BlockKind::Vertical } else { mode.block(trimmed) };
+        let Some(block) = kind else { continue };
 
         // Consecutive horizontal blocks stack vertically instead of each
         // claiming its own slot beside the columns. Without this a one-word
@@ -369,6 +366,58 @@ pub fn render_document(input: &str, options: RenderOptions) -> String {
     }
     html.push_str("</div>\n");
     html
+}
+
+/// Which way each segment is set; `None` for a blank one.
+///
+/// `.vertext-code` is the author declaring "set this vertically as code" —
+/// the showcase case. A fenced block inside ordinary prose is the opposite
+/// instruction and goes horizontal. Same content, and the difference is what
+/// the author asked for, never what we guessed.
+///
+/// A heading goes horizontal only when its own text and the body it heads
+/// both would, so a section title never sits at odds with its section. Its
+/// own script alone was the wrong measure: `2.3 構建系統——Cargo vs CMake /
+/// Bazel / Meson / Make` carries more Latin than Han and stood horizontal
+/// over a vertical page. Its body alone is wrong the other way: a heading
+/// `解答` over a first paragraph of `x`, `+INFINITY` and `-1.0` would turn.
+/// The body is the first paragraph or list item after the heading, past
+/// other headings, code, tables and formulas. Where nothing follows, which
+/// happens where a block the filter passes through whole ends the strip, the
+/// strip's paragraphs and list items together stand for the page; with none
+/// at all, the heading's own text decides.
+fn block_kinds(segments: &[(Mode, String)], whole_strip_code: bool) -> Vec<Option<BlockKind>> {
+    let trimmed = |index: usize| segments[index].1.trim_end_matches(['\n', '\r']);
+    let own: Vec<Option<BlockKind>> = (0..segments.len())
+        .map(|index| {
+            if trimmed(index).is_empty() {
+                None
+            } else if whole_strip_code {
+                Some(BlockKind::Vertical)
+            } else {
+                Some(segments[index].0.block(trimmed(index)))
+            }
+        })
+        .collect();
+    let is_body = |index: &usize| {
+        matches!(segments[*index].0, Mode::Prose | Mode::ListItem { .. }) && own[*index].is_some()
+    };
+    let strip_body = || {
+        let text: Vec<&str> = (0..segments.len()).filter(is_body).map(trimmed).collect();
+        (!text.is_empty()).then(|| prefers_horizontal(&text.join("\n")))
+    };
+    (0..segments.len())
+        .map(|index| match (segments[index].0, own[index]) {
+            (Mode::Heading(_), Some(BlockKind::Horizontal(_))) if !whole_strip_code => {
+                let body_horizontal = match (index + 1..segments.len()).find(is_body) {
+                    Some(at) => own[at] != Some(BlockKind::Vertical),
+                    None => strip_body().unwrap_or(true),
+                };
+                if body_horizontal { own[index] } else { Some(BlockKind::Vertical) }
+            }
+            _ => own[index],
+        })
+        .collect()
 }
 
 /// A horizontal block: an orthogonal island in the vertical flow.
@@ -893,10 +942,55 @@ mod tests {
         assert!(html.contains("vertext-column-heading vertext-column-h2"));
         assert!(html.contains("vertext-column-prose vertext-column-heading"));
         assert!(!html.contains(heading_marker(2)));
-        // A Latin heading goes horizontal and carries its level there instead.
-        let latin = format!("{}Chinese{MODE_PROSE}山川", heading_marker(2));
+        // A heading over a Latin body goes horizontal and carries its level
+        // there instead.
+        let latin = format!("{}Chinese{MODE_PROSE}It is a truth universally acknowledged.",
+                            heading_marker(2));
         let html = render_document(&latin, RenderOptions::default());
-        assert!(html.contains("vertext-horizontal-heading vertext-horizontal-h2"));
+        assert!(html.contains("vertext-horizontal-heading vertext-horizontal-h2"), "{html}");
+    }
+
+    /// A heading is set the way the body it heads is set, not by its own
+    /// script: a Chinese page's title that names five tools in Latin carries
+    /// more Latin than Han, and set by itself it stood horizontal over a
+    /// vertical page.
+    #[test]
+    fn a_heading_follows_the_body_it_heads() {
+        let title = "2.3 構建系統——Cargo vs CMake / Bazel / Meson / Make";
+        assert!(prefers_horizontal(title), "the case only means something if the title alone goes horizontal");
+        let body = "讀完本課後，你將能夠陳述構建系統的職責。";
+        let vertical = |html: &str, level: u8| {
+            html.contains(&format!("vertext-column-heading vertext-column-h{level}"))
+                && !html.contains("vertext-horizontal-heading")
+        };
+        // Over its body, and over another heading that is over the body.
+        let html = render_document(&format!("{}{title}{MODE_PROSE}{body}", heading_marker(1)),
+                                   RenderOptions::default());
+        assert!(vertical(&html, 1), "{html}");
+        let html = render_document(
+            &format!("{}{title}{}學習目標{MODE_PROSE}{body}", heading_marker(1), heading_marker(2)),
+            RenderOptions::default());
+        assert!(vertical(&html, 1) && vertical(&html, 2), "{html}");
+        // Past a code segment to the prose after it.
+        let html = render_document(
+            &format!("{}Cargo vs CMake{MODE_CODE}cargo build\n{MODE_PROSE}{body}", heading_marker(3)),
+            RenderOptions::default());
+        assert!(vertical(&html, 3), "{html}");
+        // With nothing after it, the body before it is the page's.
+        let html = render_document(&format!("{body}{}Cargo vs CMake", heading_marker(3)),
+                                   RenderOptions::default());
+        assert!(vertical(&html, 3), "{html}");
+        // A heading that would be vertical by itself stays vertical over a
+        // first paragraph that is mostly Latin.
+        let html = render_document(
+            &format!("{}解答{MODE_PROSE}`x` is +INFINITY; `y` is -1.0; z = -INFINITY.", heading_marker(2)),
+            RenderOptions::default());
+        assert!(vertical(&html, 2), "{html}");
+        // With no body at all, its own text decides.
+        let html = render_document(&format!("{}{title}", heading_marker(1)), RenderOptions::default());
+        assert!(html.contains("vertext-horizontal-heading vertext-horizontal-h1"), "{html}");
+        let html = render_document(&format!("{}構建系統", heading_marker(1)), RenderOptions::default());
+        assert!(vertical(&html, 1), "{html}");
     }
 
     #[test]
