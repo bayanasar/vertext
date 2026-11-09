@@ -265,12 +265,16 @@ body:has(.chapter-title) #quarto-margin-sidebar {
      banner is on the RIGHT here, so the offset it is compensating for is
      zero.
 
-     Now that this strip sits at the BOTTOM, `top` is released to `auto` and
-     `bottom` does the pinning -- but it still has to be `!important`, because
-     the inline `top: 813px` would otherwise re-pin the strip by its top edge
-     and the `bottom` here would only stretch it. */
-  top: auto !important;
-  bottom: 0;
+     The strip sits under the TEXT, not at the window's bottom: its top is
+     where the region ends, and the region ends where the text does
+     (`--vertext-region-*`, below). Pinned to `bottom: 0` it stayed on the
+     window's edge however far the text stopped above it, as a horizontal
+     page's TOC does not: there the TOC stands beside the text at any width.
+     Measured at 1600x2200 before, the text ended at 638px and the strip
+     began at 1921px. */
+  top: calc(var(--vertext-region-top, 0px)
+            + var(--vertext-region-height, calc(100vh - #{$vertext-toc-size}))) !important;
+  bottom: auto;
   max-height: $vertext-toc-size !important;
   /* Clears the status spine, which runs the left edge between the two strips.
      At `left: 0` the strip and the spine overlapped in the corner and the
@@ -626,7 +630,14 @@ body:has(.chapter-title) .footer {
      child's forced height won, the auto-height parent grew to the child, and
      the region measured 717px inside a 605px gap -- the last rows hanging off
      the bottom of the window while every inset read correctly. */
-  height: calc(100vh - var(--vertext-nav-depth) - #{$vertext-toc-size}) !important;
+  /* No deeper than the text, so the TOC strip stands under the text rather
+     than at the window's bottom; see `--vertext-text-depth`. Each branch
+     below that keeps a TOC states its own top and room the same way. */
+  --vertext-region-top: var(--vertext-nav-depth);
+  --vertext-region-height: min(calc(100vh - var(--vertext-nav-depth) - #{$vertext-toc-size}),
+                               var(--vertext-text-depth));
+  height: var(--vertext-region-height) !important;
+  bottom: auto;
   min-height: 0 !important;
   max-width: none;
   margin: 0;
@@ -874,7 +885,9 @@ body:not(:has(.chapter-title)) #quarto-sidebar ul ul {
    one everywhere. `.sidebar-item` is what only a populated list has. */
 body:not(:has(#quarto-sidebar .sidebar-item)) #quarto-content {
   top: 0;
-  height: calc(100vh - #{$vertext-toc-size}) !important;
+  --vertext-region-top: 0px;
+  --vertext-region-height: min(calc(100vh - #{$vertext-toc-size}), var(--vertext-text-depth));
+  height: var(--vertext-region-height) !important;
 }
 body:not(:has(#quarto-margin-sidebar a)) #quarto-content {
   bottom: 0;
@@ -898,8 +911,11 @@ body:not(:has(#quarto-sidebar .sidebar-item)):not(:has(#quarto-margin-sidebar a)
    puts this at (2,1,1), which wins either way round. */
 body:has(.chapter-title):has(#quarto-margin-sidebar a) #quarto-content {
   top: var(--vertext-nav-depth);
-  bottom: $vertext-toc-size;
-  height: calc(100vh - var(--vertext-nav-depth) - #{$vertext-toc-size}) !important;
+  bottom: auto;
+  --vertext-region-top: var(--vertext-nav-depth);
+  --vertext-region-height: min(calc(100vh - var(--vertext-nav-depth) - #{$vertext-toc-size}),
+                               var(--vertext-text-depth));
+  height: var(--vertext-region-height) !important;
 }
 /* A chapter with no headings of its own has no page TOC to reserve for. */
 body:has(.chapter-title):not(:has(#quarto-margin-sidebar a)) #quarto-content {
@@ -938,6 +954,15 @@ body:has(.chapter-title):not(:has(#quarto-margin-sidebar a)) #quarto-content {
    removes that whole class of arithmetic error. */
 body {
   --vertext-column-theme-height: calc(100% - #{$vertext-column-gap});
+  /* How deep the region needs to be for the text it holds: the column budget
+     (`vertext-column-chars:` cells, 34 when the page declares none), the strip
+     wrapper's border and padding at both ends, and the gap kept at the
+     column's end. A region this deep gives the column all of its budget, so
+     on a window with room to spare the text keeps its measure and the region,
+     and the TOC strip under it, stop where the text does. A shorter window
+     still caps the region, as before, and the column with it. */
+  --vertext-text-depth: calc(var(--vertext-column-chars, 34) * var(--vertext-cell, 18px)
+                             + 2 * (1rem + 1px) + #{$vertext-column-gap});
   /* A table cell cannot use the percentage form above. Its containing block is
      the table, whose own height is content-derived, so a percentage `max-height`
      has nothing definite to resolve against and is simply dropped -- measured,
@@ -1004,6 +1029,7 @@ html[data-vertext-progression="lr"] {
     top: 0;
     left: 0;
     bottom: 0;
+    --vertext-region-top: 0px;
   }
   html[data-vertext-progression="lr"] #quarto-content {
     right: 0;

@@ -1360,6 +1360,26 @@ nothing in the core may foreclose it.
   is now a column over the vertical body, so it measures the paragraphs'
   columns without the headings'.
 
+- **The page's TOC stands under the text, not at the window's bottom**
+  (#127). A horizontal page's TOC stays beside the text however wide the
+  window; vertext-theme pinned the vertical page's TOC strip to the
+  window's bottom edge while the text stops at its measure, so a taller
+  window opened a gap: at 1600x2200 the text ended at 638px and the strip
+  began at 1921px. The region now runs no deeper than the text needs, its
+  measure plus the wrapper's border and padding and the 2rem gap
+  (`--vertext-text-depth`), and the strip is pinned at the region's end,
+  in each of the three layouts that keep a TOC and on a phone. A window
+  too short for the measure caps the region as before. `theme-geometry`
+  renders a page and a book's chapter through Quarto 1.11.9 at three
+  window heights in Chrome 152 and requires the strip to begin 0 to 64px
+  under the text's last column, end inside the window, and, where the
+  window has room, leave a column its whole 612px: with the stylesheet
+  before, red in 4, a gap of 496 to 1284px at 1600x1600 and 1600x2200;
+  green after, 44px on both pages. Quarto is not on the CI runners, so it
+  runs where Quarto is, like `test-extension.sh`, whose check that the
+  strip's rule says `bottom: 0` now asks that it place the strip by the
+  region. Firefox and Safari were not run.
+
 ## Not sealed
 
 - **Two kinds of group still have no bound.** Only a mark that repeats the

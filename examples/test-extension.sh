@@ -588,10 +588,15 @@ fi
 toc_rule=$(grep -rho '[^}]*#quarto-margin-sidebar{[^}]*}' \
              "$theme/_site/site_libs/"*/*.css 2>/dev/null \
            | grep 'position:fixed' | head -1)
-if printf '%s' "$toc_rule" | grep -q 'bottom:0'; then
-  printf 'ok   the page TOC takes the bottom edge\n'
+# The strip stands under the text rather than on the window's bottom edge: its
+# top is where the region ends (#127), and `tools/theme-geometry.py` measures
+# where that lands in a browser. What is asserted here is that the rule still
+# places it by the region and not by the window.
+if printf '%s' "$toc_rule" | grep -q 'top:calc(var(--vertext-region-top' \
+   && printf '%s' "$toc_rule" | grep -q 'bottom:auto'; then
+  printf 'ok   the page TOC stands at the region'"'"'s end, under the text\n'
 else
-  printf 'FAIL the page TOC is no longer on the bottom edge\n'
+  printf 'FAIL the page TOC is no longer placed at the region'"'"'s end\n'
   failures=$((failures + 1))
 fi
 region_clips=$(grep -rho '#quarto-content{[^}]*}' "$theme/_site/site_libs/"*/*.css 2>/dev/null \
